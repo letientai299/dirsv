@@ -1,10 +1,39 @@
+/* -- light (default) -- */
 :root {
+  --bg: #ffffff;
+  --surface: #f6f8fa;
+  --border: #d0d7de;
+  --text: #1f2328;
+  --text-dim: #656d76;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+}
+
+/* -- system dark preference -- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #21262d;
+    --text: #c9d1d9;
+    --text-dim: #8b949e;
+  }
+}
+
+/* -- explicit overrides -- */
+[data-theme="dark"] {
   --bg: #0d1117;
   --surface: #161b22;
   --border: #21262d;
   --text: #c9d1d9;
   --text-dim: #8b949e;
-  --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+}
+
+[data-theme="light"] {
+  --bg: #ffffff;
+  --surface: #f6f8fa;
+  --border: #d0d7de;
+  --text: #1f2328;
+  --text-dim: #656d76;
 }
 
 *,
@@ -30,6 +59,38 @@ body {
   font-weight: 600;
   font-family: var(--mono);
   padding: 16px 16px 8px;
+}
+
+/* ---------- toolbar ---------- */
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 16px 8px;
+}
+
+.toolbar .dir-path {
+  padding: 0;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+  background: var(--surface);
+  color: var(--text);
 }
 
 .dir-table {
