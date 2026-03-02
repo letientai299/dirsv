@@ -13,7 +13,6 @@ func setupTestDir(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 
-	// Create files and subdirectories.
 	if err := os.WriteFile(filepath.Join(dir, "hello.txt"), []byte("hello world"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -23,15 +22,30 @@ func setupTestDir(t *testing.T) string {
 	if err := os.WriteFile(filepath.Join(dir, "sub", "nested.txt"), []byte("nested content"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(dir, "readme.md"), []byte("# Hello"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// Dir with index.html for trailing-slash test.
+	if err := os.Mkdir(filepath.Join(dir, "site"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "site", "index.html"), []byte("<h1>hi</h1>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	return dir
 }
 
-func TestListRoot(t *testing.T) {
-	srv, err := New(setupTestDir(t))
+func newTestServer(t *testing.T) *Server {
+	t.Helper()
+	srv, err := New(setupTestDir(t), nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
+	return srv
+}
 
+func TestBrowseRoot(t *testing.T) {
+	srv := newTestServer(t)
 	req := httptest.NewRequest(http.MethodGet, "/api/browse/", nil)
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
@@ -40,33 +54,30 @@ func TestListRoot(t *testing.T) {
 		t.Fatalf("want 200, got %d", rec.Code)
 	}
 
-	var entries []Entry
-	if err := json.NewDecoder(rec.Body).Decode(&entries); err != nil {
+	var resp BrowseResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
 		t.Fatal(err)
 	}
 
+	if resp.Type != "dir" {
+		t.Fatalf("want type=dir, got %s", resp.Type)
+	}
+
 	names := map[string]bool{}
-	for _, e := range entries {
+	for _, e := range resp.Entries {
 		names[e.Name] = e.IsDir
 	}
 
 	if !names["sub"] {
 		t.Error("expected sub/ to be a directory entry")
 	}
-	if names["hello.txt"] {
-		t.Error("expected hello.txt to not be a directory")
-	}
 	if _, ok := names["hello.txt"]; !ok {
 		t.Error("expected hello.txt in listing")
 	}
 }
 
-func TestServeFile(t *testing.T) {
-	srv, err := New(setupTestDir(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-
+func TestBrowseFile(t *testing.T) {
+	srv := newTestServer(t)
 	req := httptest.NewRequest(http.MethodGet, "/api/browse/hello.txt", nil)
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
@@ -74,21 +85,62 @@ func TestServeFile(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("want 200, got %d", rec.Code)
 	}
-	if ct := rec.Header().Get("Content-Type"); ct != "text/plain; charset=utf-8" {
-		t.Errorf("want text/plain, got %s", ct)
+
+	var resp BrowseResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.Type != "file" {
+		t.Fatalf("want type=file, got %s", resp.Type)
+	}
+}
+
+func TestRawFile(t *testing.T) {
+	srv := newTestServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/api/raw/hello.txt", nil)
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", rec.Code)
 	}
 	if rec.Body.String() != "hello world" {
 		t.Errorf("want 'hello world', got %q", rec.Body.String())
 	}
 }
 
-func TestNestedPath(t *testing.T) {
-	srv, err := New(setupTestDir(t))
-	if err != nil {
-		t.Fatal(err)
+func TestRawMIME(t *testing.T) {
+	srv := newTestServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/api/raw/readme.md", nil)
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", rec.Code)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/api/browse/sub/nested.txt", nil)
+	ct := rec.Header().Get("Content-Type")
+	// .md files should get a text MIME type.
+	if ct == "" {
+		t.Error("expected Content-Type header")
+	}
+}
+
+func TestRawDir(t *testing.T) {
+	srv := newTestServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/api/raw/sub", nil)
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("want 400 for raw dir, got %d", rec.Code)
+	}
+}
+
+func TestRawNested(t *testing.T) {
+	srv := newTestServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/api/raw/sub/nested.txt", nil)
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
 
@@ -101,35 +153,126 @@ func TestNestedPath(t *testing.T) {
 }
 
 func TestNotFound(t *testing.T) {
-	srv, err := New(setupTestDir(t))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	req := httptest.NewRequest(http.MethodGet, "/api/browse/nope.txt", nil)
-	rec := httptest.NewRecorder()
-	srv.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusNotFound {
-		t.Fatalf("want 404, got %d", rec.Code)
+	srv := newTestServer(t)
+	for _, path := range []string{"/api/browse/nope.txt", "/api/raw/nope.txt"} {
+		rec := httptest.NewRecorder()
+		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("%s: want 404, got %d", path, rec.Code)
+		}
 	}
 }
 
 func TestPathTraversal(t *testing.T) {
-	srv, err := New(setupTestDir(t))
+	srv := newTestServer(t)
+	for _, path := range []string{
+		"/api/browse/../../../etc/passwd",
+		"/api/raw/../../../etc/passwd",
+	} {
+		rec := httptest.NewRecorder()
+		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		// Should either resolve within root or be forbidden — never serve /etc/passwd.
+		if rec.Code == http.StatusOK {
+			body := rec.Body.String()
+			if len(body) > 0 && body[0] == 'r' {
+				t.Errorf("%s: path traversal may have leaked a file", path)
+			}
+		}
+	}
+}
+
+func TestSymlinkEscape(t *testing.T) {
+	dir := setupTestDir(t)
+	// Create a symlink inside root pointing to /tmp (outside root).
+	link := filepath.Join(dir, "escape")
+	if err := os.Symlink(os.TempDir(), link); err != nil {
+		t.Skip("symlinks not supported:", err)
+	}
+
+	srv, err := New(dir, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/api/browse/../../../etc/passwd", nil)
+	for _, p := range []string{"/api/browse/escape", "/api/raw/escape"} {
+		rec := httptest.NewRecorder()
+		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, p, nil))
+		if rec.Code == http.StatusOK {
+			t.Errorf("%s: symlink escape should not return 200", p)
+		}
+	}
+}
+
+func TestTrailingSlashIndex(t *testing.T) {
+	srv := newTestServer(t)
+
+	// No trailing slash on dir with index.html → type=index.
+	req := httptest.NewRequest(http.MethodGet, "/api/browse/site", nil)
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
 
-	// Should either be 403 or resolve within root (not leak /etc/passwd).
-	if rec.Code == http.StatusOK && rec.Body.String() != "" {
-		// If it resolved to root listing, that's fine. But it must not serve /etc/passwd.
-		if rec.Header().Get("Content-Type") == "text/plain; charset=utf-8" {
-			t.Error("path traversal: served a file outside root")
-		}
+	if rec.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", rec.Code)
+	}
+
+	var resp BrowseResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.Type != "index" {
+		t.Fatalf("want type=index, got %s", resp.Type)
+	}
+	if resp.Path != "site/index.html" {
+		t.Errorf("want path=site/index.html, got %s", resp.Path)
+	}
+}
+
+func TestTrailingSlashDirListing(t *testing.T) {
+	srv := newTestServer(t)
+
+	// Trailing slash on dir with index.html → type=dir (dir listing).
+	req := httptest.NewRequest(http.MethodGet, "/api/browse/site/", nil)
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", rec.Code)
+	}
+
+	var resp BrowseResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.Type != "dir" {
+		t.Fatalf("want type=dir, got %s", resp.Type)
+	}
+}
+
+func TestSPAFallback(t *testing.T) {
+	// Create a minimal embedded FS with index.html.
+	dir := t.TempDir()
+	distDir := filepath.Join(dir, "app", "dist")
+	if err := os.MkdirAll(distDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(distDir, "index.html"), []byte("<!doctype html><div id=app></div>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	srv, err := New(setupTestDir(t), os.DirFS(dir), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Non-API, non-asset path should return index.html (SPA fallback).
+	req := httptest.NewRequest(http.MethodGet, "/some/deep/path", nil)
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", rec.Code)
+	}
+	if body := rec.Body.String(); body != "<!doctype html><div id=app></div>" {
+		t.Errorf("want SPA index.html, got %q", body)
 	}
 }

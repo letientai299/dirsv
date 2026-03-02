@@ -1,21 +1,32 @@
 [tools]
 go = "latest"
+bun = "latest"
 golangci-lint = "2"
 
 # -- build / run / dev --
 
 [tasks.build]
-description = "Build server binary into ./bin"
+description = "Build frontend and server binary"
 alias = "b"
-run = "go build -o bin/server ./cmd/server"
+run = "cd app && bun install && bun run build && cd .. && go build -o bin/server ./cmd/server"
 
 [tasks.run]
 description = "Build and run server"
-run = "go build -o bin/server ./cmd/server && ./bin/server"
+run = "mise build && ./bin/server"
 
 [tasks.dev]
-description = "Run dev server with auto rebuild/restart"
-run = "watchexec --restart --stop-signal SIGINT --exts go mise run run"
+description = "Run Go server (-dev) and Vite dev server in parallel"
+run = """
+cd app && bun install --frozen-lockfile 2>/dev/null || bun install &
+wait
+cd app && bun run dev &
+VITE_PID=$!
+sleep 1
+go run ./cmd/server -dev &
+GO_PID=$!
+trap 'kill $VITE_PID $GO_PID 2>/dev/null' EXIT
+wait
+"""
 
 # -- test --
 
@@ -32,5 +43,5 @@ alias = "l"
 run = "golangci-lint run ./..."
 
 [tasks.fmt]
-description = "Format Go code"
+description = "Format Go and frontend code"
 run = "gofmt -w -s . && golangci-lint run --fix ./..."

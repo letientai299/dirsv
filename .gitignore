@@ -1,3 +1,5 @@
 bin/
 .ai.dump/
 agents.local.md
+app/node_modules/
+app/dist/
