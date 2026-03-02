@@ -50,12 +50,19 @@ const sanitizeSchema: typeof defaultSchema = {
     // SVG icons from remark-github-blockquote-alert title paragraphs
     svg: ["viewBox", "width", "height", "ariaHidden", "className"],
     path: ["d"],
+    // Media elements
+    video: ["controls", "width", "height", "preload", "poster"],
+    audio: ["controls", "preload"],
+    source: [...schemaAttrs("source"), "src", "type"],
   },
   tagNames: [
     ...(defaultSchema.tagNames ?? []),
     // SVG elements used by alert icons
     "svg",
     "path",
+    // Media elements
+    "video",
+    "audio",
   ],
 }
 
