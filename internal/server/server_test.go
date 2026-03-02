@@ -48,6 +48,13 @@ func setupTestDir(t *testing.T) string {
 	); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(
+		filepath.Join(dir, "vite.config.ts"),
+		[]byte(`import { defineConfig } from "vite"`),
+		0o644,
+	); err != nil {
+		t.Fatal(err)
+	}
 	return dir
 }
 
@@ -146,6 +153,22 @@ func TestRawMIME(t *testing.T) {
 	// .md files should get a text MIME type.
 	if ct == "" {
 		t.Error("expected Content-Type header")
+	}
+}
+
+func TestRawTSNotBinary(t *testing.T) {
+	srv := newTestServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/api/raw/vite.config.ts", nil)
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("want 200, got %d", rec.Code)
+	}
+
+	ct := rec.Header().Get("Content-Type")
+	if ct != "text/plain; charset=utf-8" {
+		t.Errorf("want text/plain for .ts, got %q", ct)
 	}
 }
 

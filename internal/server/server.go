@@ -79,6 +79,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 var errForbidden = errors.New("forbidden")
 
+// textMIME overrides Go's mime.TypeByExtension for extensions that are
+// misidentified as non-text (e.g., .ts → video/mp2t).
+var textMIME = map[string]string{
+	".ts":  "text/plain; charset=utf-8",
+	".tsx": "text/plain; charset=utf-8",
+	".mts": "text/plain; charset=utf-8",
+	".cts": "text/plain; charset=utf-8",
+}
+
 // resolvePath cleans, resolves symlinks, and validates a request path
 // against the root. Returns the real filesystem path and FileInfo, or an error:
 //   - fs.ErrNotExist if the path doesn't exist
@@ -227,9 +236,17 @@ func (s *Server) handleRaw(w http.ResponseWriter, r *http.Request) {
 	// fresh content instead of heuristic-cached stale data.
 	w.Header().Set("Cache-Control", "no-cache")
 
+	name := filepath.Base(full)
+
+	// Go's mime package maps .ts to video/mp2t (MPEG-2 Transport Stream).
+	// Override extensions that are misidentified as non-text.
+	if ct, ok := textMIME[strings.ToLower(filepath.Ext(name))]; ok {
+		w.Header().Set("Content-Type", ct)
+	}
+
 	// ServeContent handles Content-Length, Last-Modified, ETag,
 	// If-Modified-Since, Range requests, and MIME sniffing.
-	http.ServeContent(w, r, filepath.Base(full), info.ModTime(), f)
+	http.ServeContent(w, r, name, info.ModTime(), f)
 }
 
 func (s *Server) mountSPA(appFS fs.FS) {
