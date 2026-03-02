@@ -1,46 +1,41 @@
 export interface DirEntry {
-  name: string;
-  isDir: boolean;
-  size: number;
-  modTime: string;
+	name: string
+	isDir: boolean
+	size: number
+	modTime: string
 }
 
 export type BrowseResponse =
-  | { type: "dir"; entries: DirEntry[] }
-  | { type: "file"; path: string }
-  | { type: "index"; path: string };
+	| { type: "dir"; entries: DirEntry[] }
+	| { type: "file"; path: string }
+	| { type: "index"; path: string }
 
-export async function browse(
-  path: string,
-  signal?: AbortSignal,
-): Promise<BrowseResponse> {
-  const apiPath = "/api/browse" + (path === "/" ? "/" : path);
-  const res = await fetch(apiPath, { signal });
-  if (!res.ok) throw new Error(`browse ${path}: ${res.status}`);
-  return res.json();
+export async function browse(path: string, signal?: AbortSignal): Promise<BrowseResponse> {
+	const apiPath = `/api/browse${path === "/" ? "/" : path}`
+	const res = await fetch(apiPath, signal ? { signal } : {})
+	if (!res.ok) throw new Error(`browse ${path}: ${res.status}`)
+	return res.json()
 }
 
 export type RawResult =
-  | { kind: "text"; content: string }
-  | { kind: "binary"; url: string; contentType: string; size: number };
+	| { kind: "text"; content: string }
+	| { kind: "binary"; url: string; contentType: string; size: number }
 
-const textTypes = /^(text\/|application\/(json|xml|javascript|typescript|x-sh|x-httpd-php|toml|yaml|x-yaml))/;
+const textTypes =
+	/^(text\/|application\/(json|xml|javascript|typescript|x-sh|x-httpd-php|toml|yaml|x-yaml))/
 
-export async function fetchRaw(
-  path: string,
-  signal?: AbortSignal,
-): Promise<RawResult> {
-  const apiPath = "/api/raw" + path;
-  const res = await fetch(apiPath, { signal });
-  if (!res.ok) throw new Error(`raw ${path}: ${res.status}`);
+export async function fetchRaw(path: string, signal?: AbortSignal): Promise<RawResult> {
+	const apiPath = `/api/raw${path}`
+	const res = await fetch(apiPath, signal ? { signal } : {})
+	if (!res.ok) throw new Error(`raw ${path}: ${res.status}`)
 
-  const ct = res.headers.get("Content-Type") ?? "application/octet-stream";
-  const mime = ct.split(";")[0].trim();
-  if (textTypes.test(mime)) {
-    return { kind: "text", content: await res.text() };
-  }
-  // Binary — discard body and return metadata for download.
-  res.body?.cancel();
-  const size = Number(res.headers.get("Content-Length")) || 0;
-  return { kind: "binary", url: apiPath, contentType: mime, size };
+	const ct = res.headers.get("Content-Type") ?? "application/octet-stream"
+	const mime = ct.split(";")[0]?.trim() ?? ct
+	if (textTypes.test(mime)) {
+		return { kind: "text", content: await res.text() }
+	}
+	// Binary — discard body and return metadata for download.
+	res.body?.cancel()
+	const size = Number(res.headers.get("Content-Length")) || 0
+	return { kind: "binary", url: apiPath, contentType: mime, size }
 }

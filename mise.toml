@@ -58,11 +58,29 @@ run = "go test -race -cover -count=1 -shuffle=on -timeout=5m ./..."
 
 # -- lint / fmt --
 
-[tasks.lint]
+[tasks."lint:be"]
 description = "Lint Go code"
-alias = "l"
 run = "golangci-lint run ./..."
 
-[tasks.fmt]
-description = "Format Go and frontend code"
+[tasks."lint:fe"]
+description = "Lint and check frontend code"
+dir = "app"
+run = ["bun biome check .", "bunx tsc --noEmit"]
+
+[tasks.lint]
+description = "Lint all code"
+alias = "l"
+depends = ["lint:be", "lint:fe"]
+
+[tasks."fmt:be"]
+description = "Format Go code"
 run = "gofmt -w -s . && golangci-lint run --fix ./..."
+
+[tasks."fmt:fe"]
+description = "Format frontend code"
+dir = "app"
+run = "bun biome check --write ."
+
+[tasks.fmt]
+description = "Format all code"
+depends = ["fmt:be", "fmt:fe"]
