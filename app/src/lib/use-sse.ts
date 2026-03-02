@@ -8,6 +8,8 @@ interface SSEEvent {
 /**
  * Subscribes to SSE events for the given watch path.
  * Calls onEvent whenever a file system change is detected.
+ * Debounces rapid events (e.g., editor write+chmod+rename)
+ * into a single callback invocation.
  */
 export function useSSE(watchPath: string, onEvent: (ev: SSEEvent) => void) {
   const onEventRef = useRef(onEvent)
@@ -18,16 +20,24 @@ export function useSSE(watchPath: string, onEvent: (ev: SSEEvent) => void) {
   useEffect(() => {
     const url = `/api/events?watch=${encodeURIComponent(watchPath)}`
     const source = new EventSource(url)
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let latestEvent: SSEEvent | undefined
 
     source.onmessage = (msg) => {
       try {
-        const ev: SSEEvent = JSON.parse(msg.data)
-        onEventRef.current(ev)
+        latestEvent = JSON.parse(msg.data)
       } catch {
-        // Ignore malformed events.
+        return
       }
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        if (latestEvent) onEventRef.current(latestEvent)
+      }, 300)
     }
 
-    return () => source.close()
+    return () => {
+      clearTimeout(timer)
+      source.close()
+    }
   }, [watchPath])
 }

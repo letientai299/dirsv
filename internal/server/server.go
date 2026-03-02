@@ -136,6 +136,7 @@ func (s *Server) handleBrowse(w http.ResponseWriter, r *http.Request) {
 			ModTime: info.ModTime(),
 		}
 		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-cache")
 		_ = json.NewEncoder(w).Encode(resp)
 		return
 	}
@@ -161,6 +162,7 @@ func (s *Server) handleBrowse(w http.ResponseWriter, r *http.Request) {
 				Path: filepath.ToSlash(rel),
 			}
 			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Cache-Control", "no-cache")
 			_ = json.NewEncoder(w).Encode(resp)
 			return
 		}
@@ -189,6 +191,7 @@ func (s *Server) serveDirEntries(
 
 	resp := BrowseResponse{Type: "dir", Entries: entries}
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-cache")
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 	}
@@ -219,6 +222,10 @@ func (s *Server) handleRaw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer func() { _ = f.Close() }()
+
+	// Force browsers to revalidate so SSE-triggered re-fetches get
+	// fresh content instead of heuristic-cached stale data.
+	w.Header().Set("Cache-Control", "no-cache")
 
 	// ServeContent handles Content-Length, Last-Modified, ETag,
 	// If-Modified-Since, Range requests, and MIME sniffing.
