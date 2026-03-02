@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "preact/hooks"
+import { parse as parseYaml } from "yaml"
 import { Toolbar } from "../components/toolbar"
 import { fetchRaw, type RawResult } from "../lib/api"
 import { useSSE } from "../lib/use-sse"
 import { CodeView } from "./code-view"
-import { JsonView } from "./json-view"
 import { MarkdownView } from "./markdown-view"
+import { StructuredView } from "./structured-view"
 
 interface Props {
   path: string
@@ -70,7 +71,25 @@ export function FileView({ path }: Props) {
   }
 
   if (/\.json$/i.test(path)) {
-    return <JsonView path={path} content={result.content} />
+    return (
+      <StructuredView
+        path={path}
+        content={result.content}
+        parse={JSON.parse}
+        lang="json"
+      />
+    )
+  }
+
+  if (/\.ya?ml$/i.test(path)) {
+    return (
+      <StructuredView
+        path={path}
+        content={result.content}
+        parse={parseYaml}
+        lang="yaml"
+      />
+    )
   }
 
   return <CodeView path={path} content={result.content} />

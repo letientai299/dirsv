@@ -8,22 +8,24 @@ import { useShiki } from "../lib/use-shiki"
 interface Props {
   path: string
   content: string
+  parse: (content: string) => JsonValue
+  lang: string
 }
 
 const LARGE_THRESHOLD = 500_000
 
-export function JsonView({ path, content }: Props) {
+export function StructuredView({ path, content, parse, lang }: Props) {
   const [parsed, setParsed] = useState<JsonValue | undefined>(undefined)
   const [parseError, setParseError] = useState(false)
   const [filter, setFilter] = useState("")
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
   const [mode, setMode] = useState<"tree" | "raw">("tree")
   const [largeWarned, setLargeWarned] = useState(false)
-  const rawHtml = useShiki(content, "json")
+  const rawHtml = useShiki(content, lang)
 
   useEffect(() => {
     try {
-      const val = JSON.parse(content) as JsonValue
+      const val = parse(content) as JsonValue
       setParsed(val)
       setParseError(false)
       // Preserve expanded paths that still exist in new data
@@ -41,7 +43,7 @@ export function JsonView({ path, content }: Props) {
       setParseError(true)
       setMode("raw")
     }
-  }, [content])
+  }, [content, parse])
 
   // Default to raw for large files
   useEffect(() => {
