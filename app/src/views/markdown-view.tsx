@@ -1,4 +1,5 @@
 import { useEffect, useState } from "preact/hooks"
+import { Toolbar } from "../components/toolbar"
 import { renderMarkdown } from "../lib/markdown"
 
 interface Props {
@@ -23,7 +24,7 @@ export function MarkdownView({ path, content }: Props) {
 
   return (
     <div>
-      <h1>{path}</h1>
+      <Toolbar path={path} />
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: sanitized by remarkRehype (no allowDangerousHtml) */}
       <div dangerouslySetInnerHTML={{ __html: html }} />
     </div>

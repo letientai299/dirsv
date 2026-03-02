@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "preact/hooks"
+import { Toolbar } from "../components/toolbar"
 import { fetchRaw, type RawResult } from "../lib/api"
 import { useSSE } from "../lib/use-sse"
 import { MarkdownView } from "./markdown-view"
@@ -51,7 +52,7 @@ export function FileView({ path }: Props) {
     const name = path.split("/").pop() ?? path
     return (
       <div>
-        <h1>{path}</h1>
+        <Toolbar path={path} />
         <p>
           Binary file ({result.contentType}, {formatSize(result.size)})
         </p>
@@ -69,7 +70,7 @@ export function FileView({ path }: Props) {
 
   return (
     <div>
-      <h1>{path}</h1>
+      <Toolbar path={path} />
       <pre>
         <code>{result.content}</code>
       </pre>
