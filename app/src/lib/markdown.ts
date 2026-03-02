@@ -7,6 +7,7 @@ import { remarkAlert } from "remark-github-blockquote-alert"
 import remarkMath from "remark-math"
 import remarkParse from "remark-parse"
 import remarkRehype from "remark-rehype"
+import { getSingletonHighlighter } from "shiki"
 import type { Processor } from "unified"
 import { unified } from "unified"
 import type { Heading } from "./rehype-extract-headings"
@@ -41,6 +42,10 @@ function getProcessor() {
       .use(rehypeShiki, {
         themes: { light: "github-light", dark: "github-dark" },
         defaultColor: false,
+        // Load grammars on demand instead of all 100+ bundled languages upfront.
+        // The shiki full-bundle fallback resolver handles lazy loading.
+        langs: [],
+        fallbackLanguage: "text",
       })
       .use(rehypeSlug)
       .use(rehypeStringify)
@@ -61,6 +66,14 @@ function extractHeadings(html: string): Heading[] {
     }
   }
   return headings
+}
+
+/** Eagerly load the Shiki WASM engine + themes so the first render is fast. */
+export function warmUpShiki(): void {
+  void getSingletonHighlighter({
+    themes: ["github-light", "github-dark"],
+    langs: [],
+  })
 }
 
 export async function renderMarkdown(source: string): Promise<MarkdownResult> {
