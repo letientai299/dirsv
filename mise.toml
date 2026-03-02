@@ -3,30 +3,51 @@ go = "latest"
 bun = "latest"
 golangci-lint = "2"
 
+[env]
+_.path = ["bin"]
+
 # -- build / run / dev --
+
+[tasks."build:fe"]
+description = "Install deps and build frontend"
+dir = "app"
+run = ["bun install --frozen-lockfile 2>/dev/null || bun install", "bun run build"]
+
+[tasks."build:be"]
+description = "Build Go server binary"
+depends = ["build:fe"]
+run = "go build -o bin/server ./cmd/server"
 
 [tasks.build]
 description = "Build frontend and server binary"
 alias = "b"
-run = "cd app && bun install && bun run build && cd .. && go build -o bin/server ./cmd/server"
+depends = ["build:be"]
 
 [tasks.run]
 description = "Build and run server"
 run = "mise build && ./bin/server"
 
+[tasks."dev:install"]
+description = "Install frontend dependencies"
+dir = "app"
+run = "bun install --frozen-lockfile 2>/dev/null || bun install"
+
+[tasks."dev:vite"]
+description = "Run Vite dev server"
+depends = ["dev:install"]
+dir = "app"
+run = "bun run dev"
+
+[tasks."dev:server"]
+description = "Run Go server in dev mode"
+depends = ["dev:install"]
+run = "go run ./cmd/server --dev --no-open"
+
 [tasks.dev]
-description = "Run Go server (-dev) and Vite dev server in parallel"
-run = """
-cd app && bun install --frozen-lockfile 2>/dev/null || bun install &
-wait
-cd app && bun run dev &
-VITE_PID=$!
-sleep 1
-go run ./cmd/server -dev &
-GO_PID=$!
-trap 'kill $VITE_PID $GO_PID 2>/dev/null' EXIT
-wait
-"""
+description = "Run Go server and Vite dev server in parallel"
+run = [
+  { tasks = ["dev:vite", "dev:server"] },
+]
 
 # -- test --
 

@@ -2,24 +2,29 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os/exec"
+	"runtime"
 	"strings"
 
+	flag "github.com/spf13/pflag"
 	dirsv "github.com/tai/dirsv"
 	"github.com/tai/dirsv/internal/server"
 	"github.com/tai/dirsv/internal/watcher"
 )
 
 func main() {
-	addr := flag.String("addr", ":8080", "listen address")
-	root := flag.String("root", ".", "root directory to serve")
+	addr := flag.StringP("addr", "a", ":8080", "listen address")
+	root := flag.StringP("root", "r", ".", "root directory to serve")
+	browser := flag.StringP("browser", "b", "", "browser to open (default: system default)")
 	dev := flag.Bool("dev", false, "proxy frontend to Vite dev server")
+	noOpen := flag.Bool("no-open", false, "don't auto-open browser")
 	flag.Parse()
 
 	w, err := watcher.New(*root)
@@ -45,13 +50,23 @@ func main() {
 		handler = devProxy(srv)
 	}
 
-	fmt.Printf("serving %s on %s\n", *root, *addr)
+	ln, err := net.Listen("tcp", *addr)
+	if err != nil {
+		_ = w.Close()
+		log.Fatal(err)
+	}
+
+	fmt.Printf("serving %s on %s\n", *root, ln.Addr())
 	if *dev {
 		fmt.Println("dev mode: proxying frontend to http://localhost:5173")
 	}
 
-	// ListenAndServe blocks until error; clean up watcher afterward.
-	err = http.ListenAndServe(*addr, handler)
+	if !*noOpen {
+		openBrowser(browserURL(ln.Addr().String()), *browser)
+	}
+
+	// Serve blocks until error; clean up watcher afterward.
+	err = http.Serve(ln, handler)
 	_ = w.Close()
 	if err != nil {
 		log.Fatal(err)
@@ -74,4 +89,37 @@ func devProxy(srv *server.Server) http.Handler {
 
 func isAPIPath(p string) bool {
 	return p == "/api" || strings.HasPrefix(p, "/api/")
+}
+
+// browserURL turns a listen address like ":8080" or "0.0.0.0:8080" into
+// an http://localhost:port URL suitable for opening in a browser.
+func browserURL(addr string) string {
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return "http://" + addr
+	}
+	if host == "" || host == "0.0.0.0" || host == "::" {
+		host = "localhost"
+	}
+	return "http://" + net.JoinHostPort(host, port)
+}
+
+func openBrowser(url, browser string) {
+	var cmd *exec.Cmd
+	if browser != "" {
+		cmd = exec.Command(browser, url)
+	} else {
+		switch runtime.GOOS {
+		case "darwin":
+			cmd = exec.Command("open", url)
+		case "linux":
+			cmd = exec.Command("xdg-open", url)
+		case "windows":
+			cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+		default:
+			return
+		}
+	}
+	// Best-effort — don't fail the server if the browser doesn't open.
+	_ = cmd.Start()
 }
