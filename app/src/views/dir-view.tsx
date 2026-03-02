@@ -1,5 +1,5 @@
-import { useCallback } from "preact/hooks";
-import type { DirEntry } from "../lib/api";
+import { useCallback, useState } from "preact/hooks";
+import { browse, type DirEntry } from "../lib/api";
 import { useSSE } from "../lib/use-sse";
 
 interface Props {
@@ -14,15 +14,23 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+const dateFmt = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "short",
+  timeStyle: "short",
+});
+
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString();
+  return dateFmt.format(new Date(iso));
 }
 
-export function DirView({ path, entries, onNavigate }: Props) {
+export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
+  const [entries, setEntries] = useState(initialEntries);
+
   const refresh = useCallback(() => {
-    // Force re-render by navigating to the same path.
-    onNavigate(path);
-  }, [path, onNavigate]);
+    browse(path).then((res) => {
+      if (res.type === "dir") setEntries(res.entries);
+    });
+  }, [path]);
 
   useSSE(path === "/" ? "" : path.replace(/^\//, ""), refresh);
 

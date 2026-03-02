@@ -1,4 +1,4 @@
-import { useEffect, useState } from "preact/hooks";
+import { useCallback, useEffect, useState } from "preact/hooks";
 import { DirView } from "./views/dir-view";
 import { FileView } from "./views/file-view";
 import { browse, type BrowseResponse } from "./lib/api";
@@ -26,10 +26,10 @@ export function App() {
     return () => controller.abort();
   }, [path]);
 
-  const navigate = (to: string) => {
+  const navigate = useCallback((to: string) => {
     history.pushState(null, "", to);
     setPath(to);
-  };
+  }, []);
 
   if (error) return <div class="error">Error: {error}</div>;
   if (!data) return <div class="loading">Loading...</div>;
