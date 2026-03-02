@@ -1,0 +1,36 @@
+[tools]
+go = "latest"
+golangci-lint = "2"
+
+# -- build / run / dev --
+
+[tasks.build]
+description = "Build server binary into ./bin"
+alias = "b"
+run = "go build -o bin/server ./cmd/server"
+
+[tasks.run]
+description = "Build and run server"
+run = "go build -o bin/server ./cmd/server && ./bin/server"
+
+[tasks.dev]
+description = "Run dev server with auto rebuild/restart"
+run = "watchexec --restart --stop-signal SIGINT --exts go mise run run"
+
+# -- test --
+
+[tasks.test]
+description = "Run Go tests"
+alias = "t"
+run = "go test -race -cover -count=1 -shuffle=on -timeout=5m ./..."
+
+# -- lint / fmt --
+
+[tasks.lint]
+description = "Lint Go code"
+alias = "l"
+run = "golangci-lint run ./..."
+
+[tasks.fmt]
+description = "Format Go code"
+run = "gofmt -w -s . && golangci-lint run --fix ./..."
