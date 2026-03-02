@@ -7,8 +7,9 @@ import { remarkAlert } from "remark-github-blockquote-alert"
 import remarkMath from "remark-math"
 import remarkParse from "remark-parse"
 import remarkRehype from "remark-rehype"
+import type { Processor } from "unified"
 import { unified } from "unified"
-import { type Heading, rehypeExtractHeadings } from "./rehype-extract-headings"
+import type { Heading } from "./rehype-extract-headings"
 import { rehypeMermaid } from "./rehype-mermaid"
 
 export type { Heading }
@@ -18,28 +19,52 @@ export interface MarkdownResult {
   headings: Heading[]
 }
 
-export async function renderMarkdown(source: string): Promise<MarkdownResult> {
+// Cached processor — all plugins are stateless so the instance is reusable.
+// Shiki lazy-loads themes/grammars on first .process(); subsequent calls reuse
+// the cache internally.
+// biome-ignore lint/suspicious/noExplicitAny: unified's generic types are deeply nested; the processor is used only via .process(string)
+let cached: Processor<any, any, any, any, any> | undefined
+
+function getProcessor() {
+  if (!cached) {
+    cached = unified()
+      .use(remarkParse)
+      .use(remarkGfm)
+      .use(remarkMath)
+      .use(remarkAlert)
+      // SECURITY: remarkRehype without allowDangerousHtml strips raw HTML from
+      // markdown source, preventing XSS. Do not add allowDangerousHtml without
+      // also adding rehype-sanitize.
+      .use(remarkRehype)
+      .use(rehypeKatex)
+      .use(rehypeMermaid)
+      .use(rehypeShiki, {
+        themes: { light: "github-light", dark: "github-dark" },
+        defaultColor: false,
+      })
+      .use(rehypeSlug)
+      .use(rehypeStringify)
+  }
+  return cached
+}
+
+/** Extract headings from rendered HTML via DOMParser (fast, no HAST needed). */
+function extractHeadings(html: string): Heading[] {
+  const doc = new DOMParser().parseFromString(html, "text/html")
   const headings: Heading[] = []
+  for (const el of doc.querySelectorAll("h1, h2, h3, h4, h5, h6")) {
+    const id = el.id
+    const text = el.textContent?.trim() ?? ""
+    if (id && text) {
+      const depth = Number.parseInt(el.tagName.charAt(1), 10)
+      headings.push({ depth, text, id })
+    }
+  }
+  return headings
+}
 
-  const processor = unified()
-    .use(remarkParse)
-    .use(remarkGfm)
-    .use(remarkMath)
-    .use(remarkAlert)
-    // SECURITY: remarkRehype without allowDangerousHtml strips raw HTML from
-    // markdown source, preventing XSS. Do not add allowDangerousHtml without
-    // also adding rehype-sanitize.
-    .use(remarkRehype)
-    .use(rehypeKatex)
-    .use(rehypeMermaid)
-    .use(rehypeShiki, {
-      themes: { light: "github-light", dark: "github-dark" },
-      defaultColor: false,
-    })
-    .use(rehypeSlug)
-    .use(rehypeExtractHeadings(headings))
-    .use(rehypeStringify)
-
-  const result = await processor.process(source)
-  return { html: String(result), headings }
+export async function renderMarkdown(source: string): Promise<MarkdownResult> {
+  const result = await getProcessor().process(source)
+  const html = String(result)
+  return { html, headings: extractHeadings(html) }
 }

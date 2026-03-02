@@ -12,6 +12,7 @@
     "github-markdown-css": "^5.9.0",
     "katex": "^0.16.33",
     "mermaid": "^11.12.3",
+    "morphdom": "^2.7.8",
     "preact": "^10.25.0",
     "rehype-katex": "^7.0.1",
     "rehype-slug": "^6.0.0",
