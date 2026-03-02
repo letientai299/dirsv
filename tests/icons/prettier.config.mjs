@@ -1,0 +1,1 @@
+export default { trailingComma: "all" }

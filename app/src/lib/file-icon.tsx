@@ -2,14 +2,24 @@
 
 const DEVICON_CDN = "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons"
 
+const SI = "https://cdn.simpleicons.org"
+
 // Extensions with direct SVG URLs (not available in Devicon)
 const EXT_URL_MAP: Record<string, string> = {
-  toml: "https://cdn.simpleicons.org/toml/9C4121",
-  editorconfig: "https://cdn.simpleicons.org/editorconfig/000000",
+  toml: `${SI}/toml/9C4121`,
+  editorconfig: `${SI}/editorconfig/000000`,
+  sql: `${SI}/postgresql/4169E1`,
+  graphql: `${SI}/graphql/E10098`,
+  gql: `${SI}/graphql/E10098`,
+  v: `${SI}/v/5D87BF`,
+  proto: `${SI}/protobuf/4285F4`,
+  mdx: `${SI}/mdx/F9AC00`,
+  env: `${SI}/dotenv/ECD53F`,
 }
 
 // Extension → [deviconName, variant]
 const EXT_MAP: Record<string, [string, string]> = {
+  // Languages
   go: ["go", "original"],
   mod: ["go", "original"],
   sum: ["go", "original"],
@@ -17,11 +27,16 @@ const EXT_MAP: Record<string, [string, string]> = {
   tsx: ["typescript", "original"],
   js: ["javascript", "original"],
   jsx: ["javascript", "original"],
+  mjs: ["javascript", "original"],
+  cjs: ["javascript", "original"],
+  mts: ["typescript", "original"],
+  cts: ["typescript", "original"],
   py: ["python", "original"],
   rb: ["ruby", "original"],
   rs: ["rust", "original"],
   java: ["java", "original"],
   kt: ["kotlin", "original"],
+  kts: ["kotlin", "original"],
   swift: ["swift", "original"],
   php: ["php", "original"],
   c: ["c", "original"],
@@ -36,6 +51,22 @@ const EXT_MAP: Record<string, [string, string]> = {
   hs: ["haskell", "original"],
   scala: ["scala", "original"],
   r: ["r", "original"],
+  pl: ["perl", "original"],
+  pm: ["perl", "original"],
+  jl: ["julia", "original"],
+  clj: ["clojure", "original"],
+  cljs: ["clojure", "original"],
+  erl: ["erlang", "original"],
+  hrl: ["erlang", "original"],
+  ml: ["ocaml", "original"],
+  mli: ["ocaml", "original"],
+  fs: ["fsharp", "original"],
+  fsx: ["fsharp", "original"],
+  m: ["objectivec", "plain"],
+  groovy: ["groovy", "original"],
+  nim: ["nim", "original"],
+  cr: ["crystal", "original"],
+  // Markup & data
   yml: ["yaml", "original"],
   yaml: ["yaml", "original"],
   json: ["json", "original"],
@@ -45,26 +76,66 @@ const EXT_MAP: Record<string, [string, string]> = {
   css: ["css3", "original"],
   scss: ["sass", "original"],
   sass: ["sass", "original"],
+  less: ["less", "plain-wordmark"],
+  tex: ["latex", "original"],
+  // Web frameworks
+  vue: ["vuejs", "original"],
+  svelte: ["svelte", "original"],
+  astro: ["astro", "original"],
+  // Shell & infra
   sh: ["bash", "original"],
   bash: ["bash", "original"],
   zsh: ["bash", "original"],
   ps1: ["powershell", "original"],
+  gradle: ["gradle", "original"],
+  // Git
   gitignore: ["git", "original"],
   gitattributes: ["git", "original"],
   gitmodules: ["git", "original"],
+  // Containers & infra
   dockerfile: ["docker", "original"],
   tf: ["terraform", "original"],
   nix: ["nixos", "original"],
-  vue: ["vuejs", "original"],
-  svelte: ["svelte", "original"],
 }
 
 // Special full-filename matches (case-insensitive)
-const NAME_MAP: Record<string, [string, string]> = {
+const NAME_MAP: Record<string, [string, string] | string> = {
   dockerfile: ["docker", "original"],
   "docker-compose.yml": ["docker", "original"],
   "docker-compose.yaml": ["docker", "original"],
   makefile: ["cmake", "original"],
+  "cmakelists.txt": ["cmake", "original"],
+  gemfile: `${SI}/rubygems/E9573F`,
+  "gemfile.lock": `${SI}/rubygems/E9573F`,
+  "pom.xml": `${SI}/apachemaven/C71A36`,
+  ".npmrc": `${SI}/npm/CB3837`,
+  ".nvmrc": `${SI}/nodedotjs/5FA04E`,
+  ".node-version": `${SI}/nodedotjs/5FA04E`,
+  "package.json": `${SI}/npm/CB3837`,
+  "package-lock.json": `${SI}/npm/CB3837`,
+  "yarn.lock": `${SI}/yarn/2C8EBB`,
+  ".yarnrc.yml": `${SI}/yarn/2C8EBB`,
+  "pnpm-lock.yaml": `${SI}/pnpm/F69220`,
+  ".prettierrc": `${SI}/prettier/F7B93E`,
+  "prettier.config.js": `${SI}/prettier/F7B93E`,
+  "prettier.config.ts": `${SI}/prettier/F7B93E`,
+  "prettier.config.mjs": `${SI}/prettier/F7B93E`,
+  ".babelrc": `${SI}/babel/F9DC3E`,
+  "babel.config.js": `${SI}/babel/F9DC3E`,
+  "nginx.conf": `${SI}/nginx/009639`,
+  "requirements.txt": ["python", "original"],
+  "pyproject.toml": ["python", "original"],
+  pipfile: ["python", "original"],
+  "pipfile.lock": ["python", "original"],
+  "cargo.toml": ["rust", "original"],
+  "cargo.lock": ["rust", "original"],
+  "go.mod": ["go", "original"],
+  "go.sum": ["go", "original"],
+  "tsconfig.json": ["typescript", "original"],
+  "biome.json": `${SI}/biome/60A5FA`,
+  "biome.jsonc": `${SI}/biome/60A5FA`,
+  "bun.lock": `${SI}/bun/000000`,
+  "bun.lockb": `${SI}/bun/000000`,
 }
 
 function deviconUrl(name: string, variant: string): string {
@@ -76,10 +147,23 @@ function resolveExt(fileName: string): string | null {
   return lower.includes(".") ? (lower.split(".").pop() ?? null) : null
 }
 
+// Prefix → icon URL for config files with variable extensions (e.g. eslint.config.*)
+const PREFIX_MAP: Record<string, string> = {
+  "eslint.config.": `${SI}/eslint/4B32C3`,
+  ".eslintrc": `${SI}/eslint/4B32C3`,
+  "prettier.config.": `${SI}/prettier/F7B93E`,
+  ".prettierrc": `${SI}/prettier/F7B93E`,
+  "babel.config.": `${SI}/babel/F9DC3E`,
+}
+
 function resolve(fileName: string): [string, string] | string | null {
   const lower = fileName.toLowerCase()
-  const match = NAME_MAP[lower]
-  if (match) return match
+  const nameMatch = NAME_MAP[lower]
+  if (nameMatch) return nameMatch
+
+  for (const prefix in PREFIX_MAP) {
+    if (lower.startsWith(prefix)) return PREFIX_MAP[prefix]
+  }
 
   const ext = resolveExt(lower)
   if (ext) {
