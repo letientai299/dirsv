@@ -20,12 +20,27 @@ export async function browse(
   return res.json();
 }
 
+export type RawResult =
+  | { kind: "text"; content: string }
+  | { kind: "binary"; url: string; contentType: string; size: number };
+
+const textTypes = /^(text\/|application\/(json|xml|javascript|typescript|x-sh|x-httpd-php|toml|yaml|x-yaml))/;
+
 export async function fetchRaw(
   path: string,
   signal?: AbortSignal,
-): Promise<string> {
+): Promise<RawResult> {
   const apiPath = "/api/raw" + path;
   const res = await fetch(apiPath, { signal });
   if (!res.ok) throw new Error(`raw ${path}: ${res.status}`);
-  return res.text();
+
+  const ct = res.headers.get("Content-Type") ?? "application/octet-stream";
+  const mime = ct.split(";")[0].trim();
+  if (textTypes.test(mime)) {
+    return { kind: "text", content: await res.text() };
+  }
+  // Binary — discard body and return metadata for download.
+  res.body?.cancel();
+  const size = Number(res.headers.get("Content-Length")) || 0;
+  return { kind: "binary", url: apiPath, contentType: mime, size };
 }
