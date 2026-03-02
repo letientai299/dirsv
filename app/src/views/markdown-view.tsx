@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks"
 import { TableOfContents } from "../components/toc"
 import { Toolbar } from "../components/toolbar"
+import { injectCopyButtons } from "../lib/code-copy"
 import type { MarkdownResult } from "../lib/markdown"
 import { renderMarkdown } from "../lib/markdown"
 import { renderMermaidBlocks } from "../lib/mermaid-render"
@@ -25,11 +26,12 @@ export function MarkdownView({ path, content }: Props) {
       .catch((err: Error) => setError(err.message))
   }, [content])
 
-  // Render mermaid blocks after HTML is injected into the DOM
+  // Post-render: mermaid diagrams + copy buttons
   useEffect(() => {
     const el = contentRef.current
     if (!el || !result) return
     void renderMermaidBlocks(el)
+    injectCopyButtons(el)
   }, [result])
 
   if (error) return <div class="error">Render error: {error}</div>
