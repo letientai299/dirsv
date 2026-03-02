@@ -35,6 +35,55 @@ function MoonIcon() {
   )
 }
 
+function navigate(to: string) {
+  history.pushState(null, "", to)
+  window.dispatchEvent(new PopStateEvent("popstate"))
+}
+
+function Breadcrumbs({ path }: { path: string }) {
+  if (path === "/") return <span>/</span>
+
+  const segments = path.replace(/^\//, "").split("/")
+
+  return (
+    <>
+      <a
+        class="breadcrumb-link"
+        href="/"
+        onClick={(e) => {
+          e.preventDefault()
+          navigate("/")
+        }}
+      >
+        /
+      </a>
+      {segments.map((seg, i) => {
+        const href = "/" + segments.slice(0, i + 1).join("/")
+        const isLast = i === segments.length - 1
+        return (
+          <>
+            {i > 0 && <span class="breadcrumb-sep">/</span>}
+            {isLast ? (
+              <span>{seg}</span>
+            ) : (
+              <a
+                class="breadcrumb-link"
+                href={href}
+                onClick={(e) => {
+                  e.preventDefault()
+                  navigate(href)
+                }}
+              >
+                {seg}
+              </a>
+            )}
+          </>
+        )
+      })}
+    </>
+  )
+}
+
 export function Toolbar({ path }: Props) {
   const [isDark, setIsDark] = useState(() => getEffectiveTheme() === "dark")
 
@@ -45,7 +94,9 @@ export function Toolbar({ path }: Props) {
 
   return (
     <div class="toolbar">
-      <div class="toolbar-path">{path}</div>
+      <div class="toolbar-path">
+        <Breadcrumbs path={path} />
+      </div>
       <button
         type="button"
         class="theme-toggle"

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "preact/hooks"
 import { Toolbar } from "../components/toolbar"
 import { fetchRaw, type RawResult } from "../lib/api"
 import { useSSE } from "../lib/use-sse"
+import { CodeView } from "./code-view"
+import { JsonView } from "./json-view"
 import { MarkdownView } from "./markdown-view"
 
 interface Props {
@@ -63,17 +65,13 @@ export function FileView({ path }: Props) {
     )
   }
 
-  const isMarkdown = /\.md$/i.test(path)
-  if (isMarkdown) {
+  if (/\.mdx?$/i.test(path)) {
     return <MarkdownView path={path} content={result.content} />
   }
 
-  return (
-    <div>
-      <Toolbar path={path} />
-      <pre>
-        <code>{result.content}</code>
-      </pre>
-    </div>
-  )
+  if (/\.json$/i.test(path)) {
+    return <JsonView path={path} content={result.content} />
+  }
+
+  return <CodeView path={path} content={result.content} />
 }
