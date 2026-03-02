@@ -1,5 +1,6 @@
 import { useCallback, useState } from "preact/hooks"
 import { browse, type DirEntry } from "../lib/api"
+import { FileIcon, ParentIcon } from "../lib/file-icon"
 import { useSSE } from "../lib/use-sse"
 
 interface Props {
@@ -39,12 +40,12 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
 
   return (
     <div>
-      <h1>{path}</h1>
-      <table>
+      <div class="dir-path">{path}</div>
+      <table class="dir-table">
         <thead>
           <tr>
             <th>Name</th>
-            <th>Size</th>
+            <th class="col-size">Size</th>
             <th>Modified</th>
           </tr>
         </thead>
@@ -59,11 +60,14 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
                     onNavigate(parentPath)
                   }}
                 >
+                  <span class="entry-icon">
+                    <ParentIcon />
+                  </span>
                   ..
                 </a>
               </td>
-              <td />
-              <td />
+              <td class="col-size" />
+              <td class="col-date" />
             </tr>
           )}
           {entries.map((entry) => {
@@ -78,12 +82,19 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
                       onNavigate(href)
                     }}
                   >
+                    <span
+                      class={`entry-icon${entry.isDir ? " entry-icon--folder" : ""}`}
+                    >
+                      <FileIcon name={entry.name} isDir={entry.isDir} />
+                    </span>
                     {entry.name}
                     {entry.isDir ? "/" : ""}
                   </a>
                 </td>
-                <td>{entry.isDir ? "-" : formatSize(entry.size)}</td>
-                <td>{formatDate(entry.modTime)}</td>
+                <td class="col-size">
+                  {entry.isDir ? "\u2013" : formatSize(entry.size)}
+                </td>
+                <td class="col-date">{formatDate(entry.modTime)}</td>
               </tr>
             )
           })}
