@@ -10,16 +10,22 @@ export type BrowseResponse =
   | { type: "file"; path: string }
   | { type: "index"; path: string };
 
-export async function browse(path: string): Promise<BrowseResponse> {
+export async function browse(
+  path: string,
+  signal?: AbortSignal,
+): Promise<BrowseResponse> {
   const apiPath = "/api/browse" + (path === "/" ? "/" : path);
-  const res = await fetch(apiPath);
+  const res = await fetch(apiPath, { signal });
   if (!res.ok) throw new Error(`browse ${path}: ${res.status}`);
   return res.json();
 }
 
-export async function fetchRaw(path: string): Promise<string> {
+export async function fetchRaw(
+  path: string,
+  signal?: AbortSignal,
+): Promise<string> {
   const apiPath = "/api/raw" + path;
-  const res = await fetch(apiPath);
+  const res = await fetch(apiPath, { signal });
   if (!res.ok) throw new Error(`raw ${path}: ${res.status}`);
   return res.text();
 }

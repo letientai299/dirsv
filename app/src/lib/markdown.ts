@@ -11,6 +11,9 @@ async function createProcessor() {
   return unified()
     .use(remarkParse)
     .use(remarkGfm)
+    // SECURITY: remarkRehype without allowDangerousHtml strips raw HTML from
+    // markdown source, preventing XSS. Do not add allowDangerousHtml without
+    // also adding rehype-sanitize.
     .use(remarkRehype)
     .use(rehypeShiki, {
       theme: "github-dark",

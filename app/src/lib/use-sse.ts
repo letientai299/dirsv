@@ -1,4 +1,4 @@
-import { useEffect } from "preact/hooks";
+import { useEffect, useRef } from "preact/hooks";
 
 interface SSEEvent {
   type: "change" | "create" | "delete" | "rename";
@@ -10,6 +10,11 @@ interface SSEEvent {
  * Calls onEvent whenever a file system change is detected.
  */
 export function useSSE(watchPath: string, onEvent: (ev: SSEEvent) => void) {
+  const onEventRef = useRef(onEvent);
+  useEffect(() => {
+    onEventRef.current = onEvent;
+  });
+
   useEffect(() => {
     const url = `/api/events?watch=${encodeURIComponent(watchPath)}`;
     const source = new EventSource(url);
@@ -17,7 +22,7 @@ export function useSSE(watchPath: string, onEvent: (ev: SSEEvent) => void) {
     source.onmessage = (msg) => {
       try {
         const ev: SSEEvent = JSON.parse(msg.data);
-        onEvent(ev);
+        onEventRef.current(ev);
       } catch {
         // Ignore malformed events.
       }

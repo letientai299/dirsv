@@ -8,12 +8,17 @@ interface Props {
 
 export function MarkdownView({ path, content }: Props) {
   const [html, setHtml] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setHtml(null);
-    renderMarkdown(content).then(setHtml);
+    setError(null);
+    renderMarkdown(content)
+      .then(setHtml)
+      .catch((err: Error) => setError(err.message));
   }, [content]);
 
+  if (error) return <div class="error">Render error: {error}</div>;
   if (html === null) return <div class="loading">Rendering...</div>;
 
   return (

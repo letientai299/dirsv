@@ -15,11 +15,15 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    const controller = new AbortController();
     setData(null);
     setError(null);
-    browse(path)
+    browse(path, controller.signal)
       .then(setData)
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => {
+        if (err.name !== "AbortError") setError(err.message);
+      });
+    return () => controller.abort();
   }, [path]);
 
   const navigate = (to: string) => {
@@ -34,5 +38,7 @@ export function App() {
     return <DirView path={path} entries={data.entries} onNavigate={navigate} />;
   }
 
-  return <FileView path={path} />;
+  // "index" response carries the resolved file path (e.g., "docs/index.html").
+  const filePath = data.type === "index" ? "/" + data.path : path;
+  return <FileView path={filePath} />;
 }

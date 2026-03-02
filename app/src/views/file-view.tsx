@@ -11,20 +11,27 @@ export function FileView({ path }: Props) {
   const [content, setContent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(() => {
-    setError(null);
-    fetchRaw(path)
-      .then(setContent)
-      .catch((err: Error) => setError(err.message));
-  }, [path]);
+  const load = useCallback(
+    (signal?: AbortSignal) => {
+      setError(null);
+      fetchRaw(path, signal)
+        .then(setContent)
+        .catch((err: Error) => {
+          if (err.name !== "AbortError") setError(err.message);
+        });
+    },
+    [path],
+  );
 
   useEffect(() => {
+    const controller = new AbortController();
     setContent(null);
-    load();
+    load(controller.signal);
+    return () => controller.abort();
   }, [load]);
 
-  // Re-fetch on file changes.
-  useSSE(path.replace(/^\//, ""), load);
+  // Re-fetch on file changes (SSE-triggered, no abort needed).
+  useSSE(path.replace(/^\//, ""), () => load());
 
   const isMarkdown = /\.md$/i.test(path);
 
