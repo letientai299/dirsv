@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -29,6 +30,7 @@ type Event struct {
 type Watcher struct {
 	root    string
 	fsw     *fsnotify.Watcher
+	done    chan struct{}
 	mu      sync.RWMutex
 	clients map[chan Event]string // channel → watched path prefix
 }
@@ -48,6 +50,7 @@ func New(root string) (*Watcher, error) {
 	w := &Watcher{
 		root:    abs,
 		fsw:     fsw,
+		done:    make(chan struct{}),
 		clients: make(map[chan Event]string),
 	}
 
@@ -60,8 +63,9 @@ func New(root string) (*Watcher, error) {
 	return w, nil
 }
 
-// Close stops the watcher and releases resources.
+// Close stops the watcher, unblocks SSE subscribers, and releases resources.
 func (w *Watcher) Close() error {
+	close(w.done)
 	return w.fsw.Close()
 }
 
@@ -165,6 +169,17 @@ func (w *Watcher) unsubscribe(ch chan Event) {
 	close(ch)
 }
 
+// cleanWatchPath normalizes the watch query parameter to match the format
+// of event paths (relative, slash-separated, no leading slash or dots).
+func cleanWatchPath(raw string) string {
+	cleaned := path.Clean("/" + raw)
+	cleaned = strings.TrimPrefix(cleaned, "/")
+	if cleaned == "." {
+		return ""
+	}
+	return cleaned
+}
+
 // ServeHTTP handles SSE connections at /api/events?watch=<path>.
 func (w *Watcher) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	flusher, ok := rw.(http.Flusher)
@@ -173,19 +188,22 @@ func (w *Watcher) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	watchPath := r.URL.Query().Get("watch")
+	watchPath := cleanWatchPath(r.URL.Query().Get("watch"))
 	ch := w.subscribe(watchPath)
 	defer w.unsubscribe(ch)
 
 	rw.Header().Set("Content-Type", "text/event-stream")
 	rw.Header().Set("Cache-Control", "no-cache")
 	rw.Header().Set("Connection", "keep-alive")
+	rw.Header().Set("X-Accel-Buffering", "no")
 	flusher.Flush()
 
 	ctx := r.Context()
 	for {
 		select {
 		case <-ctx.Done():
+			return
+		case <-w.done:
 			return
 		case ev := <-ch:
 			data, err := json.Marshal(ev)

@@ -94,6 +94,12 @@ func TestBrowseFile(t *testing.T) {
 	if resp.Type != "file" {
 		t.Fatalf("want type=file, got %s", resp.Type)
 	}
+	if resp.Size != int64(len("hello world")) {
+		t.Errorf("want size=%d, got %d", len("hello world"), resp.Size)
+	}
+	if resp.ModTime.IsZero() {
+		t.Error("expected non-zero modTime")
+	}
 }
 
 func TestRawFile(t *testing.T) {
@@ -165,18 +171,28 @@ func TestNotFound(t *testing.T) {
 
 func TestPathTraversal(t *testing.T) {
 	srv := newTestServer(t)
-	for _, path := range []string{
+	for _, p := range []string{
 		"/api/browse/../../../etc/passwd",
 		"/api/raw/../../../etc/passwd",
 	} {
 		rec := httptest.NewRecorder()
-		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
-		// Should either resolve within root or be forbidden — never serve /etc/passwd.
+		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, p, nil))
+		// ServeMux may clean /../ and redirect (307) before our handler runs.
+		// Any of 307, 403, 404 are safe — only 200 is a problem.
 		if rec.Code == http.StatusOK {
-			body := rec.Body.String()
-			if len(body) > 0 && body[0] == 'r' {
-				t.Errorf("%s: path traversal may have leaked a file", path)
-			}
+			t.Errorf("%s: traversal returned 200 (body: %s)", p, rec.Body.String())
+		}
+	}
+
+	// Test traversal via encoded path components that reach the handler.
+	for _, p := range []string{
+		"/api/browse/..%2F..%2F..%2Fetc%2Fpasswd",
+		"/api/raw/..%2F..%2F..%2Fetc%2Fpasswd",
+	} {
+		rec := httptest.NewRecorder()
+		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, p, nil))
+		if rec.Code == http.StatusOK {
+			t.Errorf("%s: traversal returned 200 (body: %s)", p, rec.Body.String())
 		}
 	}
 }

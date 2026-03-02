@@ -23,9 +23,11 @@ type Entry struct {
 
 // BrowseResponse is the JSON envelope for /api/browse/.
 type BrowseResponse struct {
-	Type    string  `json:"type"`
-	Entries []Entry `json:"entries,omitempty"`
-	Path    string  `json:"path,omitempty"`
+	Type    string    `json:"type"`
+	Entries []Entry   `json:"entries,omitempty"`
+	Path    string    `json:"path,omitempty"`
+	Size    int64     `json:"size,omitempty"`
+	ModTime time.Time `json:"modTime,omitempty"`
 }
 
 // Server serves directory listings, raw files, and the SPA frontend.
@@ -78,10 +80,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 var errForbidden = errors.New("forbidden")
 
 // resolvePath cleans, resolves symlinks, and validates a request path
-// against the root. Returns the real filesystem path, or an error:
-// - fs.ErrNotExist if the path doesn't exist
-// - errForbidden if the path escapes the root
-func (s *Server) resolvePath(reqPath string) (string, error) {
+// against the root. Returns the real filesystem path and FileInfo, or an error:
+//   - fs.ErrNotExist if the path doesn't exist
+//   - errForbidden if the path escapes the root
+func (s *Server) resolvePath(reqPath string) (string, os.FileInfo, error) {
 	cleaned := filepath.FromSlash(path.Clean("/" + reqPath))
 	full := filepath.Join(s.root, cleaned)
 
@@ -89,22 +91,28 @@ func (s *Server) resolvePath(reqPath string) (string, error) {
 	resolved, err := filepath.EvalSymlinks(full)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return "", fs.ErrNotExist
+			return "", nil, fs.ErrNotExist
 		}
-		return "", errForbidden
+		return "", nil, errForbidden
 	}
 
 	// Boundary-safe containment: root itself is allowed, otherwise require
 	// the separator after root to prevent /tmp/foo matching /tmp/foobar.
 	if resolved != s.root && !strings.HasPrefix(resolved, s.root+string(filepath.Separator)) {
-		return "", errForbidden
+		return "", nil, errForbidden
 	}
-	return resolved, nil
+
+	info, err := os.Stat(resolved)
+	if err != nil {
+		return "", nil, err
+	}
+
+	return resolved, info, nil
 }
 
 func (s *Server) handleBrowse(w http.ResponseWriter, r *http.Request) {
 	reqPath := r.PathValue("path")
-	full, err := s.resolvePath(reqPath)
+	full, info, err := s.resolvePath(reqPath)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			http.Error(w, "not found", http.StatusNotFound)
@@ -114,21 +122,20 @@ func (s *Server) handleBrowse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	info, err := os.Stat(full)
-	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
-
 	if !info.IsDir() {
-		resp := BrowseResponse{Type: "file", Path: reqPath}
+		resp := BrowseResponse{
+			Type:    "file",
+			Path:    reqPath,
+			Size:    info.Size(),
+			ModTime: info.ModTime(),
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resp)
 		return
 	}
 
 	// Read directory entries once — used for both the index.html check
-	// and the listing response, avoiding double stat (#3).
+	// and the listing response, avoiding double stat.
 	dirEntries, err := os.ReadDir(full)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -179,7 +186,7 @@ func (s *Server) serveDirEntries(w http.ResponseWriter, dirEntries []os.DirEntry
 
 func (s *Server) handleRaw(w http.ResponseWriter, r *http.Request) {
 	reqPath := r.PathValue("path")
-	full, err := s.resolvePath(reqPath)
+	full, info, err := s.resolvePath(reqPath)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			http.Error(w, "not found", http.StatusNotFound)
@@ -189,7 +196,11 @@ func (s *Server) handleRaw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Open first, then stat on the fd — eliminates the TOCTOU race (#4).
+	if info.IsDir() {
+		http.Error(w, "not a file", http.StatusBadRequest)
+		return
+	}
+
 	f, err := os.Open(full)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -197,19 +208,8 @@ func (s *Server) handleRaw(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() { _ = f.Close() }()
 
-	info, err := f.Stat()
-	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
-
-	if info.IsDir() {
-		http.Error(w, "not a file", http.StatusBadRequest)
-		return
-	}
-
 	// ServeContent handles Content-Length, Last-Modified, ETag,
-	// If-Modified-Since, Range requests, and MIME sniffing (#5, #6, #7).
+	// If-Modified-Since, Range requests, and MIME sniffing.
 	http.ServeContent(w, r, filepath.Base(full), info.ModTime(), f)
 }
 
@@ -229,6 +229,13 @@ func (s *Server) mountSPA(appFS fs.FS) {
 		// Serve the asset directly if it exists; otherwise SPA fallback.
 		if _, err := fs.Stat(sub, name); err != nil {
 			name = "index.html"
+		}
+
+		// Vite content-hashed assets are immutable; index.html must revalidate.
+		if strings.HasPrefix(name, "assets/") {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		} else if name == "index.html" {
+			w.Header().Set("Cache-Control", "no-cache")
 		}
 
 		http.ServeFileFS(w, r, sub, name)
