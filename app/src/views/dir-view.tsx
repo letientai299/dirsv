@@ -1,4 +1,4 @@
-import { useCallback, useState } from "preact/hooks"
+import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import { Toolbar } from "../components/toolbar"
 import { browse, type DirEntry } from "../lib/api"
 import { FileIcon, ParentIcon } from "../lib/file-icon"
@@ -27,6 +27,8 @@ function formatDate(iso: string): string {
 
 export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
   const [entries, setEntries] = useState(initialEntries)
+  const [activeIndex, setActiveIndex] = useState(-1)
+  const tbodyRef = useRef<HTMLTableSectionElement>(null)
 
   const refresh = useCallback(() => {
     void browse(path).then((res) => {
@@ -39,6 +41,52 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
   const parentPath =
     path === "/" ? null : path.replace(/\/[^/]+\/?$/, "") || "/"
 
+  // Build flat list of navigable rows: parent (..) + entries
+  const rows = useMemo(() => {
+    const list: { href: string; key: string }[] = []
+    if (parentPath) list.push({ href: parentPath, key: ".." })
+    for (const entry of entries) {
+      const href = (path === "/" ? "/" : `${path}/`) + entry.name
+      list.push({ href, key: entry.name })
+    }
+    return list
+  }, [parentPath, path, entries])
+
+  // Reset active index on navigation
+  useEffect(() => {
+    setActiveIndex(-1)
+  }, [path])
+
+  // Scroll active row into view
+  useEffect(() => {
+    if (activeIndex < 0 || !tbodyRef.current) return
+    const row = tbodyRef.current.children[activeIndex] as HTMLElement | undefined
+    row?.scrollIntoView({ block: "nearest" })
+  }, [activeIndex])
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Don't capture when focus is in an input/textarea
+      const tag = (e.target as HTMLElement).tagName
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return
+
+      if (e.key === "ArrowDown" || e.key === "j") {
+        e.preventDefault()
+        setActiveIndex((i) => Math.min(i + 1, rows.length - 1))
+      } else if (e.key === "ArrowUp" || e.key === "k") {
+        e.preventDefault()
+        setActiveIndex((i) => Math.max(i - 1, 0))
+      } else if (e.key === "Enter") {
+        if (activeIndex >= 0 && activeIndex < rows.length) {
+          e.preventDefault()
+          onNavigate(rows[activeIndex].href)
+        }
+      }
+    }
+    document.addEventListener("keydown", onKeyDown)
+    return () => document.removeEventListener("keydown", onKeyDown)
+  }, [rows, activeIndex, onNavigate])
+
   return (
     <div>
       <Toolbar path={path} />
@@ -50,9 +98,9 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
             <th>Modified</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody ref={tbodyRef}>
           {parentPath && (
-            <tr>
+            <tr class={activeIndex === 0 ? "row-active" : ""}>
               <td>
                 <a
                   href={parentPath}
@@ -71,10 +119,14 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
               <td class="col-date" />
             </tr>
           )}
-          {entries.map((entry) => {
+          {entries.map((entry, i) => {
             const href = (path === "/" ? "/" : `${path}/`) + entry.name
+            const rowIndex = parentPath ? i + 1 : i
             return (
-              <tr key={entry.name}>
+              <tr
+                key={entry.name}
+                class={activeIndex === rowIndex ? "row-active" : ""}
+              >
                 <td>
                   <a
                     href={href}

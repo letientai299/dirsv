@@ -131,7 +131,8 @@ body {
   vertical-align: middle;
 }
 
-.dir-table tbody tr:hover {
+.dir-table tbody tr:hover,
+.dir-table tbody tr.row-active {
   background: var(--surface);
 }
 
@@ -500,6 +501,14 @@ pre {
 [data-theme="dark"] .jt-key mark {
   background: #bb800926;
   color: #e3b341;
+}
+
+/* ---------- html iframe ---------- */
+
+.html-frame {
+  width: 100%;
+  height: calc(100vh - 60px);
+  border: none;
 }
 
 /* ---------- markdown layout ---------- */

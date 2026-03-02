@@ -1,7 +1,10 @@
 import rehypeShiki from "@shikijs/rehype"
 import rehypeKatex from "rehype-katex"
+import rehypeRaw from "rehype-raw"
+import rehypeSanitize, { defaultSchema } from "rehype-sanitize"
 import rehypeSlug from "rehype-slug"
 import rehypeStringify from "rehype-stringify"
+import remarkEmoji from "remark-emoji"
 import remarkGfm from "remark-gfm"
 import { remarkAlert } from "remark-github-blockquote-alert"
 import remarkMath from "remark-math"
@@ -20,6 +23,42 @@ export interface MarkdownResult {
   headings: Heading[]
 }
 
+// Extend the default sanitize schema to allow classes/attributes produced by
+// remark plugins (math, alerts, mermaid) while still blocking XSS. Plugins that
+// run AFTER sanitization (KaTeX, Shiki) don't need allowlisting — their output
+// is never seen by the sanitizer.
+// Helper to pull per-element attribute defaults from the sanitize schema.
+// Uses bracket access to satisfy TS noPropertyAccessFromIndexSignature, wrapped
+// in a function so biome's useLiteralKeys rule doesn't trigger.
+function schemaAttrs(key: string) {
+  return defaultSchema.attributes?.[key] ?? []
+}
+
+const sanitizeSchema: typeof defaultSchema = {
+  ...defaultSchema,
+  attributes: {
+    ...defaultSchema.attributes,
+    // remark-math markers consumed by rehype-katex after sanitization
+    code: [
+      ...schemaAttrs("code"),
+      ["className", "math-inline", "math-display"],
+    ],
+    // remark-github-blockquote-alert
+    div: [...schemaAttrs("div"), "dir", ["className", /^markdown-alert/]],
+    p: [...schemaAttrs("p"), "dir", ["className", "markdown-alert-title"]],
+    span: [...schemaAttrs("span"), "dir"],
+    // SVG icons from remark-github-blockquote-alert title paragraphs
+    svg: ["viewBox", "width", "height", "ariaHidden", "className"],
+    path: ["d"],
+  },
+  tagNames: [
+    ...(defaultSchema.tagNames ?? []),
+    // SVG elements used by alert icons
+    "svg",
+    "path",
+  ],
+}
+
 // Cached processor — all plugins are stateless so the instance is reusable.
 // Shiki lazy-loads themes/grammars on first .process(); subsequent calls reuse
 // the cache internally.
@@ -33,18 +72,21 @@ function getProcessor() {
       .use(remarkGfm)
       .use(remarkMath)
       .use(remarkAlert)
-      // SECURITY: remarkRehype without allowDangerousHtml strips raw HTML from
-      // markdown source, preventing XSS. Do not add allowDangerousHtml without
-      // also adding rehype-sanitize.
-      .use(remarkRehype)
+      .use(remarkEmoji)
+      // SECURITY: allowDangerousHtml lets raw HTML through as "raw" HAST nodes.
+      // rehype-raw parses them into proper elements, then rehype-sanitize strips
+      // anything unsafe. This allows <kbd>, <sub>, <sup>, <details>, etc.
+      .use(remarkRehype, { allowDangerousHtml: true })
+      .use(rehypeRaw)
+      .use(rehypeSanitize, sanitizeSchema)
       .use(rehypeKatex)
       .use(rehypeMermaid)
       .use(rehypeShiki, {
         themes: { light: "github-light", dark: "github-dark" },
         defaultColor: false,
         // Load grammars on demand instead of all 100+ bundled languages upfront.
-        // The shiki full-bundle fallback resolver handles lazy loading.
         langs: [],
+        lazy: true,
         fallbackLanguage: "text",
       })
       .use(rehypeSlug)

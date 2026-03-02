@@ -6,9 +6,11 @@ import (
 	"errors"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -61,6 +63,7 @@ func New(root string, appFS fs.FS, sseHandler http.Handler) (*Server, error) {
 	s := &Server{root: abs, mux: http.NewServeMux()}
 	s.mux.HandleFunc("GET /api/browse/{path...}", s.handleBrowse)
 	s.mux.HandleFunc("GET /api/raw/{path...}", s.handleRaw)
+	s.mux.HandleFunc("GET /api/htmlpreview/{path...}", s.handleHTMLPreview)
 
 	if sseHandler != nil {
 		s.mux.Handle("GET /api/events", sseHandler)
@@ -223,6 +226,16 @@ func (s *Server) handleRaw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	s.serveFile(w, r, full, info)
+}
+
+// serveFile sends a single file with correct MIME type and caching headers.
+func (s *Server) serveFile(
+	w http.ResponseWriter,
+	r *http.Request,
+	full string,
+	info os.FileInfo,
+) {
 	f, err := os.Open(
 		full,
 	) //nolint:gosec // G304: path validated by resolvePath containment check
@@ -247,6 +260,104 @@ func (s *Server) handleRaw(w http.ResponseWriter, r *http.Request) {
 	// ServeContent handles Content-Length, Last-Modified, ETag,
 	// If-Modified-Since, Range requests, and MIME sniffing.
 	http.ServeContent(w, r, name, info.ModTime(), f)
+}
+
+// reAbsAttr matches src, href, and action attributes with absolute-path
+// values (starting with "/" followed by a non-"/" character). Group 1
+// captures the attribute prefix, group 2 captures the first path character
+// so the leading "/" can be dropped while preserving the rest.
+var reAbsAttr = regexp.MustCompile(`((?:src|href|action)\s*=\s*["'])/([^/])`)
+
+// handleHTMLPreview serves files for HTML site preview.
+//
+// URL scheme: /api/htmlpreview/{encodedRoot}/{filePath...}
+//
+// {encodedRoot} is the site root directory with "/" encoded as %2F (e.g.,
+// "bin%2Fbims-site"). {filePath} is the path within that root.
+//
+// HTML files get URL rewriting (absolute paths → relative) plus a <base>
+// tag so all resources resolve through this endpoint. Non-HTML files are
+// served as-is. Directory requests auto-resolve to index.html.
+func (s *Server) handleHTMLPreview(w http.ResponseWriter, r *http.Request) {
+	// Use the raw (percent-encoded) URL to preserve %2F in the root
+	// segment. Go's mux decodes %2F before populating PathValue, so
+	// we extract from EscapedPath instead.
+	const prefix = "/api/htmlpreview/"
+	escaped := r.URL.EscapedPath()
+	rawPath := strings.TrimPrefix(escaped, prefix)
+
+	// Split into encoded-root (first segment) and file path (rest).
+	encodedRoot, filePath, _ := strings.Cut(rawPath, "/")
+	siteRoot, err := url.PathUnescape(encodedRoot)
+	if err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	// Resolve the full filesystem path: root + filePath.
+	fsPath := path.Join(siteRoot, filePath)
+	full, info, resolveErr := s.resolvePath(fsPath)
+	if resolveErr != nil {
+		if errors.Is(resolveErr, fs.ErrNotExist) {
+			http.Error(w, "not found", http.StatusNotFound)
+		} else {
+			http.Error(w, "forbidden", http.StatusForbidden)
+		}
+		return
+	}
+
+	// Directories auto-resolve to index.html (like a real web server).
+	if info.IsDir() {
+		indexPath := filepath.Join(full, "index.html")
+		indexInfo, statErr := os.Stat(indexPath)
+		if statErr != nil {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		full = indexPath
+		info = indexInfo
+	}
+
+	ext := strings.ToLower(filepath.Ext(full))
+	if ext != ".html" && ext != ".htm" {
+		s.serveFile(w, r, full, info)
+		return
+	}
+
+	// Read HTML content for URL rewriting.
+	content, readErr := os.ReadFile(
+		full,
+	) //nolint:gosec // G304: path validated by resolvePath containment check
+	if readErr != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	// <base> always points to the site root so sub-pages and the index
+	// page resolve assets (_astro/, images/, etc.) from the same place.
+	baseHref := "/api/htmlpreview/" + url.PathEscape(siteRoot) + "/"
+
+	html := string(content)
+
+	// Strip leading "/" from absolute-path attribute values so <base>
+	// can resolve them (e.g., href="/_astro/x" → href="_astro/x").
+	html = reAbsAttr.ReplaceAllString(html, "${1}${2}")
+
+	// Inject <base> after <head> so relative URLs resolve through
+	// this endpoint, keeping site-internal navigation working.
+	baseTag := `<base href="` + baseHref + `">`
+	if idx := strings.Index(strings.ToLower(html), "<head"); idx != -1 {
+		if closeIdx := strings.IndexByte(html[idx:], '>'); closeIdx != -1 {
+			insertAt := idx + closeIdx + 1
+			html = html[:insertAt] + baseTag + html[insertAt:]
+		}
+	} else {
+		html = baseTag + html
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	_, _ = w.Write([]byte(html))
 }
 
 func (s *Server) mountSPA(appFS fs.FS) {

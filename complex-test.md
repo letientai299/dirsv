@@ -48,13 +48,13 @@ $$
 
 The $n$-th roots of unity satisfy several critical identities:
 
-| Property | Formula | Notes |
-|---|---|---|
-| Periodicity | $\omega_n^{n} = 1$ | Definition |
-| Symmetry | $\omega_n^{k + n/2} = -\omega_n^k$ | Cancellation lemma |
-| Reduction | $\omega_{2n}^{2k} = \omega_n^k$ | Halving lemma |
-| Sum | $\sum_{j=0}^{n-1} \omega_n^{jk} = 0$ for $k \not\equiv 0$ | Orthogonality |
-| Conjugate | $\overline{\omega_n^k} = \omega_n^{-k} = \omega_n^{n-k}$ | Inverse DFT |
+| Property    | Formula                                                   | Notes              |
+| ----------- | --------------------------------------------------------- | ------------------ |
+| Periodicity | $\omega_n^{n} = 1$                                        | Definition         |
+| Symmetry    | $\omega_n^{k + n/2} = -\omega_n^k$                        | Cancellation lemma |
+| Reduction   | $\omega_{2n}^{2k} = \omega_n^k$                           | Halving lemma      |
+| Sum         | $\sum_{j=0}^{n-1} \omega_n^{jk} = 0$ for $k \not\equiv 0$ | Orthogonality      |
+| Conjugate   | $\overline{\omega_n^k} = \omega_n^{-k} = \omega_n^{n-k}$  | Inverse DFT        |
 
 The **cancellation lemma** is the key insight that makes FFT work: it lets us
 split an $n$-point DFT into two $n/2$-point DFTs.
@@ -163,15 +163,15 @@ index $j$ with binary representation $b_{m-1} b_{m-2} \ldots b_1 b_0$, its
 bit-reversal is $b_0 b_1 \ldots b_{m-2} b_{m-1}$.
 
 | Index (decimal) | Binary | Reversed Binary | Reversed (decimal) |
-|---|---|---|---|
-| 0 | 000 | 000 | 0 |
-| 1 | 001 | 100 | 4 |
-| 2 | 010 | 010 | 2 |
-| 3 | 011 | 110 | 6 |
-| 4 | 100 | 001 | 1 |
-| 5 | 101 | 101 | 5 |
-| 6 | 110 | 011 | 3 |
-| 7 | 111 | 111 | 7 |
+| --------------- | ------ | --------------- | ------------------ |
+| 0               | 000    | 000             | 0                  |
+| 1               | 001    | 100             | 4                  |
+| 2               | 010    | 010             | 2                  |
+| 3               | 011    | 110             | 6                  |
+| 4               | 100    | 001             | 1                  |
+| 5               | 101    | 101             | 5                  |
+| 6               | 110    | 011             | 3                  |
+| 7               | 111    | 111             | 7                  |
 
 ---
 
@@ -377,11 +377,11 @@ func FFT(a []complex128, invert bool) {
 Each butterfly stage processes $n$ elements with $n/2$ multiplications and $n$
 additions. There are $\log_2 n$ stages.
 
-| Operation | Count per stage | Total |
-|---|---|---|
-| Complex multiply | $n/2$ | $\frac{n}{2} \log_2 n$ |
-| Complex add | $n$ | $n \log_2 n$ |
-| Twiddle factor | $n/2$ | $\frac{n}{2} \log_2 n$ |
+| Operation        | Count per stage | Total                  |
+| ---------------- | --------------- | ---------------------- |
+| Complex multiply | $n/2$           | $\frac{n}{2} \log_2 n$ |
+| Complex add      | $n$             | $n \log_2 n$           |
+| Twiddle factor   | $n/2$           | $\frac{n}{2} \log_2 n$ |
 
 A complex multiplication $(a + bi)(c + di)$ expands to:
 
@@ -404,12 +404,12 @@ $$
 
 ### 4.2 Space Complexity
 
-| Variant | Time | Extra Space | In-place? |
-|---|---|---|---|
-| Recursive | $O(n \log n)$ | $O(n \log n)$ | No |
-| Iterative (Cooley-Tukey) | $O(n \log n)$ | $O(1)$ | Yes |
-| Bluestein's | $O(n \log n)$ | $O(n)$ | No |
-| Rader's | $O(n \log n)$ | $O(n)$ | No |
+| Variant                  | Time          | Extra Space   | In-place? |
+| ------------------------ | ------------- | ------------- | --------- |
+| Recursive                | $O(n \log n)$ | $O(n \log n)$ | No        |
+| Iterative (Cooley-Tukey) | $O(n \log n)$ | $O(1)$        | Yes       |
+| Bluestein's              | $O(n \log n)$ | $O(n)$        | No        |
+| Rader's                  | $O(n \log n)$ | $O(n)$        | No        |
 
 ### 4.3 Cache Performance
 
@@ -421,8 +421,8 @@ $$
 \text{DFT}_n = P \cdot (\text{DFT}_{n_1} \otimes I_{n_2}) \cdot D \cdot (I_{n_1} \otimes \text{DFT}_{n_2}) \cdot P^T
 $$
 
-where $n = n_1 \cdot n_2$, $P$ is a permutation matrix, $D$ is a diagonal
-matrix of twiddle factors, and $\otimes$ is the Kronecker product.
+where $n = n_1 \cdot n_2$, $P$ is a permutation matrix, $D$ is a diagonal matrix
+of twiddle factors, and $\otimes$ is the Kronecker product.
 
 ```mermaid
 flowchart LR
@@ -440,13 +440,13 @@ flowchart LR
 
 For practical sizes:
 
-| $n$ | Naive DFT ($n^2$) | FFT ($n \log_2 n$) | Speedup |
-|---|---|---|---|
-| $2^{8}$ (256) | 65,536 | 2,048 | 32× |
-| $2^{10}$ (1024) | 1,048,576 | 10,240 | 102× |
-| $2^{16}$ (65536) | $4.3 \times 10^9$ | $1.05 \times 10^6$ | 4,096× |
-| $2^{20}$ (1M) | $1.1 \times 10^{12}$ | $2.1 \times 10^7$ | 52,429× |
-| $2^{24}$ (16M) | $2.8 \times 10^{14}$ | $4.0 \times 10^8$ | 699,051× |
+| $n$              | Naive DFT ($n^2$)    | FFT ($n \log_2 n$) | Speedup  |
+| ---------------- | -------------------- | ------------------ | -------- |
+| $2^{8}$ (256)    | 65,536               | 2,048              | 32×      |
+| $2^{10}$ (1024)  | 1,048,576            | 10,240             | 102×     |
+| $2^{16}$ (65536) | $4.3 \times 10^9$    | $1.05 \times 10^6$ | 4,096×   |
+| $2^{20}$ (1M)    | $1.1 \times 10^{12}$ | $2.1 \times 10^7$  | 52,429×  |
+| $2^{24}$ (16M)   | $2.8 \times 10^{14}$ | $4.0 \times 10^8$  | 699,051× |
 
 ---
 
@@ -454,19 +454,20 @@ For practical sizes:
 
 The **Number Theoretic Transform** (NTT) is the FFT over a finite field
 $\mathbb{Z}/p\mathbb{Z}$ instead of $\mathbb{C}$. It's exact (no floating-point
-errors) and widely used in competitive programming for polynomial multiplication.
+errors) and widely used in competitive programming for polynomial
+multiplication.
 
 ### 5.1 Setup
 
 Choose a prime $p$ such that $p - 1$ is divisible by a large power of 2. Common
 choices:
 
-| Prime $p$ | $p - 1$ | Max power-of-2 | Generator $g$ |
-|---|---|---|---|
-| $998244353$ | $2^{23} \times 7 \times 17$ | $2^{23}$ | 3 |
-| $985661441$ | $2^{23} \times \ldots$ | $2^{23}$ | 3 |
-| $754974721$ | $2^{24} \times \ldots$ | $2^{24}$ | 11 |
-| $469762049$ | $2^{26} \times \ldots$ | $2^{26}$ | 3 |
+| Prime $p$   | $p - 1$                     | Max power-of-2 | Generator $g$ |
+| ----------- | --------------------------- | -------------- | ------------- |
+| $998244353$ | $2^{23} \times 7 \times 17$ | $2^{23}$       | 3             |
+| $985661441$ | $2^{23} \times \ldots$      | $2^{23}$       | 3             |
+| $754974721$ | $2^{24} \times \ldots$      | $2^{24}$       | 11            |
+| $469762049$ | $2^{26} \times \ldots$      | $2^{26}$       | 3             |
 
 The primitive $n$-th root of unity in $\mathbb{Z}/p\mathbb{Z}$ is:
 
@@ -575,6 +576,7 @@ Multiplying two $n$-digit numbers can be done via:
 This gives $O(n \log n)$ digit multiplication (used by GMP, Python's `int`).
 
 For exact results, use either:
+
 - NTT with Chinese Remainder Theorem (multiple primes)
 - Floating-point FFT with careful rounding
 
@@ -608,15 +610,15 @@ This enables:
 
 Common problems solvable with FFT/NTT:
 
-| Problem | Reduction | Complexity |
-|---|---|---|
-| Polynomial multiplication | Direct convolution | $O(n \log n)$ |
-| Large number multiplication | Digit convolution | $O(n \log n)$ |
-| Counting subset sums | Generating function product | $O(n \log n)$ |
-| String matching with wildcards | Convolution trick | $O(n \log n)$ |
-| Bitwise OR/AND convolution | Subset-sum / Möbius transform | $O(n \log n)$ |
-| Power series inversion | Newton's method + FFT | $O(n \log n)$ |
-| Power series exp/log | Newton's method + FFT | $O(n \log n)$ |
+| Problem                        | Reduction                     | Complexity    |
+| ------------------------------ | ----------------------------- | ------------- |
+| Polynomial multiplication      | Direct convolution            | $O(n \log n)$ |
+| Large number multiplication    | Digit convolution             | $O(n \log n)$ |
+| Counting subset sums           | Generating function product   | $O(n \log n)$ |
+| String matching with wildcards | Convolution trick             | $O(n \log n)$ |
+| Bitwise OR/AND convolution     | Subset-sum / Möbius transform | $O(n \log n)$ |
+| Power series inversion         | Newton's method + FFT         | $O(n \log n)$ |
+| Power series exp/log           | Newton's method + FFT         | $O(n \log n)$ |
 
 ---
 
@@ -654,15 +656,15 @@ graph TD
 
 ### Detailed Comparison
 
-| Algorithm | Length Restriction | Operations | Numerical Precision | Use Case |
-|---|---|---|---|---|
-| Cooley-Tukey (Radix-2) | $n = 2^k$ | $\frac{n}{2}\log_2 n$ mults | Floating-point | General purpose |
-| Split-Radix | $n = 2^k$ | $\frac{n}{3}(\log_2 n - 3) + 4$ mults | Floating-point | Optimized radix-2 |
-| Mixed-Radix | $n = \prod p_i^{a_i}$ | Depends on factorization | Floating-point | Non-power-of-2 |
-| Bluestein's (Chirp-Z) | Any $n$ | $3 \cdot \text{FFT}(2n)$ | Floating-point | Arbitrary length |
-| Rader's | $n$ prime | $2 \cdot \text{FFT}(n-1)$ | Floating-point | Prime length |
-| NTT | $n \mid (p-1)$ | $\frac{n}{2}\log_2 n$ mults mod $p$ | Exact | Competitive prog |
-| Walsh-Hadamard | $n = 2^k$ | $n \log_2 n$ adds | Exact (integers) | Bitwise convolution |
+| Algorithm              | Length Restriction    | Operations                            | Numerical Precision | Use Case            |
+| ---------------------- | --------------------- | ------------------------------------- | ------------------- | ------------------- |
+| Cooley-Tukey (Radix-2) | $n = 2^k$             | $\frac{n}{2}\log_2 n$ mults           | Floating-point      | General purpose     |
+| Split-Radix            | $n = 2^k$             | $\frac{n}{3}(\log_2 n - 3) + 4$ mults | Floating-point      | Optimized radix-2   |
+| Mixed-Radix            | $n = \prod p_i^{a_i}$ | Depends on factorization              | Floating-point      | Non-power-of-2      |
+| Bluestein's (Chirp-Z)  | Any $n$               | $3 \cdot \text{FFT}(2n)$              | Floating-point      | Arbitrary length    |
+| Rader's                | $n$ prime             | $2 \cdot \text{FFT}(n-1)$             | Floating-point      | Prime length        |
+| NTT                    | $n \mid (p-1)$        | $\frac{n}{2}\log_2 n$ mults mod $p$   | Exact               | Competitive prog    |
+| Walsh-Hadamard         | $n = 2^k$             | $n \log_2 n$ adds                     | Exact (integers)    | Bitwise convolution |
 
 ### 7.1 Numerical Stability
 
@@ -749,35 +751,151 @@ $$
 
 ---
 
-> **Further reading**: Cormen et al., *Introduction to Algorithms* (Chapter 30);
-> Knuth, *The Art of Computer Programming* Vol. 2 (Section 4.3.3); Press et al.,
-> *Numerical Recipes* (Chapter 12).
+> **Further reading**: Cormen et al., _Introduction to Algorithms_ (Chapter 30);
+> Knuth, _The Art of Computer Programming_ Vol. 2 (Section 4.3.3); Press et al.,
+> _Numerical Recipes_ (Chapter 12).
 
 ---
 
 ## Appendix B: Practical Notes
 
-> [!NOTE]
-> The FFT requires input length to be a power of 2. Pad your input with zeros
-> before calling the transform. Most libraries handle this automatically.
+> [!NOTE] The FFT requires input length to be a power of 2. Pad your input with
+> zeros before calling the transform. Most libraries handle this automatically.
 
-> [!TIP]
-> For competitive programming, prefer the NTT with $p = 998244353$ — it avoids
-> floating-point precision issues entirely and the prime's structure supports
-> transforms up to $2^{23}$ elements.
+> [!TIP] For competitive programming, prefer the NTT with $p = 998244353$ — it
+> avoids floating-point precision issues entirely and the prime's structure
+> supports transforms up to $2^{23}$ elements.
 
-> [!IMPORTANT]
-> The bit-reversal permutation must be applied **before** the butterfly stages
-> in the iterative implementation. Forgetting this step produces scrambled output
-> that looks plausible but is mathematically wrong.
+> [!IMPORTANT] The bit-reversal permutation must be applied **before** the
+> butterfly stages in the iterative implementation. Forgetting this step
+> produces scrambled output that looks plausible but is mathematically wrong.
 
-> [!WARNING]
-> Floating-point FFT accumulates rounding errors proportional to $O(\epsilon \log n)$.
-> For polynomial multiplication with large coefficients ($M > 10^9$), use NTT or
-> multi-precision arithmetic to avoid silent corruption.
+> [!WARNING] Floating-point FFT accumulates rounding errors proportional to
+> $O(\epsilon \log n)$. For polynomial multiplication with large coefficients
+> ($M > 10^9$), use NTT or multi-precision arithmetic to avoid silent
+> corruption.
 
-> [!CAUTION]
-> Never apply the inverse FFT without dividing by $n$. The raw inverse transform
-> produces values scaled by the transform length — omitting the $1/n$ factor is
-> one of the most common FFT bugs and leads to results that are off by orders of
-> magnitude.
+> [!CAUTION] Never apply the inverse FFT without dividing by $n$. The raw
+> inverse transform produces values scaled by the transform length — omitting
+> the $1/n$ factor is one of the most common FFT bugs and leads to results that
+> are off by orders of magnitude.
+
+---
+
+## Appendix C: GFM Feature Showcase
+
+This section exercises GFM features not covered above.
+
+### Text Formatting
+
+The FFT is **_critically important_** in modern computing. Some older algorithms
+are now ~~obsolete~~ thanks to it. Use `np.fft` for quick prototyping, but
+_always_ validate against a known-good implementation.
+
+Press <kbd>Ctrl</kbd>+<kbd>C</kbd> to copy the result. The formula uses
+H<sub>2</sub>O as an analogy and runs in O(n<sup>2</sup>) time before
+optimization.
+
+### Task Lists
+
+Implementation checklist for a production FFT library:
+
+- [x] Radix-2 Cooley-Tukey (power-of-2 lengths)
+- [x] Bit-reversal permutation
+- [x] Inverse transform with $1/n$ scaling
+- [ ] Mixed-radix support (arbitrary composite lengths)
+- [ ] Split-radix optimization
+- [ ] Bluestein's algorithm for prime lengths
+- [ ] SIMD-vectorized butterfly operations
+- [ ] Multi-threaded stage execution
+
+### Ordered & Nested Lists
+
+Steps to implement FFT-based polynomial multiplication:
+
+1. Read coefficients of $A(x)$ and $B(x)$
+2. Prepare input arrays
+   1. Compute required output length: $n + m - 1$
+   2. Round up to the next power of 2
+   3. Zero-pad both arrays
+3. Apply forward FFT to both arrays
+   - Use the iterative in-place variant for best cache performance
+   - Ensure bit-reversal is applied _before_ butterfly stages
+4. Pointwise multiplication in frequency domain
+5. Apply inverse FFT to the product
+6. Round coefficients to nearest integer (floating-point FFT) or reduce mod $p$
+   (NTT)
+
+### Nested Blockquotes
+
+> Cooley and Tukey's 1965 paper rediscovered an algorithm known to Gauss:
+>
+> > "Gauss described this algorithm in 1805, but it was not widely known until
+> > Cooley and Tukey's independent rediscovery 160 years later."
+> >
+> > — Heideman, Johnson, and Burrus (1984)
+>
+> The historical attribution remains a topic of scholarly debate.
+
+### Autolinks & Reference-Style Links
+
+The original Cooley-Tukey paper is available at
+https://www.ams.org/journals/mcom/1965-19-090/S0025-5718-1965-0178586-1/
+
+For implementations, see the [FFTW library][fftw] and [KissFFT][kissfft]. The
+[GMP library][gmp] uses FFT-based multiplication internally for large integers.
+
+[fftw]: https://www.fftw.org/
+[kissfft]: https://github.com/mborgerding/kissfft
+[gmp]: https://gmplib.org/
+
+### Footnotes
+
+The Cooley-Tukey algorithm[^1] is the most widely used FFT variant. The
+split-radix FFT[^2] achieves the lowest known arithmetic complexity for
+power-of-2 lengths. For non-power-of-2 lengths, Bluestein's chirp-z
+transform[^3] reduces the problem to a power-of-2 convolution.
+
+[^1]:
+    Cooley, J.W. and Tukey, J.W. (1965). "An algorithm for the machine
+    calculation of complex Fourier series." _Mathematics of Computation_,
+    19(90), 297–301.
+
+[^2]:
+    Yavne, R. (1968). "An economical method for calculating the discrete Fourier
+    transform." _AFIPS Conference Proceedings_, 33, 115–125.
+
+[^3]:
+    Bluestein, L. (1970). "A linear filtering approach to the computation of
+    discrete Fourier transform." _IEEE Transactions on Audio and
+    Electroacoustics_, 18(4), 451–455.
+
+### Images
+
+![FFT butterfly diagram](https://picsum.photos/600/200)
+
+### Collapsible Sections
+
+<details>
+<summary>Derivation of the butterfly equation</summary>
+
+Starting from the DFT definition and splitting into even/odd indices:
+
+$$
+X_k = \sum_{j=0}^{n/2-1} x_{2j} \omega_{n/2}^{-jk} + \omega_n^{-k} \sum_{j=0}^{n/2-1} x_{2j+1} \omega_{n/2}^{-jk}
+$$
+
+Let $A_k$ and $B_k$ denote the two sums. Then $X_k = A_k + \omega_n^{-k} B_k$
+and by the symmetry property $\omega_n^{-(k+n/2)} = -\omega_n^{-k}$, we get
+$X_{k+n/2} = A_k - \omega_n^{-k} B_k$.
+
+This pair of equations is the **butterfly operation**.
+
+</details>
+
+### Emoji Shortcodes
+
+- :rocket: Fast — $O(n \log n)$ vs $O(n^2)$ for naive DFT
+- :warning: Precision — floating-point errors accumulate as $O(\epsilon \log n)$
+- :bulb: Tip — use NTT when exact arithmetic is required
+- :white_check_mark: Verified — all implementations above match `numpy.fft` output

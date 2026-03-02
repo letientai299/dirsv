@@ -4,6 +4,7 @@ import { Toolbar } from "../components/toolbar"
 import { fetchRaw, type RawResult } from "../lib/api"
 import { useSSE } from "../lib/use-sse"
 import { CodeView } from "./code-view"
+import { HtmlView } from "./html-view"
 import { MarkdownView } from "./markdown-view"
 import { StructuredView } from "./structured-view"
 
@@ -23,11 +24,13 @@ function formatSize(bytes: number): string {
 }
 
 export function FileView({ path }: Props) {
+  const isHtml = /\.html?$/i.test(path)
   const [result, setResult] = useState<RawResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(
     (signal?: AbortSignal) => {
+      if (isHtml) return
       setError(null)
       fetchRaw(path, signal)
         .then(setResult)
@@ -35,7 +38,7 @@ export function FileView({ path }: Props) {
           if (err.name !== "AbortError") setError(err.message)
         })
     },
-    [path],
+    [path, isHtml],
   )
 
   useEffect(() => {
@@ -47,6 +50,8 @@ export function FileView({ path }: Props) {
 
   // Re-fetch on file changes (SSE-triggered, no abort needed).
   useSSE(path.replace(/^\//, ""), () => load())
+
+  if (isHtml) return <HtmlView path={path} />
 
   if (error) return <div class="error">Error: {error}</div>
   if (result === null) return <div class="loading">Loading...</div>
