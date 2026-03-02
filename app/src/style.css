@@ -361,6 +361,7 @@ pre {
   font-family: var(--mono);
   font-size: 13px;
   line-height: 1.6;
+  outline: none;
 }
 
 .jt-row {
@@ -368,6 +369,12 @@ pre {
   align-items: baseline;
   gap: 2px;
   min-height: 24px;
+}
+
+.jt-row--focused {
+  outline: 2px solid var(--color-accent, #54aeff);
+  outline-offset: -2px;
+  border-radius: 3px;
 }
 
 .jt-toggle {

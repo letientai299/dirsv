@@ -12,6 +12,8 @@ interface Props {
   expanded: Set<string>
   onToggle: (path: string) => void
   filter: string
+  focusedPath: string | null
+  onFocusPath: (path: string | null) => void
 }
 
 function ClipboardIcon() {
@@ -76,7 +78,7 @@ function Toggle({
 }) {
   if (isContainer && !isEmpty) {
     return (
-      <button type="button" class="jt-toggle" onClick={onToggle}>
+      <button type="button" class="jt-toggle" onClick={onToggle} tabIndex={-1}>
         {isOpen ? "▼" : "▶"}
       </button>
     )
@@ -84,11 +86,20 @@ function Toggle({
   return <span class="jt-toggle jt-toggle--leaf" />
 }
 
-export function JsonNode({ info, depth, expanded, onToggle, filter }: Props) {
+export function JsonNode({
+  info,
+  depth,
+  expanded,
+  onToggle,
+  filter,
+  focusedPath,
+  onFocusPath,
+}: Props) {
   const { path, key, value, type, childCount } = info
   const isContainer = type === "object" || type === "array"
   const isOpen = expanded.has(path)
   const isEmpty = isContainer && childCount === 0
+  const isFocused = path === focusedPath
 
   const handleToggle = useCallback(() => onToggle(path), [onToggle, path])
 
@@ -96,12 +107,30 @@ export function JsonNode({ info, depth, expanded, onToggle, filter }: Props) {
     void navigator.clipboard.writeText(serializeValue(value))
   }, [value])
 
+  const handleRowClick = useCallback(() => {
+    onFocusPath(path)
+  }, [onFocusPath, path])
+
   const children =
     isContainer && isOpen && !isEmpty ? getChildren(value, path) : []
 
+  const rowClass = `jt-row${isFocused ? " jt-row--focused" : ""}`
+
   return (
-    <div class="jt-node">
-      <div class="jt-row" style={{ paddingLeft: `${depth * 20}px` }}>
+    <div
+      class="jt-node"
+      role="treeitem"
+      tabIndex={-1}
+      aria-expanded={isContainer && !isEmpty ? isOpen : undefined}
+    >
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: keyboard handled at tree root level */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: click sets virtual focus; keyboard at tree root */}
+      <div
+        class={rowClass}
+        id={`jt-row-${path}`}
+        style={{ paddingLeft: `${depth * 20}px` }}
+        onClick={handleRowClick}
+      >
         <Toggle
           isContainer={isContainer}
           isEmpty={isEmpty}
@@ -127,20 +156,28 @@ export function JsonNode({ info, depth, expanded, onToggle, filter }: Props) {
           class="jt-copy"
           onClick={handleCopy}
           title="Copy value"
+          tabIndex={-1}
         >
           <ClipboardIcon />
         </button>
       </div>
-      {children.map((child) => (
-        <JsonNode
-          key={child.path}
-          info={child}
-          depth={depth + 1}
-          expanded={expanded}
-          onToggle={onToggle}
-          filter={filter}
-        />
-      ))}
+      {children.length > 0 && (
+        // biome-ignore lint/a11y/useSemanticElements: role="group" is correct for ARIA tree pattern
+        <div role="group">
+          {children.map((child) => (
+            <JsonNode
+              key={child.path}
+              info={child}
+              depth={depth + 1}
+              expanded={expanded}
+              onToggle={onToggle}
+              filter={filter}
+              focusedPath={focusedPath}
+              onFocusPath={onFocusPath}
+            />
+          ))}
+        </div>
+      )}
       {isContainer && isOpen && !isEmpty && (
         <div class="jt-row" style={{ paddingLeft: `${depth * 20}px` }}>
           <span class="jt-toggle jt-toggle--leaf" />

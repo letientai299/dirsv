@@ -117,6 +117,37 @@ export function collectAllPaths(value: JsonValue, prefix = ""): Set<string> {
   return paths
 }
 
+/**
+ * Walk the tree in render order, yielding only paths whose ancestors are all
+ * expanded (and pass the visibility filter). Used for arrow-key navigation.
+ */
+export function computeFlatVisiblePaths(
+  value: JsonValue,
+  expanded: Set<string>,
+  visible: Set<string> | null,
+): string[] {
+  const result: string[] = []
+  if (value === null || typeof value !== "object") return result
+  walkFlatPaths(value, "", expanded, visible, result)
+  return result
+}
+
+function walkFlatPaths(
+  v: JsonValue,
+  parentPath: string,
+  expanded: Set<string>,
+  visible: Set<string> | null,
+  result: string[],
+) {
+  for (const child of getChildren(v, parentPath)) {
+    if (visible && !visible.has(child.path)) continue
+    result.push(child.path)
+    if (child.childCount > 0 && expanded.has(child.path)) {
+      walkFlatPaths(child.value, child.path, expanded, visible, result)
+    }
+  }
+}
+
 export function serializeValue(value: JsonValue): string {
   if (typeof value === "string") return JSON.stringify(value)
   if (value === null || typeof value !== "object") return String(value)

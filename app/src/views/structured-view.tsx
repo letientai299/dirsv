@@ -2,7 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "preact/hooks"
 import { JsonToolbar } from "../components/json-toolbar"
 import { JsonTree } from "../components/json-tree"
 import { Toolbar } from "../components/toolbar"
-import { collectAllPaths, type JsonValue } from "../lib/json-tree"
+import {
+  collectAllPaths,
+  computeFlatVisiblePaths,
+  computeVisiblePaths,
+  type JsonValue,
+} from "../lib/json-tree"
 import { useShiki } from "../lib/use-shiki"
 
 interface Props {
@@ -20,6 +25,7 @@ export function StructuredView({ path, content, parse, lang }: Props) {
   const [filter, setFilter] = useState("")
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set())
   const [mode, setMode] = useState<"tree" | "raw">("tree")
+  const [focusedPath, setFocusedPath] = useState<string | null>(null)
   const [largeWarned, setLargeWarned] = useState(false)
   const rawHtml = useShiki(content, lang)
 
@@ -57,6 +63,25 @@ export function StructuredView({ path, content, parse, lang }: Props) {
     () => (parsed !== undefined ? collectAllPaths(parsed) : new Set<string>()),
     [parsed],
   )
+
+  const visible = useMemo(
+    () => computeVisiblePaths(allPaths, filter),
+    [allPaths, filter],
+  )
+
+  const flatPaths = useMemo(
+    () =>
+      parsed !== undefined
+        ? computeFlatVisiblePaths(parsed, expanded, visible)
+        : [],
+    [parsed, expanded, visible],
+  )
+
+  // Reset focus when content or filter changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset on content/filter change
+  useEffect(() => {
+    setFocusedPath(null)
+  }, [content, filter])
 
   const handleToggle = useCallback((nodePath: string) => {
     setExpanded((prev) => {
@@ -110,6 +135,9 @@ export function StructuredView({ path, content, parse, lang }: Props) {
           onToggle={handleToggle}
           filter={filter}
           allPaths={allPaths}
+          focusedPath={focusedPath}
+          flatPaths={flatPaths}
+          onFocusPath={setFocusedPath}
         />
       ) : rawHtml ? (
         <div
