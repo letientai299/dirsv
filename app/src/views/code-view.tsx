@@ -21,9 +21,21 @@ export function CodeView({ path, content }: Props) {
           dangerouslySetInnerHTML={{ __html: html }}
         />
       ) : (
-        <pre class="code-view-fallback">
-          <code>{content}</code>
-        </pre>
+        <div class="code-view">
+          <pre>
+            <code>
+              {content.split("\n").map((line, i, arr) =>
+                // Skip the trailing empty line from the final newline.
+                i === arr.length - 1 && line === "" ? null : (
+                  <>
+                    <span class="line">{line}</span>
+                    {"\n"}
+                  </>
+                ),
+              )}
+            </code>
+          </pre>
+        </div>
       )}
     </div>
   )

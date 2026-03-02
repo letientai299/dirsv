@@ -186,7 +186,7 @@ body {
 
 /* ---------- code view ---------- */
 
-.code-view pre.shiki {
+.code-view pre {
   margin: 0;
   padding: 12px 0;
   overflow-x: auto;
@@ -196,18 +196,18 @@ body {
   border-radius: 0;
 }
 
-.code-view pre.shiki code {
+.code-view pre code {
   display: block;
   counter-reset: line;
 }
 
-.code-view pre.shiki .line {
+.code-view pre .line {
   display: inline-block;
   width: 100%;
   padding: 0 16px 0 0;
 }
 
-.code-view pre.shiki .line::before {
+.code-view pre .line::before {
   counter-increment: line;
   content: counter(line);
   display: inline-block;
@@ -222,7 +222,7 @@ body {
 }
 
 /* Shiki appends an empty .line for the trailing newline — hide its line number. */
-.code-view pre.shiki .line:last-child:empty::before {
+.code-view pre .line:last-child:empty::before {
   display: none;
   counter-increment: none;
 }
