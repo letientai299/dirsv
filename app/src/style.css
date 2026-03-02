@@ -62,12 +62,18 @@ body {
 }
 
 .toolbar-path {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   font-size: 15px;
   font-weight: 600;
   font-family: var(--mono);
 }
 
 .breadcrumb-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--text-dim);
   text-decoration: none;
 }
@@ -76,6 +82,7 @@ body {
   color: var(--text);
   text-decoration: underline;
 }
+
 
 .breadcrumb-sep {
   color: var(--text-dim);

@@ -1,4 +1,5 @@
 import { useCallback, useState } from "preact/hooks"
+import { FolderIcon } from "../lib/file-icon"
 import { cycleTheme, getEffectiveTheme } from "../lib/theme"
 
 interface Props {
@@ -55,6 +56,9 @@ function Breadcrumbs({ path }: { path: string }) {
           navigate("/")
         }}
       >
+        <span class="entry-icon entry-icon--folder">
+          <FolderIcon />
+        </span>
         /
       </a>
       {segments.map((seg, i) => {

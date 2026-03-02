@@ -2,6 +2,12 @@
 
 const DEVICON_CDN = "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons"
 
+// Extensions with direct SVG URLs (not available in Devicon)
+const EXT_URL_MAP: Record<string, string> = {
+  toml: "https://cdn.simpleicons.org/toml/9C4121",
+  editorconfig: "https://cdn.simpleicons.org/editorconfig/000000",
+}
+
 // Extension → [deviconName, variant]
 const EXT_MAP: Record<string, [string, string]> = {
   go: ["go", "original"],
@@ -32,7 +38,6 @@ const EXT_MAP: Record<string, [string, string]> = {
   r: ["r", "original"],
   yml: ["yaml", "original"],
   yaml: ["yaml", "original"],
-  toml: ["toml", "original"],
   json: ["json", "original"],
   xml: ["xml", "original"],
   md: ["markdown", "original"],
@@ -66,20 +71,21 @@ function deviconUrl(name: string, variant: string): string {
   return `${DEVICON_CDN}/${name}/${name}-${variant}.svg`
 }
 
-function resolve(fileName: string): [string, string] | null {
+function resolveExt(fileName: string): string | null {
+  const lower = fileName.toLowerCase()
+  return lower.includes(".") ? (lower.split(".").pop() ?? null) : null
+}
+
+function resolve(fileName: string): [string, string] | string | null {
   const lower = fileName.toLowerCase()
   const match = NAME_MAP[lower]
   if (match) return match
 
-  // Strip leading dot for dotfiles like .gitignore → gitignore
-  const stripped = lower.startsWith(".") ? lower.slice(1) : null
-  if (stripped) {
-    const dotMatch = EXT_MAP[stripped]
-    if (dotMatch) return dotMatch
-  }
-
-  const ext = lower.includes(".") ? lower.split(".").pop() : null
+  const ext = resolveExt(lower)
   if (ext) {
+    const urlMatch = EXT_URL_MAP[ext]
+    if (urlMatch) return urlMatch
+
     const extMatch = EXT_MAP[ext]
     if (extMatch) return extMatch
   }
@@ -88,6 +94,8 @@ function resolve(fileName: string): [string, string] | null {
 }
 
 // Inline Octicon SVGs for folder, generic file, and parent navigation.
+export const FolderIcon = () => FOLDER_SVG
+
 const FOLDER_SVG = (
   <svg
     width="16"
@@ -133,10 +141,10 @@ export function FileIcon({ name, isDir }: { name: string; isDir: boolean }) {
   const match = resolve(name)
   if (!match) return FILE_SVG
 
-  const [iconName, variant] = match
+  const src = typeof match === "string" ? match : deviconUrl(match[0], match[1])
   return (
     <img
-      src={deviconUrl(iconName, variant)}
+      src={src}
       width={16}
       height={16}
       alt=""
