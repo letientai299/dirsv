@@ -66,7 +66,7 @@ func main() {
 	}
 
 	// Serve blocks until error; clean up watcher afterward.
-	err = http.Serve(ln, handler)
+	err = http.Serve(ln, handler) //nolint:gosec // G114: local dev tool; timeouts not needed
 	_ = w.Close()
 	if err != nil {
 		log.Fatal(err)
@@ -104,18 +104,18 @@ func browserURL(addr string) string {
 	return "http://" + net.JoinHostPort(host, port)
 }
 
-func openBrowser(url, browser string) {
+func openBrowser(target, browser string) {
 	var cmd *exec.Cmd
 	if browser != "" {
-		cmd = exec.Command(browser, url)
+		cmd = exec.Command(browser, target)
 	} else {
 		switch runtime.GOOS {
 		case "darwin":
-			cmd = exec.Command("open", url)
+			cmd = exec.Command("open", target)
 		case "linux":
-			cmd = exec.Command("xdg-open", url)
+			cmd = exec.Command("xdg-open", target)
 		case "windows":
-			cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+			cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", target)
 		default:
 			return
 		}

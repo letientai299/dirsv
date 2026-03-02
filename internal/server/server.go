@@ -83,12 +83,12 @@ var errForbidden = errors.New("forbidden")
 // against the root. Returns the real filesystem path and FileInfo, or an error:
 //   - fs.ErrNotExist if the path doesn't exist
 //   - errForbidden if the path escapes the root
-func (s *Server) resolvePath(reqPath string) (string, os.FileInfo, error) {
+func (s *Server) resolvePath(reqPath string) (resolved string, info os.FileInfo, err error) {
 	cleaned := filepath.FromSlash(path.Clean("/" + reqPath))
 	full := filepath.Join(s.root, cleaned)
 
 	// Resolve symlinks so the containment check uses the real target.
-	resolved, err := filepath.EvalSymlinks(full)
+	resolved, err = filepath.EvalSymlinks(full)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return "", nil, fs.ErrNotExist
@@ -102,12 +102,13 @@ func (s *Server) resolvePath(reqPath string) (string, os.FileInfo, error) {
 		return "", nil, errForbidden
 	}
 
-	info, err := os.Stat(resolved)
-	if err != nil {
-		return "", nil, err
+	// Containment check above ensures resolved is within s.root.
+	fi, statErr := os.Stat(resolved) //nolint:gosec // G703: path validated by containment check
+	if statErr != nil {
+		return "", nil, statErr
 	}
 
-	return resolved, info, nil
+	return resolved, fi, nil
 }
 
 func (s *Server) handleBrowse(w http.ResponseWriter, r *http.Request) {
@@ -146,16 +147,17 @@ func (s *Server) handleBrowse(w http.ResponseWriter, r *http.Request) {
 	hasTrailingSlash := strings.HasSuffix(r.URL.Path, "/")
 	if !hasTrailingSlash && reqPath != "" {
 		for _, de := range dirEntries {
-			if !de.IsDir() && de.Name() == "index.html" {
-				rel, _ := filepath.Rel(s.root, filepath.Join(full, "index.html"))
-				resp := BrowseResponse{
-					Type: "index",
-					Path: filepath.ToSlash(rel),
-				}
-				w.Header().Set("Content-Type", "application/json")
-				_ = json.NewEncoder(w).Encode(resp)
-				return
+			if de.IsDir() || de.Name() != "index.html" {
+				continue
 			}
+			rel, _ := filepath.Rel(s.root, filepath.Join(full, "index.html"))
+			resp := BrowseResponse{
+				Type: "index",
+				Path: filepath.ToSlash(rel),
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(resp)
+			return
 		}
 	}
 
@@ -201,7 +203,7 @@ func (s *Server) handleRaw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	f, err := os.Open(full)
+	f, err := os.Open(full) //nolint:gosec // G304: path validated by resolvePath containment check
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return

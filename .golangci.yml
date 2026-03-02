@@ -2,17 +2,90 @@ version: "2"
 
 linters:
   enable:
+    # Default-tier: correctness
     - copyloopvar
     - errcheck
     - govet
     - ineffassign
     - staticcheck
     - unused
+
+    # Error handling
+    - errorlint
+    - nilerr
+
+    # Security — critical for a server exposing local filesystem
+    - gosec
+    - bidichk
+    - bodyclose
+    - noctx
+
+    # Code quality
     - gocritic
     - revive
-    - nilerr
-    - bodyclose
-    - errorlint
+    - unconvert
+    - unparam
+    - wastedassign
+    - prealloc
+
+  settings:
+    gosec:
+      # Audit mode: stricter analysis, fewer false negatives.
+      config:
+        global:
+          audit: true
+      # G104 duplicates errcheck; exclude to avoid double-flagging
+      # intentional `_ = err` patterns.
+      excludes:
+        - G104
+
+    errcheck:
+      check-type-assertions: true
+
+    govet:
+      enable:
+        - shadow
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+        - style
+
+    errorlint:
+      errorf: true
+      asserts: true
+      comparison: true
+
+  exclusions:
+    rules:
+      # Test files: relax file-permission checks and httpNoBody noise.
+      - path: _test\.go
+        linters:
+          - gosec
+        text: "G301|G306"
+      - path: _test\.go
+        linters:
+          - gocritic
+        text: httpNoBody
+
+      # openBrowser: subprocess args are constructed from CLI flags, not
+      # user-controlled HTTP input.
+      - path: cmd/server/main\.go
+        linters:
+          - gosec
+        text: "G204"
+
+      # devProxy: reverse-proxy target is hardcoded localhost:5173.
+      - path: cmd/server/main\.go
+        linters:
+          - gosec
+        text: "G704"
+
+      # net.Listen in main: CLI entry point, no parent context.
+      - path: cmd/server/main\.go
+        linters:
+          - noctx
 
 issues:
   max-issues-per-linter: 0
