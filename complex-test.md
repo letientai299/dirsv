@@ -752,3 +752,32 @@ $$
 > **Further reading**: Cormen et al., *Introduction to Algorithms* (Chapter 30);
 > Knuth, *The Art of Computer Programming* Vol. 2 (Section 4.3.3); Press et al.,
 > *Numerical Recipes* (Chapter 12).
+
+---
+
+## Appendix B: Practical Notes
+
+> [!NOTE]
+> The FFT requires input length to be a power of 2. Pad your input with zeros
+> before calling the transform. Most libraries handle this automatically.
+
+> [!TIP]
+> For competitive programming, prefer the NTT with $p = 998244353$ — it avoids
+> floating-point precision issues entirely and the prime's structure supports
+> transforms up to $2^{23}$ elements.
+
+> [!IMPORTANT]
+> The bit-reversal permutation must be applied **before** the butterfly stages
+> in the iterative implementation. Forgetting this step produces scrambled output
+> that looks plausible but is mathematically wrong.
+
+> [!WARNING]
+> Floating-point FFT accumulates rounding errors proportional to $O(\epsilon \log n)$.
+> For polynomial multiplication with large coefficients ($M > 10^9$), use NTT or
+> multi-precision arithmetic to avoid silent corruption.
+
+> [!CAUTION]
+> Never apply the inverse FFT without dividing by $n$. The raw inverse transform
+> produces values scaled by the transform length — omitting the $1/n$ factor is
+> one of the most common FFT bugs and leads to results that are off by orders of
+> magnitude.

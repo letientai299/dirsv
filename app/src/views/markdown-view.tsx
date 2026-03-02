@@ -7,6 +7,7 @@ import { renderMarkdown } from "../lib/markdown"
 import { renderMermaidBlocks } from "../lib/mermaid-render"
 import "github-markdown-css/github-markdown.css"
 import "katex/dist/katex.min.css"
+import "remark-github-blockquote-alert/alert.css"
 
 interface Props {
   path: string

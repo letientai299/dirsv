@@ -3,6 +3,7 @@ import rehypeKatex from "rehype-katex"
 import rehypeSlug from "rehype-slug"
 import rehypeStringify from "rehype-stringify"
 import remarkGfm from "remark-gfm"
+import { remarkAlert } from "remark-github-blockquote-alert"
 import remarkMath from "remark-math"
 import remarkParse from "remark-parse"
 import remarkRehype from "remark-rehype"
@@ -24,6 +25,7 @@ export async function renderMarkdown(source: string): Promise<MarkdownResult> {
     .use(remarkParse)
     .use(remarkGfm)
     .use(remarkMath)
+    .use(remarkAlert)
     // SECURITY: remarkRehype without allowDangerousHtml strips raw HTML from
     // markdown source, preventing XSS. Do not add allowDangerousHtml without
     // also adding rehype-sanitize.
