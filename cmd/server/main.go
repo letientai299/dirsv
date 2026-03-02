@@ -22,7 +22,12 @@ import (
 func main() {
 	addr := flag.StringP("addr", "a", ":8080", "listen address")
 	root := flag.StringP("root", "r", ".", "root directory to serve")
-	browser := flag.StringP("browser", "b", "", "browser to open (default: system default)")
+	browser := flag.StringP(
+		"browser",
+		"b",
+		"",
+		"browser to open (default: system default)",
+	)
 	dev := flag.Bool("dev", false, "proxy frontend to Vite dev server")
 	noOpen := flag.Bool("no-open", false, "don't auto-open browser")
 	flag.Parse()
@@ -66,7 +71,10 @@ func main() {
 	}
 
 	// Serve blocks until error; clean up watcher afterward.
-	err = http.Serve(ln, handler) //nolint:gosec // G114: local dev tool; timeouts not needed
+	err = http.Serve(
+		ln,
+		handler,
+	) //nolint:gosec // G114: local dev tool; timeouts not needed
 	_ = w.Close()
 	if err != nil {
 		log.Fatal(err)

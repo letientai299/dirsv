@@ -83,7 +83,9 @@ var errForbidden = errors.New("forbidden")
 // against the root. Returns the real filesystem path and FileInfo, or an error:
 //   - fs.ErrNotExist if the path doesn't exist
 //   - errForbidden if the path escapes the root
-func (s *Server) resolvePath(reqPath string) (resolved string, info os.FileInfo, err error) {
+func (s *Server) resolvePath(
+	reqPath string,
+) (resolved string, info os.FileInfo, err error) {
 	cleaned := filepath.FromSlash(path.Clean("/" + reqPath))
 	full := filepath.Join(s.root, cleaned)
 
@@ -98,12 +100,15 @@ func (s *Server) resolvePath(reqPath string) (resolved string, info os.FileInfo,
 
 	// Boundary-safe containment: root itself is allowed, otherwise require
 	// the separator after root to prevent /tmp/foo matching /tmp/foobar.
-	if resolved != s.root && !strings.HasPrefix(resolved, s.root+string(filepath.Separator)) {
+	if resolved != s.root &&
+		!strings.HasPrefix(resolved, s.root+string(filepath.Separator)) {
 		return "", nil, errForbidden
 	}
 
 	// Containment check above ensures resolved is within s.root.
-	fi, statErr := os.Stat(resolved) //nolint:gosec // G703: path validated by containment check
+	fi, statErr := os.Stat(
+		resolved,
+	) //nolint:gosec // G703: path validated by containment check
 	if statErr != nil {
 		return "", nil, statErr
 	}
@@ -164,7 +169,10 @@ func (s *Server) handleBrowse(w http.ResponseWriter, r *http.Request) {
 	s.serveDirEntries(w, dirEntries)
 }
 
-func (s *Server) serveDirEntries(w http.ResponseWriter, dirEntries []os.DirEntry) {
+func (s *Server) serveDirEntries(
+	w http.ResponseWriter,
+	dirEntries []os.DirEntry,
+) {
 	entries := make([]Entry, 0, len(dirEntries))
 	for _, de := range dirEntries {
 		info, err := de.Info()
@@ -203,7 +211,9 @@ func (s *Server) handleRaw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	f, err := os.Open(full) //nolint:gosec // G304: path validated by resolvePath containment check
+	f, err := os.Open(
+		full,
+	) //nolint:gosec // G304: path validated by resolvePath containment check
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -222,24 +232,27 @@ func (s *Server) mountSPA(appFS fs.FS) {
 		sub = appFS
 	}
 
-	s.mux.HandleFunc("GET /{path...}", func(w http.ResponseWriter, r *http.Request) {
-		name := strings.TrimPrefix(r.URL.Path, "/")
-		if name == "" {
-			name = "index.html"
-		}
+	s.mux.HandleFunc(
+		"GET /{path...}",
+		func(w http.ResponseWriter, r *http.Request) {
+			name := strings.TrimPrefix(r.URL.Path, "/")
+			if name == "" {
+				name = "index.html"
+			}
 
-		// Serve the asset directly if it exists; otherwise SPA fallback.
-		if _, err := fs.Stat(sub, name); err != nil {
-			name = "index.html"
-		}
+			// Serve the asset directly if it exists; otherwise SPA fallback.
+			if _, err := fs.Stat(sub, name); err != nil {
+				name = "index.html"
+			}
 
-		// Vite content-hashed assets are immutable; index.html must revalidate.
-		if strings.HasPrefix(name, "assets/") {
-			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-		} else if name == "index.html" {
-			w.Header().Set("Cache-Control", "no-cache")
-		}
+			// Vite content-hashed assets are immutable; index.html must revalidate.
+			if strings.HasPrefix(name, "assets/") {
+				w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			} else if name == "index.html" {
+				w.Header().Set("Cache-Control", "no-cache")
+			}
 
-		http.ServeFileFS(w, r, sub, name)
-	})
+			http.ServeFileFS(w, r, sub, name)
+		},
+	)
 }

@@ -143,7 +143,8 @@ func (w *Watcher) handleEvent(ev fsnotify.Event) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 	for ch, prefix := range w.clients {
-		if prefix == "" || strings.HasPrefix(rel, prefix) || strings.HasPrefix(prefix, rel) {
+		if prefix == "" || strings.HasPrefix(rel, prefix) ||
+			strings.HasPrefix(prefix, rel) {
 			select {
 			case ch <- sseEvent:
 			default:

@@ -74,7 +74,7 @@ depends = ["lint:be", "lint:fe"]
 
 [tasks."fmt:be"]
 description = "Format Go code"
-run = "gofmt -w -s . && golangci-lint run --fix ./..."
+run = "golangci-lint fmt ./... && golangci-lint run --fix ./..."
 
 [tasks."fmt:fe"]
 description = "Format frontend code"

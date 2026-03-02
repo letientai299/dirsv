@@ -87,6 +87,17 @@ linters:
         linters:
           - noctx
 
+formatters:
+  enable:
+    - gofumpt
+    - golines
+  settings:
+    gofumpt:
+      extra-rules: true
+    golines:
+      max-len: 80
+      tab-len: 2
+
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0

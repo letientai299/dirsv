@@ -13,23 +13,39 @@ func setupTestDir(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 
-	if err := os.WriteFile(filepath.Join(dir, "hello.txt"), []byte("hello world"), 0o644); err != nil {
+	if err := os.WriteFile(
+		filepath.Join(dir, "hello.txt"),
+		[]byte("hello world"),
+		0o644,
+	); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Mkdir(filepath.Join(dir, "sub"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "sub", "nested.txt"), []byte("nested content"), 0o644); err != nil {
+	if err := os.WriteFile(
+		filepath.Join(dir, "sub", "nested.txt"),
+		[]byte("nested content"),
+		0o644,
+	); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "readme.md"), []byte("# Hello"), 0o644); err != nil {
+	if err := os.WriteFile(
+		filepath.Join(dir, "readme.md"),
+		[]byte("# Hello"),
+		0o644,
+	); err != nil {
 		t.Fatal(err)
 	}
 	// Dir with index.html for trailing-slash test.
 	if err := os.Mkdir(filepath.Join(dir, "site"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "site", "index.html"), []byte("<h1>hi</h1>"), 0o644); err != nil {
+	if err := os.WriteFile(
+		filepath.Join(dir, "site", "index.html"),
+		[]byte("<h1>hi</h1>"),
+		0o644,
+	); err != nil {
 		t.Fatal(err)
 	}
 	return dir
@@ -271,7 +287,11 @@ func TestSPAFallback(t *testing.T) {
 	if err := os.MkdirAll(distDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(distDir, "index.html"), []byte("<!doctype html><div id=app></div>"), 0o644); err != nil {
+	if err := os.WriteFile(
+		filepath.Join(distDir, "index.html"),
+		[]byte("<!doctype html><div id=app></div>"),
+		0o644,
+	); err != nil {
 		t.Fatal(err)
 	}
 
