@@ -1,5 +1,4 @@
 import { useEffect, useState } from "preact/hooks"
-import { codeToHtml } from "shiki"
 
 /**
  * Above this size, skip highlighting entirely — tokenization is synchronous
@@ -25,11 +24,14 @@ export function useShiki(content: string, lang: string): string | null {
     // tokenization is synchronous inside the resolved promise — without
     // this yield the browser can't render the fallback before the freeze.
     const timer = setTimeout(() => {
-      void codeToHtml(content, {
-        lang,
-        themes: { light: "github-light", dark: "github-dark" },
-        defaultColor: false,
-      })
+      void import("shiki")
+        .then(({ codeToHtml }) =>
+          codeToHtml(content, {
+            lang,
+            themes: { light: "github-light", dark: "github-dark" },
+            defaultColor: false,
+          }),
+        )
         .then((result) => {
           if (!cancelled) setHtml(result)
         })

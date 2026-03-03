@@ -1,4 +1,3 @@
-import rehypeShiki from "@shikijs/rehype"
 import rehypeColorChips from "rehype-color-chips"
 import rehypeRaw from "rehype-raw"
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize"
@@ -14,7 +13,6 @@ import remarkGithubYamlMetadata from "remark-github-yaml-metadata"
 import remarkMath from "remark-math"
 import remarkParse from "remark-parse"
 import remarkRehype from "remark-rehype"
-import { getSingletonHighlighter } from "shiki"
 import type { Processor } from "unified"
 import { unified } from "unified"
 import { rehypeD2 } from "./rehype-d2"
@@ -24,10 +22,6 @@ import { rehypeGraphviz } from "./rehype-graphviz"
 import { rehypeKatexPlaceholder } from "./rehype-katex-placeholder"
 import { rehypeMermaid } from "./rehype-mermaid"
 import { rehypePlantuml } from "./rehype-plantuml"
-import {
-  rehypeShikiCachedPost,
-  rehypeShikiCachedPre,
-} from "./rehype-shiki-cached"
 import { rehypeTypstDiagram } from "./rehype-typst-diagram"
 
 export type { Heading }
@@ -82,15 +76,15 @@ const sanitizeSchema: typeof defaultSchema = {
   ],
 }
 
-// Cached processor — all plugins are stateless so the instance is reusable.
-// Shiki lazy-loads themes/grammars on first .process(); subsequent calls reuse
-// the cache internally.
 // biome-ignore lint/suspicious/noExplicitAny: unified's generic types are deeply nested; the processor is used only via .process(string)
-let cached: Processor<any, any, any, any, any> | undefined
+type AnyProcessor = Processor<any, any, any, any, any>
 
-function getProcessor() {
-  if (!cached) {
-    cached = unified()
+/** Shared remark/rehype pipeline without Shiki — produces plain <pre><code>. */
+let cachedBase: AnyProcessor | undefined
+
+function getBaseProcessor(): AnyProcessor {
+  if (!cachedBase) {
+    cachedBase = unified()
       .use(remarkParse)
       .use(remarkFrontmatter)
       .use(remarkGithubYamlMetadata)
@@ -114,20 +108,70 @@ function getProcessor() {
       .use(rehypeD2)
       .use(rehypeDbml)
       .use(rehypeTypstDiagram)
-      .use(rehypeShikiCachedPre)
-      .use(rehypeShiki, {
-        themes: { light: "github-light", dark: "github-dark" },
-        defaultColor: false,
-        // Load grammars on demand instead of all 100+ bundled languages upfront.
-        langs: [],
-        lazy: true,
-        fallbackLanguage: "text",
-      })
-      .use(rehypeShikiCachedPost)
       .use(rehypeSlug)
       .use(rehypeStringify)
   }
-  return cached
+  return cachedBase
+}
+
+/** Full pipeline with Shiki — built lazily via dynamic import. */
+let shikiProcessorPromise: Promise<AnyProcessor> | undefined
+
+function getShikiProcessor(): Promise<AnyProcessor> {
+  if (!shikiProcessorPromise) {
+    shikiProcessorPromise = (async () => {
+      const [
+        { default: rehypeShiki },
+        { getSingletonHighlighter },
+        { rehypeShikiCachedPre, rehypeShikiCachedPost },
+      ] = await Promise.all([
+        import("@shikijs/rehype"),
+        import("shiki"),
+        import("./rehype-shiki-cached"),
+      ])
+
+      // Warm up the highlighter so the first render is fast.
+      void getSingletonHighlighter({
+        themes: ["github-light", "github-dark"],
+        langs: [],
+      })
+
+      return unified()
+        .use(remarkParse)
+        .use(remarkFrontmatter)
+        .use(remarkGithubYamlMetadata)
+        .use(remarkGfm)
+        .use(remarkDefinitionList)
+        .use(remarkMath)
+        .use(remarkAlert)
+        .use(remarkEmoji)
+        .use(remarkRehype, { allowDangerousHtml: true })
+        .use(rehypeRaw)
+        .use(rehypeColorChips)
+        .use(rehypeVideo)
+        .use(rehypeSanitize, sanitizeSchema)
+        .use(rehypeKatexPlaceholder)
+        .use(rehypeMermaid)
+        .use(rehypePlantuml)
+        .use(rehypeGraphviz)
+        .use(rehypeD2)
+        .use(rehypeDbml)
+        .use(rehypeTypstDiagram)
+        .use(rehypeShikiCachedPre)
+        .use(rehypeShiki, {
+          themes: { light: "github-light", dark: "github-dark" },
+          defaultColor: false,
+          langs: [],
+          lazy: true,
+          fallbackLanguage: "text",
+        })
+        .use(rehypeShikiCachedPost)
+        .use(rehypeSlug)
+        .use(rehypeStringify)
+    })()
+  }
+
+  return shikiProcessorPromise
 }
 
 /** Extract headings from rendered HTML via DOMParser (fast, no HAST needed). */
@@ -145,16 +189,19 @@ function extractHeadings(html: string): Heading[] {
   return headings
 }
 
-/** Eagerly load the Shiki WASM engine + themes so the first render is fast. */
-export function warmUpShiki(): void {
-  void getSingletonHighlighter({
-    themes: ["github-light", "github-dark"],
-    langs: [],
-  })
+/** Render markdown without syntax highlighting (fast first paint). */
+export async function renderMarkdown(source: string): Promise<MarkdownResult> {
+  const result = await getBaseProcessor().process(source)
+  const html = String(result)
+  return { html, headings: extractHeadings(html) }
 }
 
-export async function renderMarkdown(source: string): Promise<MarkdownResult> {
-  const result = await getProcessor().process(source)
+/** Render markdown with Shiki syntax highlighting (lazy-loaded). */
+export async function renderMarkdownHighlighted(
+  source: string,
+): Promise<MarkdownResult> {
+  const processor = await getShikiProcessor()
+  const result = await processor.process(source)
   const html = String(result)
   return { html, headings: extractHeadings(html) }
 }

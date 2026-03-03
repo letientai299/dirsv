@@ -8,15 +8,13 @@ import { renderDbmlBlocks } from "../lib/dbml-render"
 import { renderGraphvizBlocks } from "../lib/graphviz-render"
 import { renderKatexBlocks } from "../lib/katex-render"
 import type { MarkdownResult } from "../lib/markdown"
-import { renderMarkdown, warmUpShiki } from "../lib/markdown"
+import { renderMarkdown, renderMarkdownHighlighted } from "../lib/markdown"
 import { renderMermaidBlocks } from "../lib/mermaid-render"
 import { renderPlantumlBlocks } from "../lib/plantuml-render"
 import { renderTypstBlocks } from "../lib/typst-render"
 import "github-markdown-css/github-markdown.css"
 import "katex/dist/katex.min.css"
 import "remark-github-blockquote-alert/alert.css"
-
-warmUpShiki()
 
 interface Props {
   path: string
@@ -37,13 +35,30 @@ export function MarkdownView({ path, content }: Props) {
     // Keep old result visible — no setResult(null) flash.
     setError(null)
     let cancelled = false
+    let highlighted = false
+
+    // First pass: render without syntax highlighting for fast initial paint.
     renderMarkdown(content)
       .then((r) => {
-        if (!cancelled) setResult(r)
+        if (!cancelled && !highlighted) setResult(r)
       })
       .catch((err: Error) => {
         if (!cancelled) setError(err.message)
       })
+
+    // Second pass: re-render with Shiki highlighting. morphdom patches only
+    // the changed <pre> blocks — headings, text, diagrams stay untouched.
+    renderMarkdownHighlighted(content)
+      .then((r) => {
+        if (!cancelled) {
+          highlighted = true
+          setResult(r)
+        }
+      })
+      .catch(() => {
+        // Shiki enhancement failed — keep the plain render.
+      })
+
     return () => {
       cancelled = true
     }
