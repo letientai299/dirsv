@@ -1,4 +1,4 @@
-module github.com/tai/dirsv
+module github.com/letientai299/dirsv
 
 go 1.25.0
 

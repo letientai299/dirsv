@@ -34,7 +34,7 @@ depends = ["build:fe"]
 run = """
 commit=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 dirty=$(git diff --quiet 2>/dev/null || echo "true")
-ldflags="-X github.com/tai/dirsv/internal/appinfo.commit=${commit} -X github.com/tai/dirsv/internal/appinfo.dirty=${dirty}"
+ldflags="-X github.com/letientai299/dirsv/internal/appinfo.commit=${commit} -X github.com/letientai299/dirsv/internal/appinfo.dirty=${dirty}"
 go build -ldflags="$ldflags" -o bin/server ./cmd/server
 """
 
@@ -65,7 +65,7 @@ usage = 'arg "[target]" help="Directory or file to serve"'
 run = """
 commit=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 dirty=$(git diff --quiet 2>/dev/null || echo "true")
-ldflags="-X github.com/tai/dirsv/internal/appinfo.commit=${commit} -X github.com/tai/dirsv/internal/appinfo.dirty=${dirty}"
+ldflags="-X github.com/letientai299/dirsv/internal/appinfo.commit=${commit} -X github.com/letientai299/dirsv/internal/appinfo.dirty=${dirty}"
 watchexec -r -e go -- go run -ldflags="$ldflags" ./cmd/server --no-open --dev {{usage.target | default(value='')}}
 """
 
@@ -89,7 +89,7 @@ description = "Build smallest production binary"
 depends = ["build:compress"]
 run = """
 tag=$(git describe --tags --exact-match 2>/dev/null || true)
-CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X github.com/tai/dirsv/internal/appinfo.tag=${tag}" -o bin/dirsv ./cmd/server
+CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X github.com/letientai299/dirsv/internal/appinfo.tag=${tag}" -o bin/dirsv ./cmd/server
 """
 
 # -- test --

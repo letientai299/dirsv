@@ -17,11 +17,11 @@ import (
 	"strings"
 	"time"
 
+	dirsv "github.com/letientai299/dirsv"
+	"github.com/letientai299/dirsv/internal/appinfo"
+	"github.com/letientai299/dirsv/internal/server"
+	"github.com/letientai299/dirsv/internal/watcher"
 	flag "github.com/spf13/pflag"
-	dirsv "github.com/tai/dirsv"
-	"github.com/tai/dirsv/internal/appinfo"
-	"github.com/tai/dirsv/internal/server"
-	"github.com/tai/dirsv/internal/watcher"
 )
 
 func main() {
