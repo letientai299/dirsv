@@ -367,6 +367,7 @@ body {
 /* ---------- file view ---------- */
 
 pre {
+  position: relative;
   padding: 16px;
   overflow-x: auto;
   font-family: var(--mono);
