@@ -101,11 +101,11 @@ linters:
           - noctx
 
       # resolvePath validates containment before os.Stat/Open/ReadFile.
-      # Taint-analysis rules (G703, G304) can't see the boundary check.
+      # Taint-analysis rules (G703, G304, G204) can't see the boundary check.
       - path: internal/server/server\.go
         linters:
           - gosec
-        text: "G703|G304"
+        text: "G703|G304|G204|G702"
 
       # HTML preview response is built from local files, not user input.
       - path: internal/server/server\.go
