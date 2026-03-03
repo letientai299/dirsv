@@ -5,6 +5,7 @@ import { useSSE } from "../lib/use-sse"
 
 interface Props {
   path: string
+  kind: "image" | "video"
 }
 
 const imageExts = new Set([
@@ -20,10 +21,16 @@ const imageExts = new Set([
   ".webp",
 ])
 
-function isImage(name: string): boolean {
+const videoExts = new Set([".mp4", ".webm", ".ogg", ".mov"])
+
+function extOf(name: string): string {
   const dot = name.lastIndexOf(".")
-  if (dot < 0) return false
-  return imageExts.has(name.slice(dot).toLowerCase())
+  return dot < 0 ? "" : name.slice(dot).toLowerCase()
+}
+
+function matchesKind(name: string, kind: "image" | "video"): boolean {
+  const ext = extOf(name)
+  return kind === "image" ? imageExts.has(ext) : videoExts.has(ext)
 }
 
 function navigate(to: string) {
@@ -31,7 +38,7 @@ function navigate(to: string) {
   window.dispatchEvent(new PopStateEvent("popstate"))
 }
 
-export function ImageView({ path }: Props) {
+export function MediaView({ path, kind }: Props) {
   const [siblings, setSiblings] = useState<string[]>([])
 
   const parentDir = useMemo(() => {
@@ -45,19 +52,19 @@ export function ImageView({ path }: Props) {
       browse(parentDir, signal)
         .then((data) => {
           if (data.type !== "dir") return
-          const images = data.entries
-            .filter((e) => !e.isDir && isImage(e.name))
+          const items = data.entries
+            .filter((e) => !e.isDir && matchesKind(e.name, kind))
             .map((e) => {
               const dir = parentDir === "/" ? "" : parentDir
               return `${dir}/${e.name}`
             })
-          setSiblings(images)
+          setSiblings(items)
         })
         .catch(() => {
           // Silently ignore — parent directory may be inaccessible.
         })
     },
-    [parentDir],
+    [parentDir, kind],
   )
 
   useEffect(() => {
@@ -66,7 +73,6 @@ export function ImageView({ path }: Props) {
     return () => controller.abort()
   }, [loadSiblings])
 
-  // Refresh sibling list on directory changes.
   useSSE(parentDir.replace(/^\//, "") || ".", () => loadSiblings())
 
   const currentIdx = siblings.indexOf(path)
@@ -101,28 +107,34 @@ export function ImageView({ path }: Props) {
   return (
     <div>
       <Toolbar path={path} />
-      <div class="img-viewer">
-        <div class="img-container">
-          <img src={rawUrl} alt={fileName} class="img-preview" />
+      <div class="media-viewer">
+        <div class="media-container">
+          {kind === "image" ? (
+            <img src={rawUrl} alt={fileName} class="media-content" />
+          ) : (
+            <video src={rawUrl} controls class="media-content">
+              <track kind="captions" />
+            </video>
+          )}
         </div>
         {siblings.length > 1 && (
-          <div class="img-nav">
+          <div class="media-nav">
             <button
               type="button"
-              class="img-nav-btn"
+              class="media-nav-btn"
               disabled={!prevPath}
               onClick={() => prevPath && navigate(prevPath)}
-              aria-label="Previous image"
+              aria-label={`Previous ${kind}`}
             >
               <ChevronLeft />
             </button>
-            <span class="img-nav-pos">{position}</span>
+            <span class="media-nav-pos">{position}</span>
             <button
               type="button"
-              class="img-nav-btn"
+              class="media-nav-btn"
               disabled={!nextPath}
               onClick={() => nextPath && navigate(nextPath)}
-              aria-label="Next image"
+              aria-label={`Next ${kind}`}
             >
               <ChevronRight />
             </button>

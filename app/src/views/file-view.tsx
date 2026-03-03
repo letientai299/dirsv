@@ -5,8 +5,8 @@ import { fetchRaw, type RawResult } from "../lib/api"
 import { useSSE } from "../lib/use-sse"
 import { CodeView } from "./code-view"
 import { HtmlView } from "./html-view"
-import { ImageView } from "./image-view"
 import { MarkdownView } from "./markdown-view"
+import { MediaView } from "./media-view"
 import { StructuredView } from "./structured-view"
 
 interface Props {
@@ -25,16 +25,18 @@ function formatSize(bytes: number): string {
 }
 
 const imageRe = /\.(apng|avif|bmp|gif|ico|jpe?g|png|svg|webp)$/i
+const videoRe = /\.(mp4|webm|ogg|mov)$/i
 
 export function FileView({ path }: Props) {
   const isHtml = /\.html?$/i.test(path)
   const isImage = imageRe.test(path)
+  const isVideo = videoRe.test(path)
   const [result, setResult] = useState<RawResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(
     (signal?: AbortSignal) => {
-      if (isHtml || isImage) return
+      if (isHtml || isImage || isVideo) return
       setError(null)
       fetchRaw(path, signal)
         .then(setResult)
@@ -42,7 +44,7 @@ export function FileView({ path }: Props) {
           if (err.name !== "AbortError") setError(err.message)
         })
     },
-    [path, isHtml, isImage],
+    [path, isHtml, isImage, isVideo],
   )
 
   useEffect(() => {
@@ -56,7 +58,8 @@ export function FileView({ path }: Props) {
   useSSE(path.replace(/^\//, ""), () => load())
 
   if (isHtml) return <HtmlView path={path} />
-  if (isImage) return <ImageView path={path} />
+  if (isImage) return <MediaView path={path} kind="image" />
+  if (isVideo) return <MediaView path={path} kind="video" />
 
   if (error) return <div class="error">Error: {error}</div>
   if (result === null) return <div class="loading">Loading...</div>
