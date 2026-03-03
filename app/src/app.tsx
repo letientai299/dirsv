@@ -4,12 +4,12 @@ import { DirView } from "./views/dir-view"
 import { FileView } from "./views/file-view"
 
 export function App() {
-  const [path, setPath] = useState(location.pathname)
+  const [path, setPath] = useState(decodeURIComponent(location.pathname))
   const [data, setData] = useState<BrowseResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const onPopState = () => setPath(location.pathname)
+    const onPopState = () => setPath(decodeURIComponent(location.pathname))
     window.addEventListener("popstate", onPopState)
     return () => window.removeEventListener("popstate", onPopState)
   }, [])

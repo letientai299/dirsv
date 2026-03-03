@@ -34,7 +34,12 @@ function matchesKind(name: string, kind: "image" | "video"): boolean {
 }
 
 function navigate(to: string) {
-  history.pushState(null, "", to)
+  // Encode each path segment so the URL bar displays proper percent-encoding.
+  const encoded = to
+    .split("/")
+    .map((s) => encodeURIComponent(s))
+    .join("/")
+  history.pushState(null, "", encoded)
   window.dispatchEvent(new PopStateEvent("popstate"))
 }
 
