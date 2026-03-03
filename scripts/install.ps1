@@ -39,7 +39,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$Repo = "tai/dirsv"
+$Repo = "letientai299/dirsv"
 $BinaryName = "dirsv"
 
 # --- Platform detection (PS5 + PS7) ---

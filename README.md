@@ -52,19 +52,19 @@ syntax-highlighted code blocks, and see changes instantly via WebSocket.
 **macOS / Linux:**
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/tai/dirsv/main/scripts/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/letientai299/dirsv/main/scripts/install.sh | bash
 ```
 
 **Windows (PowerShell 5.1+):**
 
 ```powershell
-irm https://raw.githubusercontent.com/tai/dirsv/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/letientai299/dirsv/main/scripts/install.ps1 | iex
 ```
 
 **Custom directory:**
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/tai/dirsv/main/scripts/install.sh | bash -s -- -d ~/.local/bin
+curl -fsSL https://raw.githubusercontent.com/letientai299/dirsv/main/scripts/install.sh | bash -s -- -d ~/.local/bin
 ```
 
 Or download a binary directly from [Releases][releases].
@@ -134,4 +134,4 @@ MIT
 [vite]: https://vite.dev/
 [bun]: https://bun.sh/
 [gclint]: https://golangci-lint.run/
-[releases]: https://github.com/tai/dirsv/releases
+[releases]: https://github.com/letientai299/dirsv/releases

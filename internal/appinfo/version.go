@@ -10,10 +10,10 @@ var (
 	dirty  string // "true" or ""
 )
 
-const repo = "https://github.com/tai/dirsv"
+const repo = "https://github.com/letientai299/dirsv"
 
 // String returns a human-readable version string.
-// Release build: "v0.3.1  https://github.com/tai/dirsv/releases/tag/v0.3.1"
+// Release build: "v0.3.1  https://github.com/letientai299/dirsv/releases/tag/v0.3.1"
 // Dev build:     "dev (a857dcc-dirty)"
 func String() string {
 	if tag != "" {

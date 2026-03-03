@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="tai/dirsv"
+REPO="letientai299/dirsv"
 BINARY_NAME="dirsv"
 INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
 
