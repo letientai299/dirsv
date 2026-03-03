@@ -1,4 +1,4 @@
-import { useCallback, useState } from "preact/hooks"
+import { useCallback, useEffect, useRef, useState } from "preact/hooks"
 import { FolderIcon } from "../lib/file-icon"
 import { getEffectiveTheme, toggleTheme } from "../lib/theme"
 
@@ -88,6 +88,71 @@ function Breadcrumbs({ path }: { path: string }) {
   )
 }
 
+function KeybindHelp() {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false)
+    }
+    document.addEventListener("mousedown", onClick)
+    document.addEventListener("keydown", onKey)
+    return () => {
+      document.removeEventListener("mousedown", onClick)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [open])
+
+  return (
+    <div class="kb-help" ref={ref}>
+      <button
+        type="button"
+        class="theme-toggle"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Keyboard shortcuts"
+      >
+        ?
+      </button>
+      {open && (
+        <div class="kb-popover">
+          <div class="kb-title">Keyboard shortcuts</div>
+          <table class="kb-table">
+            <tr>
+              <td class="kb-keys">
+                <kbd>j</kbd> <kbd>↓</kbd>
+              </td>
+              <td>Move down</td>
+            </tr>
+            <tr>
+              <td class="kb-keys">
+                <kbd>k</kbd> <kbd>↑</kbd>
+              </td>
+              <td>Move up</td>
+            </tr>
+            <tr>
+              <td class="kb-keys">
+                <kbd>l</kbd> <kbd>Enter</kbd>
+              </td>
+              <td>Open</td>
+            </tr>
+            <tr>
+              <td class="kb-keys">
+                <kbd>h</kbd> <kbd>Backspace</kbd> <kbd>⌥↑</kbd>
+              </td>
+              <td>Go to parent</td>
+            </tr>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function Toolbar({ path }: Props) {
   const [isDark, setIsDark] = useState(() => getEffectiveTheme() === "dark")
 
@@ -101,14 +166,17 @@ export function Toolbar({ path }: Props) {
       <div class="toolbar-path">
         <Breadcrumbs path={path} />
       </div>
-      <button
-        type="button"
-        class="theme-toggle"
-        onClick={toggle}
-        aria-label="Toggle theme"
-      >
-        {isDark ? <SunIcon /> : <MoonIcon />}
-      </button>
+      <div class="toolbar-actions">
+        <KeybindHelp />
+        <button
+          type="button"
+          class="theme-toggle"
+          onClick={toggle}
+          aria-label="Toggle theme"
+        >
+          {isDark ? <SunIcon /> : <MoonIcon />}
+        </button>
+      </div>
     </div>
   )
 }

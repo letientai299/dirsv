@@ -27,7 +27,7 @@ function formatDate(iso: string): string {
 
 function handleDirNavKey(
   e: KeyboardEvent,
-  rows: { href: string }[],
+  rows: { href: string; key: string }[],
   activeIndex: number,
   setActiveIndex: (fn: (i: number) => number) => void,
   onNavigate: (to: string) => void,
