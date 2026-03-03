@@ -34,7 +34,12 @@ const imageRe = /\.(apng|avif|bmp|gif|ico|jpe?g|png|svg|webp)$/i
 const videoRe = /\.(mp4|webm|ogg|mov)$/i
 
 function useParentNav(path: string) {
-  const parentPath = path.replace(/\/[^/]+$/, "") || "/"
+  // For index.html served via "index" response, go up two levels so the user
+  // lands on the parent directory listing instead of re-triggering the index.
+  const dir = path.replace(/\/[^/]+$/, "") || "/"
+  const parentPath = /\/index\.html?$/i.test(path)
+    ? dir.replace(/\/[^/]+$/, "") || "/"
+    : dir
   useKeys(
     (e) => {
       if (

@@ -26,6 +26,17 @@ function formatDate(iso: string): string {
   return dateFmt.format(new Date(iso))
 }
 
+function navigateToParent(
+  e: KeyboardEvent,
+  rows: { href: string; key: string }[],
+  onNavigate: (to: string) => void,
+) {
+  const parent = rows[0]
+  if (parent?.key !== "..") return
+  e.preventDefault()
+  onNavigate(parent.href)
+}
+
 function handleDirNavKey(
   e: KeyboardEvent,
   rows: { href: string; key: string }[],
@@ -34,11 +45,7 @@ function handleDirNavKey(
   onNavigate: (to: string) => void,
 ) {
   if (e.key === "ArrowUp" && e.altKey) {
-    const parent = rows[0]
-    if (parent?.key === "..") {
-      e.preventDefault()
-      onNavigate(parent.href)
-    }
+    navigateToParent(e, rows, onNavigate)
   } else if (e.key === "ArrowDown" || e.key === "j") {
     e.preventDefault()
     setActiveIndex((i) => Math.min(i + 1, rows.length - 1))
@@ -52,11 +59,7 @@ function handleDirNavKey(
       onNavigate(row.href)
     }
   } else if (e.key === "h" || e.key === "Backspace") {
-    const parent = rows[0]
-    if (parent?.key === "..") {
-      e.preventDefault()
-      onNavigate(parent.href)
-    }
+    navigateToParent(e, rows, onNavigate)
   }
 }
 
