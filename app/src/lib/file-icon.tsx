@@ -230,6 +230,47 @@ export function ParentIcon() {
   )
 }
 
+// Octicon image icon for image files.
+const IMAGE_EXTS = new Set([
+  "apng",
+  "avif",
+  "bmp",
+  "gif",
+  "ico",
+  "jpeg",
+  "jpg",
+  "png",
+  "svg",
+  "webp",
+])
+
+const IMAGE_SVG = (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path d="M16 13.25A1.75 1.75 0 0 1 14.25 15H1.75A1.75 1.75 0 0 1 0 13.25V2.75C0 1.784.784 1 1.75 1h12.5c.966 0 1.75.784 1.75 1.75ZM1.75 2.5a.25.25 0 0 0-.25.25v10.5c0 .138.112.25.25.25h.94l3.88-6.46a1.25 1.25 0 0 1 2.14 0L9.44 8.75l.97-1.617a1.25 1.25 0 0 1 2.14 0L15.5 12.1V2.75a.25.25 0 0 0-.25-.25ZM.94 14.5h4.08L2.34 9.843a.25.25 0 0 0-.428 0Zm5.52 0h4.08L8.5 11.102 6.888 13.788Zm5.52 0h3.08l-2.68-4.467a.25.25 0 0 0-.428 0Z" />
+  </svg>
+)
+
+// Octicon video icon for video files.
+const VIDEO_EXTS = new Set(["mp4", "webm", "ogg", "mov"])
+
+const VIDEO_SVG = (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path d="M0 3.75C0 2.784.784 2 1.75 2h12.5c.966 0 1.75.784 1.75 1.75v8.5A1.75 1.75 0 0 1 14.25 14H1.75A1.75 1.75 0 0 1 0 12.25Zm1.75-.25a.25.25 0 0 0-.25.25v8.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25v-8.5a.25.25 0 0 0-.25-.25ZM6 10.559V5.442a.25.25 0 0 1 .379-.215l4.264 2.559a.25.25 0 0 1 0 .428L6.379 10.774A.25.25 0 0 1 6 10.559Z" />
+  </svg>
+)
+
 // Octicon terminal icon for extensionless executables.
 const EXEC_SVG = (
   <svg
@@ -256,7 +297,13 @@ export function FileIcon({
   if (isDir) return FOLDER_SVG
 
   const match = resolve(name)
-  if (!match) return isExec ? EXEC_SVG : FILE_SVG
+  if (!match) {
+    if (isExec) return EXEC_SVG
+    const ext = resolveExt(name)
+    if (ext && IMAGE_EXTS.has(ext)) return IMAGE_SVG
+    if (ext && VIDEO_EXTS.has(ext)) return VIDEO_SVG
+    return FILE_SVG
+  }
 
   const src = typeof match === "string" ? match : deviconUrl(match[0], match[1])
   return (
