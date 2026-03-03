@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "preact/hooks"
 import { Toolbar } from "../components/toolbar"
 import { browse } from "../lib/api"
+import { useKeys } from "../lib/use-keys"
 import { useSSE } from "../lib/use-sse"
 
 interface Props {
@@ -87,11 +88,8 @@ export function MediaView({ path, kind }: Props) {
       ? siblings[currentIdx + 1]
       : null
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.target instanceof HTMLInputElement) return
-      if (e.target instanceof HTMLTextAreaElement) return
-
+  useKeys(
+    (e) => {
       if (e.key === "ArrowLeft" && prevPath) {
         e.preventDefault()
         navigate(prevPath)
@@ -99,10 +97,9 @@ export function MediaView({ path, kind }: Props) {
         e.preventDefault()
         navigate(nextPath)
       }
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [prevPath, nextPath])
+    },
+    [prevPath, nextPath],
+  )
 
   const rawUrl = `/api/raw${path}`
   const fileName = path.split("/").pop() ?? path

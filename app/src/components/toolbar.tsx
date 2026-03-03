@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "preact/hooks"
 import { FolderIcon } from "../lib/file-icon"
 import { getEffectiveTheme, toggleTheme } from "../lib/theme"
+import { useKeys } from "../lib/use-keys"
 
 interface Props {
   path: string
@@ -92,21 +93,22 @@ function KeybindHelp() {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
+  useKeys((e) => {
+    if (e.key === "?" && e.shiftKey) {
+      e.preventDefault()
+      setOpen((v) => !v)
+    } else if (e.key === "Escape") {
+      setOpen(false)
+    }
+  }, [])
+
   useEffect(() => {
-    if (!open) return
     const onClick = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false)
-    }
     document.addEventListener("mousedown", onClick)
-    document.addEventListener("keydown", onKey)
-    return () => {
-      document.removeEventListener("mousedown", onClick)
-      document.removeEventListener("keydown", onKey)
-    }
-  }, [open])
+    return () => document.removeEventListener("mousedown", onClick)
+  }, [])
 
   return (
     <div class="kb-help" ref={ref}>

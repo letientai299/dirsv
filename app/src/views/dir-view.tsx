@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import { Toolbar } from "../components/toolbar"
 import { browse, type DirEntry } from "../lib/api"
 import { FileIcon, ParentIcon } from "../lib/file-icon"
+import { useKeys } from "../lib/use-keys"
 import { useSSE } from "../lib/use-sse"
 
 interface Props {
@@ -101,17 +102,10 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
     row?.scrollIntoView({ block: "nearest" })
   }, [activeIndex])
 
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      // Don't capture when focus is in an input/textarea
-      const tag = (e.target as HTMLElement).tagName
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return
-
-      handleDirNavKey(e, rows, activeIndex, setActiveIndex, onNavigate)
-    }
-    document.addEventListener("keydown", onKeyDown)
-    return () => document.removeEventListener("keydown", onKeyDown)
-  }, [rows, activeIndex, onNavigate])
+  useKeys(
+    (e) => handleDirNavKey(e, rows, activeIndex, setActiveIndex, onNavigate),
+    [rows, activeIndex, onNavigate],
+  )
 
   return (
     <div>
