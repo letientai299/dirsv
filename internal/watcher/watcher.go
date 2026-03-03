@@ -8,6 +8,7 @@
 package watcher
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net"
@@ -52,6 +53,20 @@ type Event struct {
 	Path string `json:"path"`
 }
 
+// watchMsg is the JSON message clients send to update their watch set.
+type watchMsg struct {
+	Watch []string `json:"watch"`
+}
+
+// wsClient tracks a single WebSocket subscriber and the set of path
+// prefixes it cares about. Prefixes are updated dynamically via
+// messages on the socket without reconnecting.
+type wsClient struct {
+	ch       chan Event
+	mu       sync.RWMutex
+	prefixes []string
+}
+
 // Watcher watches a directory tree and broadcasts changes to WebSocket subscribers.
 type Watcher struct {
 	root  string
@@ -60,7 +75,7 @@ type Watcher struct {
 	done  chan struct{}
 
 	mu      sync.RWMutex
-	clients map[chan Event]string // channel → watched path prefix
+	clients map[*wsClient]struct{}
 
 	watchMu sync.Mutex
 	watched map[string]struct{} // abs paths of dirs added to fsw
@@ -95,7 +110,7 @@ func New(root string, opts ...Option) (*Watcher, error) {
 		root:    abs,
 		fsw:     fsw,
 		done:    make(chan struct{}),
-		clients: make(map[chan Event]string),
+		clients: make(map[*wsClient]struct{}),
 		watched: make(map[string]struct{}),
 	}
 	for _, opt := range opts {
@@ -355,44 +370,59 @@ func eventColor(typ string) string {
 	}
 }
 
+// matchesClient reports whether any of the client's prefixes match the event path.
+func matchesClient(c *wsClient, evPath string) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if len(c.prefixes) == 0 {
+		return true // no filter — match everything
+	}
+	for _, prefix := range c.prefixes {
+		if prefix == "" || strings.HasPrefix(evPath, prefix) ||
+			strings.HasPrefix(prefix, evPath) {
+			return true
+		}
+	}
+	return false
+}
+
 // broadcast sends each pending event to matching clients.
 func (w *Watcher) broadcast(pending map[string]Event) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 	for _, ev := range pending {
 		var notified int
-		for ch, prefix := range w.clients {
-			if prefix == "" || strings.HasPrefix(ev.Path, prefix) ||
-				strings.HasPrefix(prefix, ev.Path) {
+		for c := range w.clients {
+			if matchesClient(c, ev.Path) {
 				select {
-				case ch <- ev:
+				case c.ch <- ev:
 					notified++
 				default:
 				}
 			}
 		}
-		c := eventColor(ev.Type)
+		clr := eventColor(ev.Type)
 		w.logf("%s%-10s%s %s %s→ %d client(s)%s",
-			c, ev.Type, colorReset,
+			clr, ev.Type, colorReset,
 			ev.Path,
 			colorDim, notified, colorReset)
 	}
 }
 
-// subscribe registers a client for events matching the given path prefix.
-func (w *Watcher) subscribe(prefix string) chan Event {
-	ch := make(chan Event, 16)
+// subscribe registers a new client with no initial prefixes.
+func (w *Watcher) subscribe() *wsClient {
+	c := &wsClient{ch: make(chan Event, 16)}
 	w.mu.Lock()
-	w.clients[ch] = prefix
+	w.clients[c] = struct{}{}
 	w.mu.Unlock()
-	return ch
+	return c
 }
 
-func (w *Watcher) unsubscribe(ch chan Event) {
+func (w *Watcher) unsubscribe(c *wsClient) {
 	w.mu.Lock()
-	delete(w.clients, ch)
+	delete(w.clients, c)
 	w.mu.Unlock()
-	close(ch)
+	close(c.ch)
 
 	w.pruneWatches()
 }
@@ -402,8 +432,10 @@ func (w *Watcher) unsubscribe(ch chan Event) {
 func (w *Watcher) pruneWatches() {
 	w.mu.RLock()
 	prefixes := make([]string, 0, len(w.clients))
-	for _, p := range w.clients {
-		prefixes = append(prefixes, p)
+	for c := range w.clients {
+		c.mu.RLock()
+		prefixes = append(prefixes, c.prefixes...)
+		c.mu.RUnlock()
 	}
 	w.mu.RUnlock()
 
@@ -483,10 +515,9 @@ func cleanWatchPath(raw string) string {
 	return cleaned
 }
 
-// ServeHTTP handles WebSocket connections at /api/events?watch=<path>.
+// ServeHTTP handles WebSocket connections at /api/events.
+// Clients send {"watch":["path1","path2"]} to update their watch set.
 func (w *Watcher) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	watchPath := cleanWatchPath(r.URL.Query().Get("watch"))
-
 	w.mu.RLock()
 	full := len(w.clients) >= maxClients
 	w.mu.RUnlock()
@@ -497,41 +528,77 @@ func (w *Watcher) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	conn, err := websocket.Accept(rw, r, nil)
 	if err != nil {
-		// Accept already wrote an HTTP error response.
 		return
 	}
 	defer conn.CloseNow() //nolint:errcheck // best-effort cleanup
 
-	ch := w.subscribe(watchPath)
-	defer w.unsubscribe(ch)
+	c := w.subscribe()
+	defer w.unsubscribe(c)
 
-	displayPath := watchPath
-	if displayPath == "" {
-		displayPath = "/"
-	}
 	clientID := clientAddr(r.RemoteAddr)
-	w.logConnect(clientID, displayPath, r.UserAgent())
-	defer w.logDisconnect(clientID, displayPath)
+	w.logConnect(clientID, "/", r.UserAgent())
+	defer w.logDisconnect(clientID, "/")
 
-	// Lazily watch the requested subtree after the upgrade.
-	go w.watchForClient(watchPath)
+	// readCtx is cancelled when the read goroutine exits (client
+	// disconnect or read error), which signals the write loop to stop.
+	readCtx, readCancel := context.WithCancel(r.Context())
+	defer readCancel()
 
-	ctx := r.Context()
+	go w.readLoop(readCtx, readCancel, conn, c, clientID)
+
 	for {
 		select {
-		case <-ctx.Done():
+		case <-readCtx.Done():
 			return
 		case <-w.done:
 			_ = conn.Close(websocket.StatusGoingAway, "server shutting down")
 			return
-		case ev := <-ch:
+		case ev := <-c.ch:
 			data, err := json.Marshal(ev)
 			if err != nil {
 				continue
 			}
-			if err := conn.Write(ctx, websocket.MessageText, data); err != nil {
+			if err := conn.Write(readCtx, websocket.MessageText, data); err != nil {
 				return
 			}
+		}
+	}
+}
+
+// readLoop reads watch messages from the client and updates the client's
+// prefix set. Cancels ctx on read error or close.
+func (w *Watcher) readLoop(
+	ctx context.Context,
+	cancel context.CancelFunc,
+	conn *websocket.Conn,
+	c *wsClient,
+	clientID string,
+) {
+	defer cancel()
+	for {
+		_, data, err := conn.Read(ctx)
+		if err != nil {
+			return
+		}
+		var msg watchMsg
+		if err := json.Unmarshal(data, &msg); err != nil {
+			continue
+		}
+		cleaned := make([]string, 0, len(msg.Watch))
+		for _, raw := range msg.Watch {
+			cleaned = append(cleaned, cleanWatchPath(raw))
+		}
+
+		c.mu.Lock()
+		c.prefixes = cleaned
+		c.mu.Unlock()
+
+		w.logf("%s%-10s%s %s %swatching %v%s",
+			colorCyan, "watch-set", colorReset,
+			clientID, colorDim, cleaned, colorReset)
+
+		for _, prefix := range cleaned {
+			w.watchForClient(prefix)
 		}
 	}
 }

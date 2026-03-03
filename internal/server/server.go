@@ -54,7 +54,7 @@ func WithSingleFile(name string) Option {
 
 // New creates a Server rooted at the given filesystem path.
 // If appFS is non-nil, it serves the embedded SPA frontend for non-API paths.
-// The SSE handler (if any) should be mounted before calling this.
+// The WebSocket handler (if any) should be mounted before calling this.
 func New(
 	root string,
 	appFS fs.FS,
@@ -306,7 +306,7 @@ func (s *Server) serveFile(
 	}
 	defer func() { _ = f.Close() }()
 
-	// Force browsers to revalidate so SSE-triggered re-fetches get
+	// Force browsers to revalidate so WS-triggered re-fetches get
 	// fresh content instead of heuristic-cached stale data.
 	w.Header().Set("Cache-Control", "no-cache")
 

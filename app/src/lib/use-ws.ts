@@ -10,11 +10,12 @@ type Listener = (ev: WsEvent) => void
 /**
  * Shared singleton WebSocket for the entire tab.
  *
- * Browsers limit HTTP/1.1 connections to ~6 per origin. SSE holds a slot
- * permanently; WebSocket frees the HTTP slot after the upgrade handshake.
+ * Clients send {"watch":["path1","path2"]} to update the server-side
+ * filter set whenever hooks subscribe or unsubscribe. The server only
+ * forwards events matching at least one prefix, reducing wasted
+ * broadcast work and client-side filtering.
  *
- * This module opens a single WebSocket watching the root ("") and
- * dispatches events to per-hook listeners with client-side prefix matching.
+ * Client-side prefix matching is kept as a safety net.
  */
 let ws: WebSocket | null = null
 const listeners = new Map<Listener, string>() // listener → watched prefix
@@ -26,7 +27,13 @@ const BACKOFF_MAX = 30000
 
 function wsUrl(): string {
   const proto = location.protocol === "https:" ? "wss:" : "ws:"
-  return `${proto}//${location.host}/api/events?watch=`
+  return `${proto}//${location.host}/api/events`
+}
+
+function sendWatchList() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return
+  const prefixes = [...new Set(listeners.values())]
+  ws.send(JSON.stringify({ watch: prefixes }))
 }
 
 function connect() {
@@ -38,6 +45,7 @@ function connect() {
 
   socket.onopen = () => {
     backoff = 0
+    sendWatchList()
   }
 
   socket.onmessage = (msg) => {
@@ -88,10 +96,12 @@ function teardownIfEmpty() {
 function subscribe(prefix: string, fn: Listener) {
   listeners.set(fn, prefix)
   connect()
+  sendWatchList()
 }
 
 function unsubscribe(fn: Listener) {
   listeners.delete(fn)
+  sendWatchList()
   // Defer teardown so rapid mount/unmount cycles don't churn connections.
   clearTimeout(teardownTimer)
   teardownTimer = setTimeout(teardownIfEmpty, 1000)

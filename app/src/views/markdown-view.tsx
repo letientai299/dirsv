@@ -28,7 +28,7 @@ export function MarkdownView({ content, path }: Props) {
   const prevContentRef = useRef("")
 
   useEffect(() => {
-    // Skip re-render if raw content is unchanged (SSE may re-fetch same file).
+    // Skip re-render if raw content is unchanged (WS may re-fetch same file).
     if (content === prevContentRef.current) return
     prevContentRef.current = content
 

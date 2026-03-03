@@ -3,10 +3,10 @@ import { browse, type DirEntry } from "./api"
 import { useAbortEffect } from "./use-abort-effect"
 import { useWS } from "./use-ws"
 
-/** Fetches sibling entries from `parentDir` and refreshes on SSE changes. */
+/** Fetches sibling entries from `parentDir` and refreshes on WS changes. */
 export function useSiblings(parentDir: string): DirEntry[] {
   const [siblings, setSiblings] = useState<DirEntry[]>([])
-  const sseController = useRef<AbortController | null>(null)
+  const reloadController = useRef<AbortController | null>(null)
 
   const load = useCallback(
     (signal?: AbortSignal) => {
@@ -25,18 +25,18 @@ export function useSiblings(parentDir: string): DirEntry[] {
 
   useAbortEffect(
     (signal) => {
-      // Abort any in-flight SSE-triggered reload when deps change.
-      sseController.current?.abort()
-      sseController.current = null
+      // Abort any in-flight WS-triggered reload when deps change.
+      reloadController.current?.abort()
+      reloadController.current = null
       load(signal)
     },
     [load],
   )
 
   useWS(parentDir.replace(/^\//, "") || ".", () => {
-    sseController.current?.abort()
+    reloadController.current?.abort()
     const controller = new AbortController()
-    sseController.current = controller
+    reloadController.current = controller
     load(controller.signal)
   })
 
