@@ -144,9 +144,21 @@ function KeybindHelp() {
             </tr>
             <tr>
               <td class="kb-keys">
-                <kbd>h</kbd> <kbd>Backspace</kbd> <kbd>⌥↑</kbd>
+                <kbd>h</kbd> <kbd>Backspace</kbd> <kbd>Alt+↑</kbd>
               </td>
               <td>Go to parent</td>
+            </tr>
+            <tr>
+              <td class="kb-keys">
+                <kbd>gg</kbd> <kbd>Home</kbd>
+              </td>
+              <td>Jump to top</td>
+            </tr>
+            <tr>
+              <td class="kb-keys">
+                <kbd>G</kbd> <kbd>End</kbd>
+              </td>
+              <td>Jump to bottom</td>
             </tr>
           </table>
         </div>

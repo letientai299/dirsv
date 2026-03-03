@@ -43,7 +43,13 @@ function handleDirNavKey(
   activeIndex: number,
   setActiveIndex: (fn: (i: number) => number) => void,
   onNavigate: (to: string) => void,
+  pendingG: { current: number },
 ) {
+  // Clear pending g on any non-g key
+  if (e.key !== "g") {
+    pendingG.current = 0
+  }
+
   if (e.key === "ArrowUp" && e.altKey) {
     navigateToParent(e, rows, onNavigate)
   } else if (e.key === "ArrowDown" || e.key === "j") {
@@ -60,6 +66,21 @@ function handleDirNavKey(
     }
   } else if (e.key === "h" || e.key === "Backspace") {
     navigateToParent(e, rows, onNavigate)
+  } else if (e.key === "Home") {
+    e.preventDefault()
+    setActiveIndex(() => 0)
+  } else if (e.key === "End" || e.key === "G") {
+    e.preventDefault()
+    setActiveIndex(() => rows.length - 1)
+  } else if (e.key === "g") {
+    const now = Date.now()
+    if (now - pendingG.current < 500) {
+      e.preventDefault()
+      setActiveIndex(() => 0)
+      pendingG.current = 0
+    } else {
+      pendingG.current = now
+    }
   }
 }
 
@@ -67,6 +88,7 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
   const [entries, setEntries] = useState(initialEntries)
   const [activeIndex, setActiveIndex] = useState(-1)
   const tbodyRef = useRef<HTMLTableSectionElement>(null)
+  const pendingGRef = useRef(0)
 
   const refresh = useCallback(() => {
     void browse(path).then((res) => {
@@ -106,7 +128,15 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
   }, [activeIndex])
 
   useKeys(
-    (e) => handleDirNavKey(e, rows, activeIndex, setActiveIndex, onNavigate),
+    (e) =>
+      handleDirNavKey(
+        e,
+        rows,
+        activeIndex,
+        setActiveIndex,
+        onNavigate,
+        pendingGRef,
+      ),
     [rows, activeIndex, onNavigate],
   )
 
