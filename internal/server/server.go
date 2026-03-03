@@ -27,7 +27,7 @@ type Entry struct {
 // BrowseResponse is the JSON envelope for /api/browse/.
 type BrowseResponse struct {
 	Type    string    `json:"type"`
-	Entries []Entry   `json:"entries,omitempty"`
+	Entries []Entry   `json:"entries"`
 	Path    string    `json:"path,omitempty"`
 	Size    int64     `json:"size,omitempty"`
 	ModTime time.Time `json:"modTime,omitempty"`

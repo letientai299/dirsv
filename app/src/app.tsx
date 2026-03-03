@@ -35,7 +35,9 @@ export function App() {
   if (!data) return <div class="loading">Loading...</div>
 
   if (data.type === "dir") {
-    return <DirView path={path} entries={data.entries} onNavigate={navigate} />
+    return (
+      <DirView path={path} entries={data.entries ?? []} onNavigate={navigate} />
+    )
   }
 
   // "index" response carries the resolved file path (e.g., "docs/index.html").
