@@ -354,12 +354,16 @@ func (w *Watcher) pruneWatches() {
 			continue
 		}
 		rel = filepath.ToSlash(rel)
+		if rel == "." {
+			rel = ""
+		}
 
 		needed := false
 		for _, prefix := range prefixes {
-			if prefix == "" ||
-				strings.HasPrefix(rel, prefix) ||
-				strings.HasPrefix(prefix, rel) {
+			if prefix == "" || rel == "" ||
+				rel == prefix ||
+				strings.HasPrefix(rel, prefix+"/") ||
+				strings.HasPrefix(prefix, rel+"/") {
 				needed = true
 				break
 			}
@@ -369,6 +373,9 @@ func (w *Watcher) pruneWatches() {
 		}
 		_ = w.fsw.Remove(dir)
 		delete(w.watched, dir)
+		if rel == "" {
+			rel = "."
+		}
 		dirs = append(dirs, rel)
 	}
 	if len(dirs) > 0 {
@@ -380,6 +387,7 @@ func (w *Watcher) pruneWatches() {
 
 // watchForClient resolves prefix to an absolute path under root and
 // ensures the subtree is watched. Rejects paths that escape the root.
+// If prefix points to a file, the file's parent directory is watched.
 func (w *Watcher) watchForClient(prefix string) {
 	abs := filepath.Join(w.root, filepath.FromSlash(prefix))
 	// Resolve symlinks so the containment check uses the real target.
@@ -390,6 +398,13 @@ func (w *Watcher) watchForClient(prefix string) {
 	if resolved != w.root &&
 		!strings.HasPrefix(resolved, w.root+string(filepath.Separator)) {
 		return
+	}
+	// If target is a file, watch its parent directory so fsnotify
+	// can report changes to it.
+	//nolint:gosec // G703: resolved is boundary-checked above
+	info, statErr := os.Stat(resolved)
+	if statErr == nil && !info.IsDir() {
+		resolved = filepath.Dir(resolved)
 	}
 	w.ensureWatched(resolved)
 }
