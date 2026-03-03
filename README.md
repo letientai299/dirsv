@@ -34,7 +34,36 @@ events.
 - **Single binary** — frontend assets embedded via `go:embed`, no runtime
   dependencies
 
+## Install
+
+**macOS / Linux:**
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/tai/dirsv/main/scripts/install.sh | bash
+```
+
+**Windows (PowerShell 5.1+):**
+
+```powershell
+irm https://raw.githubusercontent.com/tai/dirsv/main/scripts/install.ps1 | iex
+```
+
+**Custom directory:**
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/tai/dirsv/main/scripts/install.sh | bash -s -- -d ~/.local/bin
+```
+
+Or download a binary directly from [Releases][releases].
+
 ## Quick start
+
+```sh
+dirsv           # serve current directory on :8080, open browser
+dirsv ./docs    # serve a specific directory
+```
+
+### Build from source
 
 Requires [mise][mise] (manages Go, Bun, and golangci-lint automatically).
 
@@ -123,3 +152,4 @@ MIT
 [bun]: https://bun.sh/
 [biome]: https://biomejs.dev/
 [gclint]: https://golangci-lint.run/
+[releases]: https://github.com/tai/dirsv/releases
