@@ -21,6 +21,10 @@ export function App() {
   }, [])
 
   useEffect(() => {
+    document.title = path === "/" ? "dirsv" : `dirsv | ${path}`
+  }, [path])
+
+  useEffect(() => {
     const controller = new AbortController()
     setData(null)
     setError(null)

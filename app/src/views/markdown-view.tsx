@@ -64,6 +64,13 @@ export function MarkdownView({ content, path }: Props) {
     }
   }, [content])
 
+  // Update page title with the first h1 heading when available.
+  useEffect(() => {
+    if (!result) return
+    const h1 = result.headings.find((h) => h.depth === 1)
+    document.title = h1 ? `dirsv | ${h1.text} — ${path}` : `dirsv | ${path}`
+  }, [result, path])
+
   // Patch the DOM incrementally instead of replacing innerHTML wholesale.
   // morphdom diffs old ↔ new and only touches changed nodes, preserving
   // scroll position, focus, and already-rendered mermaid diagrams.
