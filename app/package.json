@@ -8,7 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@shikijs/rehype": "^3.0.0",
+    "@shikijs/rehype": "^4.0.0",
     "github-markdown-css": "^5.9.0",
     "katex": "^0.16.33",
     "mermaid": "^11.12.3",
@@ -31,7 +31,7 @@
     "remark-math": "^6.0.0",
     "remark-parse": "^11.0.0",
     "remark-rehype": "^11.0.0",
-    "shiki": "^3.0.0",
+    "shiki": "^4.0.0",
     "unified": "^11.0.0",
     "yaml": "^2.8.2"
   },
