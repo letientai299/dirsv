@@ -3,6 +3,8 @@ import { AppFooter } from "../components/app-footer"
 import { Toolbar } from "../components/toolbar"
 import { browse, type DirEntry } from "../lib/api"
 import { FileIcon, ParentIcon } from "../lib/file-icon"
+import { formatSize } from "../lib/format"
+import { parentOf } from "../lib/path"
 import { useKeys } from "../lib/use-keys"
 import { useSSE } from "../lib/use-sse"
 
@@ -10,12 +12,6 @@ interface Props {
   path: string
   entries: DirEntry[]
   onNavigate: (to: string) => void
-}
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 const dateFmt = new Intl.DateTimeFormat(undefined, {
@@ -114,15 +110,18 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
   const pendingGRef = useRef(0)
 
   const refresh = useCallback(() => {
-    void browse(path).then((res) => {
-      if (res.type === "dir") setEntries(res.entries)
-    })
+    browse(path)
+      .then((res) => {
+        if (res.type === "dir") setEntries(res.entries)
+      })
+      .catch(() => {
+        // Silently ignore — directory may be inaccessible after rename/delete.
+      })
   }, [path])
 
   useSSE(path === "/" ? "" : path.replace(/^\//, ""), refresh)
 
-  const parentPath =
-    path === "/" ? null : path.replace(/\/[^/]+\/?$/, "") || "/"
+  const parentPath = path === "/" ? null : parentOf(path)
 
   // Build flat list of navigable rows: parent (..) + entries
   const rows = useMemo(() => {

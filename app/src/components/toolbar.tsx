@@ -1,5 +1,7 @@
+import { Fragment } from "preact"
 import { useCallback, useEffect, useRef, useState } from "preact/hooks"
 import { FolderIcon } from "../lib/file-icon"
+import { navigate } from "../lib/navigate"
 import { getEffectiveTheme, toggleTheme } from "../lib/theme"
 import { useKeys } from "../lib/use-keys"
 
@@ -37,11 +39,6 @@ function MoonIcon() {
   )
 }
 
-function navigate(to: string) {
-  history.pushState(null, "", to)
-  window.dispatchEvent(new PopStateEvent("popstate"))
-}
-
 function Breadcrumbs({ path }: { path: string }) {
   if (path === "/") return <span>/</span>
 
@@ -66,7 +63,7 @@ function Breadcrumbs({ path }: { path: string }) {
         const href = `/${segments.slice(0, i + 1).join("/")}`
         const isLast = i === segments.length - 1
         return (
-          <>
+          <Fragment key={seg}>
             {i > 0 && <span class="breadcrumb-sep">/</span>}
             {isLast ? (
               <span>{seg}</span>
@@ -82,7 +79,7 @@ function Breadcrumbs({ path }: { path: string }) {
                 {seg}
               </a>
             )}
-          </>
+          </Fragment>
         )
       })}
     </>

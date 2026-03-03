@@ -1,5 +1,6 @@
 bin/
 .ai.dump/
 agents.local.md
+.mise.local.toml
 app/node_modules/
 app/dist/

@@ -1,12 +1,19 @@
 import type { JSX } from "preact"
 import { lazy, Suspense } from "preact/compat"
-import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
+import { useCallback, useMemo, useRef, useState } from "preact/hooks"
 import { parse as parseYaml } from "yaml"
 import { AppFooter } from "../components/app-footer"
 import { Toolbar } from "../components/toolbar"
-import { browse, type DirEntry, fetchRaw, type RawResult } from "../lib/api"
+import { fetchRaw, type RawResult } from "../lib/api"
 import { FileIcon, ParentIcon } from "../lib/file-icon"
+import { formatSize } from "../lib/format"
+import { ChevronLeft, ChevronRight } from "../lib/icons"
+import { imageRe, videoRe } from "../lib/media-types"
+import { navigate } from "../lib/navigate"
+import { parentOfFile } from "../lib/path"
+import { useAbortEffect } from "../lib/use-abort-effect"
 import { useKeys } from "../lib/use-keys"
+import { useSiblings } from "../lib/use-siblings"
 import { useSSE } from "../lib/use-sse"
 
 const D2View = lazy(() =>
@@ -41,33 +48,7 @@ interface Props {
   path: string
 }
 
-function formatSize(bytes: number): string {
-  if (bytes === 0) return "0 B"
-  const units = ["B", "KB", "MB", "GB"]
-  const i = Math.min(
-    Math.floor(Math.log(bytes) / Math.log(1024)),
-    units.length - 1,
-  )
-  const value = bytes / 1024 ** i
-  return `${i === 0 ? value : value.toFixed(1)} ${units[i]}`
-}
-
-const imageRe = /\.(apng|avif|bmp|gif|ico|jpe?g|png|svg|webp)$/i
-const videoRe = /\.(mp4|webm|ogg|mov)$/i
 const fallback = <div class="loading">Loading...</div>
-
-function navigate(to: string) {
-  history.pushState(null, "", to)
-  window.dispatchEvent(new PopStateEvent("popstate"))
-}
-
-function parentOf(path: string): string {
-  const dir = path.replace(/\/[^/]+$/, "") || "/"
-  // For index.html, go up two levels to avoid re-triggering the index.
-  return /\/index\.html?$/i.test(path)
-    ? dir.replace(/\/[^/]+$/, "") || "/"
-    : dir
-}
 
 function renderFileContent(
   path: string,
@@ -191,6 +172,7 @@ export function FileView({ path }: Props) {
 
   // Resizable sidebar
   const [sidebarWidth, setSidebarWidth] = useState(readSavedWidth)
+  const widthRef = useRef(sidebarWidth)
   const dragging = useRef(false)
 
   const onHandleMouseDown = useCallback((e: MouseEvent) => {
@@ -199,6 +181,7 @@ export function FileView({ path }: Props) {
 
     const onMove = (ev: MouseEvent) => {
       const next = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, ev.clientX))
+      widthRef.current = next
       setSidebarWidth(next)
     }
     const onUp = () => {
@@ -207,14 +190,11 @@ export function FileView({ path }: Props) {
       document.removeEventListener("mouseup", onUp)
       document.body.style.cursor = ""
       document.body.style.userSelect = ""
-      setSidebarWidth((w) => {
-        try {
-          localStorage.setItem(SIDEBAR_WIDTH_KEY, String(w))
-        } catch {
-          // ignore
-        }
-        return w
-      })
+      try {
+        localStorage.setItem(SIDEBAR_WIDTH_KEY, String(widthRef.current))
+      } catch {
+        // localStorage may be unavailable
+      }
     }
     document.body.style.cursor = "col-resize"
     document.body.style.userSelect = "none"
@@ -228,9 +208,8 @@ export function FileView({ path }: Props) {
     result: RawResult
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [siblings, setSiblings] = useState<DirEntry[]>([])
-
-  const parentDir = useMemo(() => parentOf(path), [path])
+  const parentDir = useMemo(() => parentOfFile(path), [path])
+  const siblings = useSiblings(parentDir)
 
   // Navigate to parent on h / Backspace / Alt+Up
   useKeys(
@@ -261,36 +240,10 @@ export function FileView({ path }: Props) {
     [path, isHtml, isImage, isVideo],
   )
 
-  useEffect(() => {
-    const controller = new AbortController()
-    load(controller.signal)
-    return () => controller.abort()
-  }, [load])
+  useAbortEffect((signal) => load(signal), [load])
 
   // Re-fetch on file changes
   useSSE(path.replace(/^\//, ""), () => load())
-
-  // Fetch sibling entries from parent directory
-  const loadSiblings = useCallback(
-    (signal?: AbortSignal) => {
-      browse(parentDir, signal)
-        .then((data) => {
-          if (data.type === "dir") setSiblings(data.entries)
-        })
-        .catch(() => {
-          // Silently ignore — parent directory may be inaccessible.
-        })
-    },
-    [parentDir],
-  )
-
-  useEffect(() => {
-    const controller = new AbortController()
-    loadSiblings(controller.signal)
-    return () => controller.abort()
-  }, [loadSiblings])
-
-  useSSE(parentDir.replace(/^\//, "") || ".", () => loadSiblings())
 
   // Prev/next among all siblings (dirs included) so navigation matches
   // the sidebar order instead of mysteriously jumping over directories.
@@ -407,33 +360,5 @@ export function FileView({ path }: Props) {
         </span>
       </footer>
     </div>
-  )
-}
-
-function ChevronLeft() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d="M9.78 12.78a.75.75 0 0 1-1.06 0L4.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25a.749.749 0 1 1 1.06 1.06L6.06 8l3.72 3.72a.75.75 0 0 1 0 1.06Z" />
-    </svg>
-  )
-}
-
-function ChevronRight() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.749.749 0 1 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" />
-    </svg>
   )
 }

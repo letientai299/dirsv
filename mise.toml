@@ -77,7 +77,7 @@ run = "go run ./cmd/compress app/dist/assets"
 [tasks.release]
 description = "Build smallest production binary"
 depends = ["build:compress"]
-run = "CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o bin/server ./cmd/server"
+run = "CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o bin/dirsv ./cmd/server"
 
 # -- test --
 

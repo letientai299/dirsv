@@ -1,4 +1,5 @@
 /** Maps file extensions to Devicon SVG icons from CDN. */
+import { IMAGE_EXTS, VIDEO_EXTS } from "./media-types"
 
 const DEVICON_CDN = "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons"
 const FILE_ICONS_CDN = "https://cdn.jsdelivr.net/gh/file-icons/icons@master/svg"
@@ -267,20 +268,6 @@ export function ParentIcon() {
   )
 }
 
-// Octicon image icon for image files.
-const IMAGE_EXTS = new Set([
-  "apng",
-  "avif",
-  "bmp",
-  "gif",
-  "ico",
-  "jpeg",
-  "jpg",
-  "png",
-  "svg",
-  "webp",
-])
-
 const IMAGE_SVG = (
   <svg
     width="16"
@@ -292,9 +279,6 @@ const IMAGE_SVG = (
     <path d="M16 13.25A1.75 1.75 0 0 1 14.25 15H1.75A1.75 1.75 0 0 1 0 13.25V2.75C0 1.784.784 1 1.75 1h12.5c.966 0 1.75.784 1.75 1.75ZM1.75 2.5a.25.25 0 0 0-.25.25v10.5c0 .138.112.25.25.25h.94l3.88-6.46a1.25 1.25 0 0 1 2.14 0L9.44 8.75l.97-1.617a1.25 1.25 0 0 1 2.14 0L15.5 12.1V2.75a.25.25 0 0 0-.25-.25ZM.94 14.5h4.08L2.34 9.843a.25.25 0 0 0-.428 0Zm5.52 0h4.08L8.5 11.102 6.888 13.788Zm5.52 0h3.08l-2.68-4.467a.25.25 0 0 0-.428 0Z" />
   </svg>
 )
-
-// Octicon video icon for video files.
-const VIDEO_EXTS = new Set(["mp4", "webm", "ogg", "mov"])
 
 const VIDEO_SVG = (
   <svg

@@ -1,27 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from "preact/hooks"
-import { browse } from "../lib/api"
+import { useEffect, useMemo, useState } from "preact/hooks"
+import { ChevronLeft, ChevronRight } from "../lib/icons"
+import { imageExts, videoExts } from "../lib/media-types"
+import { navigate } from "../lib/navigate"
+import { parentOf } from "../lib/path"
 import { useKeys } from "../lib/use-keys"
-import { useSSE } from "../lib/use-sse"
+import { useSiblings } from "../lib/use-siblings"
 
 interface Props {
   path: string
   kind: "image" | "video"
 }
-
-const imageExts = new Set([
-  ".apng",
-  ".avif",
-  ".bmp",
-  ".gif",
-  ".ico",
-  ".jpeg",
-  ".jpg",
-  ".png",
-  ".svg",
-  ".webp",
-])
-
-const videoExts = new Set([".mp4", ".webm", ".ogg", ".mov"])
 
 function extOf(name: string): string {
   const dot = name.lastIndexOf(".")
@@ -33,52 +21,16 @@ function matchesKind(name: string, kind: "image" | "video"): boolean {
   return kind === "image" ? imageExts.has(ext) : videoExts.has(ext)
 }
 
-function navigate(to: string) {
-  // Encode each path segment so the URL bar displays proper percent-encoding.
-  const encoded = to
-    .split("/")
-    .map((s) => encodeURIComponent(s))
-    .join("/")
-  history.pushState(null, "", encoded)
-  window.dispatchEvent(new PopStateEvent("popstate"))
-}
-
 export function MediaView({ path, kind }: Props) {
-  const [siblings, setSiblings] = useState<string[]>([])
+  const parentDir = useMemo(() => parentOf(path), [path])
+  const allSiblings = useSiblings(parentDir)
 
-  const parentDir = useMemo(() => {
-    const parts = path.replace(/^\//, "").split("/")
-    parts.pop()
-    return parts.length === 0 ? "/" : `/${parts.join("/")}`
-  }, [path])
-
-  const loadSiblings = useCallback(
-    (signal?: AbortSignal) => {
-      browse(parentDir, signal)
-        .then((data) => {
-          if (data.type !== "dir") return
-          const items = data.entries
-            .filter((e) => !e.isDir && matchesKind(e.name, kind))
-            .map((e) => {
-              const dir = parentDir === "/" ? "" : parentDir
-              return `${dir}/${e.name}`
-            })
-          setSiblings(items)
-        })
-        .catch(() => {
-          // Silently ignore — parent directory may be inaccessible.
-        })
-    },
-    [parentDir, kind],
-  )
-
-  useEffect(() => {
-    const controller = new AbortController()
-    loadSiblings(controller.signal)
-    return () => controller.abort()
-  }, [loadSiblings])
-
-  useSSE(parentDir.replace(/^\//, "") || ".", () => loadSiblings())
+  const siblings = useMemo(() => {
+    const dir = parentDir === "/" ? "" : parentDir
+    return allSiblings
+      .filter((e) => !e.isDir && matchesKind(e.name, kind))
+      .map((e) => `${dir}/${e.name}`)
+  }, [allSiblings, parentDir, kind])
 
   const currentIdx = siblings.indexOf(path)
   const prevPath = currentIdx > 0 ? siblings[currentIdx - 1] : null
@@ -161,33 +113,5 @@ export function MediaView({ path, kind }: Props) {
         </div>
       )}
     </div>
-  )
-}
-
-function ChevronLeft() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d="M9.78 12.78a.75.75 0 0 1-1.06 0L4.47 8.53a.75.75 0 0 1 0-1.06l4.25-4.25a.749.749 0 1 1 1.06 1.06L6.06 8l3.72 3.72a.75.75 0 0 1 0 1.06Z" />
-    </svg>
-  )
-}
-
-function ChevronRight() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 16 16"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.749.749 0 1 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" />
-    </svg>
   )
 }

@@ -1,7 +1,5 @@
 # dirsv
 
-[./tests/all-mermaid.md](tests/all-mermaid.md)
-
 A local directory browser with live reload. Single Go binary, embedded web UI.
 
 Browse filesystem contents with a clean table view, render markdown with
