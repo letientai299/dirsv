@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "preact/hooks"
 import { parse as parseYaml } from "yaml"
 import { Toolbar } from "../components/toolbar"
 import { fetchRaw, type RawResult } from "../lib/api"
+import { useKeys } from "../lib/use-keys"
 import { useSSE } from "../lib/use-sse"
 import { CodeView } from "./code-view"
 import { D2View } from "./d2-view"
@@ -32,12 +33,32 @@ function formatSize(bytes: number): string {
 const imageRe = /\.(apng|avif|bmp|gif|ico|jpe?g|png|svg|webp)$/i
 const videoRe = /\.(mp4|webm|ogg|mov)$/i
 
+function useParentNav(path: string) {
+  const parentPath = path.replace(/\/[^/]+$/, "") || "/"
+  useKeys(
+    (e) => {
+      if (
+        e.key === "h" ||
+        e.key === "Backspace" ||
+        (e.key === "ArrowUp" && e.altKey)
+      ) {
+        e.preventDefault()
+        history.pushState(null, "", parentPath)
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      }
+    },
+    [parentPath],
+  )
+}
+
 export function FileView({ path }: Props) {
   const isHtml = /\.html?$/i.test(path)
   const isImage = imageRe.test(path)
   const isVideo = videoRe.test(path)
   const [result, setResult] = useState<RawResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  useParentNav(path)
 
   const load = useCallback(
     (signal?: AbortSignal) => {
