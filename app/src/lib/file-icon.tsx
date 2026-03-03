@@ -22,7 +22,6 @@ const EXT_URL_MAP: Record<string, string> = {
   d2: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23007AD6'%3E%3Ctext x='1' y='13' font-size='13' font-weight='700' font-family='system-ui,sans-serif'%3ED2%3C/text%3E%3C/svg%3E",
   dbml: `${SI}/diagramsdotnet/F08705`,
   typ: `${SI}/typst/239DAD`,
-  excalidraw: `${SI}/excalidraw/6965DB`,
   env: `${SI}/dotenv/ECD53F`,
   // Platform binaries
   exe: `${DEVICON_CDN}/windows11/windows11-original.svg`,

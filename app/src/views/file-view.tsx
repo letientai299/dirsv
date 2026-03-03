@@ -21,10 +21,6 @@ const CodeView = lazy(() =>
 const StructuredView = lazy(() =>
   import("./structured-view").then((m) => ({ default: m.StructuredView })),
 )
-const ExcalidrawView = lazy(() =>
-  import("./excalidraw-view").then((m) => ({ default: m.ExcalidrawView })),
-)
-
 interface Props {
   path: string
 }
@@ -144,14 +140,6 @@ export function FileView({ path }: Props) {
 
   if (/\.typ$/i.test(path)) {
     return <TypstView path={path} content={result.content} />
-  }
-
-  if (/\.excalidraw$/i.test(path)) {
-    return (
-      <Suspense fallback={fallback}>
-        <ExcalidrawView path={path} content={result.content} />
-      </Suspense>
-    )
   }
 
   if (/\.json$/i.test(path)) {

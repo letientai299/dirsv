@@ -977,19 +977,6 @@ pre {
   height: auto;
 }
 
-/* ---------- excalidraw ---------- */
-
-.excalidraw-standalone {
-  display: flex;
-  justify-content: center;
-  padding: 24px 16px;
-}
-
-.excalidraw-standalone svg {
-  max-width: 100%;
-  height: auto;
-}
-
 /* ---------- responsive: collapse TOC ---------- */
 
 @media (max-width: 1024px) {
