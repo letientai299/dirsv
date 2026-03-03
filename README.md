@@ -1,10 +1,18 @@
 # dirsv
 
+[./tests/all-mermaid.md](tests/all-mermaid.md)
+
 A local directory browser with live reload. Single Go binary, embedded web UI.
 
 Browse filesystem contents with a clean table view, render markdown with
 syntax-highlighted code blocks, and see changes instantly via server-sent
 events.
+
+|            Directory browsing            |                JSON tree view                 |
+| :--------------------------------------: | :-------------------------------------------: |
+| ![Directory browsing](demo/dir-view.png) |     ![JSON tree view](demo/json-dark.png)     |
+|       **Markdown with KaTeX math**       |             **PlantUML diagrams**             |
+|   ![Markdown with math](demo/math.png)   | ![PlantUML diagrams](demo/plant-uml-dark.png) |
 
 ## Features
 
@@ -65,7 +73,7 @@ dirsv ./docs    # serve a specific directory
 
 ### Build from source
 
-Requires [mise][mise] (manages Go, Bun, and golangci-lint automatically).
+Requires [mise][mise] (manages Go, [Bun][bun], and [golangci-lint][gclint] automatically).
 
 ```sh
 mise build   # build frontend + Go binary
@@ -99,35 +107,7 @@ port in the 8080–8179 range.
 mise dev   # Go server + Vite dev server in parallel (HMR)
 ```
 
-The Go server runs on `:8080` and proxies non-API requests to Vite on `:5173`.
-
-### Tasks
-
-| Task         | Description                  |
-| ------------ | ---------------------------- |
-| `mise build` | Build frontend + Go binary   |
-| `mise dev`   | Dev servers with HMR         |
-| `mise test`  | Go tests (race, cover)       |
-| `mise lint`  | Lint Go + TypeScript + Biome |
-| `mise fmt`   | Format all code              |
-
-## Tech stack
-
-**Backend:** Go, [fsnotify][fsnotify] (file watching), [pflag][pflag] (CLI)
-
-**Frontend:** [Preact][preact], [Vite][vite], TypeScript,
-[unified][remark]/[Shiki][shiki] (markdown + syntax highlighting)
-
-**Tooling:** [mise][mise], [Bun][bun], [Biome][biome], [golangci-lint][gclint]
-
-## API
-
-```
-GET /api/browse/{path...}   directory listing or file metadata (JSON)
-GET /api/raw/{path...}      raw file content with MIME type
-GET /api/events?watch=path  SSE stream for filesystem changes
-GET /{path...}              SPA (index.html)
-```
+The Go server runs on `:8080` and proxies non-API requests to [Vite][vite] on `:5173`.
 
 ## License
 
@@ -145,11 +125,7 @@ MIT
 [dbml]: https://dbml.dbdiagram.io/
 [typst]: https://typst.app/
 [mise]: https://mise.jdx.dev/
-[fsnotify]: https://github.com/fsnotify/fsnotify
-[pflag]: https://github.com/spf13/pflag
-[preact]: https://preactjs.com/
 [vite]: https://vite.dev/
 [bun]: https://bun.sh/
-[biome]: https://biomejs.dev/
 [gclint]: https://golangci-lint.run/
 [releases]: https://github.com/tai/dirsv/releases
