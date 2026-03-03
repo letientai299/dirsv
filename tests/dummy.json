@@ -35,11 +35,32 @@
           "website": "https://alice.dev"
         }
       },
-      "permissions": ["users.read", "users.write", "users.delete", "settings.manage", "audit.view"],
+      "permissions": [
+        "users.read",
+        "users.write",
+        "users.delete",
+        "settings.manage",
+        "audit.view"
+      ],
       "loginHistory": [
-        { "timestamp": "2026-03-02T08:12:33Z", "ip": "203.0.113.42", "userAgent": "Mozilla/5.0", "success": true },
-        { "timestamp": "2026-03-01T19:45:01Z", "ip": "203.0.113.42", "userAgent": "Mozilla/5.0", "success": true },
-        { "timestamp": "2026-02-28T14:22:09Z", "ip": "198.51.100.7", "userAgent": "curl/8.5.0", "success": false }
+        {
+          "timestamp": "2026-03-02T08:12:33Z",
+          "ip": "203.0.113.42",
+          "userAgent": "Mozilla/5.0",
+          "success": true
+        },
+        {
+          "timestamp": "2026-03-01T19:45:01Z",
+          "ip": "203.0.113.42",
+          "userAgent": "Mozilla/5.0",
+          "success": true
+        },
+        {
+          "timestamp": "2026-02-28T14:22:09Z",
+          "ip": "198.51.100.7",
+          "userAgent": "curl/8.5.0",
+          "success": false
+        }
       ],
       "tags": ["team-lead", "on-call"],
       "preferences": {
@@ -86,7 +107,12 @@
       },
       "permissions": ["users.read", "content.write", "content.publish"],
       "loginHistory": [
-        { "timestamp": "2026-03-03T06:30:00Z", "ip": "192.0.2.88", "userAgent": "Mozilla/5.0", "success": true }
+        {
+          "timestamp": "2026-03-03T06:30:00Z",
+          "ip": "192.0.2.88",
+          "userAgent": "Mozilla/5.0",
+          "success": true
+        }
       ],
       "tags": [],
       "preferences": {
@@ -172,8 +198,18 @@
       },
       "permissions": ["content.write", "content.publish", "media.upload"],
       "loginHistory": [
-        { "timestamp": "2026-03-03T01:15:00Z", "ip": "203.0.113.99", "userAgent": "Mozilla/5.0", "success": true },
-        { "timestamp": "2026-03-02T23:50:00Z", "ip": "203.0.113.99", "userAgent": "Mozilla/5.0", "success": true }
+        {
+          "timestamp": "2026-03-03T01:15:00Z",
+          "ip": "203.0.113.99",
+          "userAgent": "Mozilla/5.0",
+          "success": true
+        },
+        {
+          "timestamp": "2026-03-02T23:50:00Z",
+          "ip": "203.0.113.99",
+          "userAgent": "Mozilla/5.0",
+          "success": true
+        }
       ],
       "tags": ["design-team"],
       "preferences": {
@@ -217,12 +253,39 @@
           "website": "https://eve.security"
         }
       },
-      "permissions": ["users.read", "users.write", "users.delete", "settings.manage", "audit.view", "security.manage"],
+      "permissions": [
+        "users.read",
+        "users.write",
+        "users.delete",
+        "settings.manage",
+        "audit.view",
+        "security.manage"
+      ],
       "loginHistory": [
-        { "timestamp": "2026-03-03T07:00:00Z", "ip": "198.51.100.22", "userAgent": "Mozilla/5.0", "success": true },
-        { "timestamp": "2026-03-02T15:30:00Z", "ip": "198.51.100.22", "userAgent": "Mozilla/5.0", "success": true },
-        { "timestamp": "2026-03-02T15:29:50Z", "ip": "198.51.100.22", "userAgent": "Mozilla/5.0", "success": false },
-        { "timestamp": "2026-03-01T09:00:00Z", "ip": "198.51.100.55", "userAgent": "httpie/3.2", "success": true }
+        {
+          "timestamp": "2026-03-03T07:00:00Z",
+          "ip": "198.51.100.22",
+          "userAgent": "Mozilla/5.0",
+          "success": true
+        },
+        {
+          "timestamp": "2026-03-02T15:30:00Z",
+          "ip": "198.51.100.22",
+          "userAgent": "Mozilla/5.0",
+          "success": true
+        },
+        {
+          "timestamp": "2026-03-02T15:29:50Z",
+          "ip": "198.51.100.22",
+          "userAgent": "Mozilla/5.0",
+          "success": false
+        },
+        {
+          "timestamp": "2026-03-01T09:00:00Z",
+          "ip": "198.51.100.55",
+          "userAgent": "httpie/3.2",
+          "success": true
+        }
       ],
       "tags": ["team-lead", "security-team", "on-call"],
       "preferences": {

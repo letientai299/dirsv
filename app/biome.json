@@ -18,7 +18,7 @@
     }
   },
   "files": {
-    "includes": ["src/**", "biome.json"]
+    "includes": ["src/**", "*.json"]
   },
   "linter": {
     "rules": {
