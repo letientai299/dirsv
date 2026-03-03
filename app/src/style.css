@@ -542,6 +542,15 @@ pre {
   object-fit: contain;
 }
 
+.media-fade {
+  opacity: 0;
+  transition: opacity 0.15s ease-in;
+}
+
+.media-fade--in {
+  opacity: 1;
+}
+
 .media-nav {
   display: flex;
   align-items: center;

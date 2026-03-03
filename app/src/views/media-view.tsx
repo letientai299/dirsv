@@ -109,13 +109,37 @@ export function MediaView({ path, kind }: Props) {
   const position =
     currentIdx >= 0 ? `${currentIdx + 1} / ${siblings.length}` : ""
 
+  // Fade-in: track whether the current image has loaded.
+  const [loaded, setLoaded] = useState(false)
+
+  // Reset loaded state when the image source changes.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: rawUrl is an intentional trigger dependency
+  useEffect(() => {
+    setLoaded(false)
+  }, [rawUrl])
+
+  // Preload adjacent images for instant transitions.
+  useEffect(() => {
+    if (kind !== "image") return
+    const toPreload = [prevPath, nextPath].filter(Boolean) as string[]
+    for (const p of toPreload) {
+      const img = new Image()
+      img.src = `/api/raw${p}`
+    }
+  }, [prevPath, nextPath, kind])
+
   return (
     <div>
       <Toolbar path={path} />
       <div class="media-viewer">
         <div class="media-container">
           {kind === "image" ? (
-            <img src={rawUrl} alt={fileName} class="media-content" />
+            <img
+              src={rawUrl}
+              alt={fileName}
+              class={`media-content media-fade ${loaded ? "media-fade--in" : ""}`}
+              onLoad={() => setLoaded(true)}
+            />
           ) : (
             <video src={rawUrl} controls class="media-content">
               <track kind="captions" />
