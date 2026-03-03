@@ -1,6 +1,6 @@
 import { useCallback, useState } from "preact/hooks"
 import { FolderIcon } from "../lib/file-icon"
-import { cycleTheme, getEffectiveTheme } from "../lib/theme"
+import { getEffectiveTheme, toggleTheme } from "../lib/theme"
 
 interface Props {
   path: string
@@ -92,8 +92,8 @@ export function Toolbar({ path }: Props) {
   const [isDark, setIsDark] = useState(() => getEffectiveTheme() === "dark")
 
   const toggle = useCallback(() => {
-    cycleTheme()
-    setIsDark(getEffectiveTheme() === "dark")
+    const next = toggleTheme()
+    setIsDark(next === "dark")
   }, [])
 
   return (

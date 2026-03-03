@@ -1,5 +1,5 @@
 import morphdom from "morphdom"
-import { useEffect, useRef, useState } from "preact/hooks"
+import { useCallback, useEffect, useRef, useState } from "preact/hooks"
 import { TableOfContents } from "../components/toc"
 import { Toolbar } from "../components/toolbar"
 import { injectCopyButtons } from "../lib/code-copy"
@@ -65,6 +65,23 @@ export function MarkdownView({ path, content }: Props) {
     void renderGraphvizBlocks(el)
     injectCopyButtons(el)
   }, [result])
+
+  // Re-render mermaid diagrams when the user toggles the colour scheme.
+  // Mermaid has built-in dark/default themes. Graphviz and PlantUML use
+  // explicit colours from the source — they're theme-agnostic.
+  const reRenderDiagrams = useCallback(() => {
+    const el = contentRef.current
+    if (!el) return
+    for (const rendered of el.querySelectorAll(".mermaid-rendered")) {
+      rendered.classList.remove("mermaid-rendered")
+    }
+    void renderMermaidBlocks(el)
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener("theme-change", reRenderDiagrams)
+    return () => window.removeEventListener("theme-change", reRenderDiagrams)
+  }, [reRenderDiagrams])
 
   if (error) return <div class="error">Render error: {error}</div>
   if (result === null) return <div class="loading">Rendering...</div>
