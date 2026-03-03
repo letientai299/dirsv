@@ -358,6 +358,23 @@ body {
   padding: 16px;
 }
 
+.file-binary-open {
+  display: inline-block;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 13px;
+  font-family: var(--mono);
+  cursor: pointer;
+}
+
+.file-binary-open:hover {
+  background: var(--border);
+}
+
 .file-footer {
   display: flex;
   align-items: center;

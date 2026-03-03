@@ -95,14 +95,13 @@ function renderFileContent(
   if (error) return <div class="error">Error: {error}</div>
   if (result === null) return fallback
   if (result.kind === "binary") {
-    const name = path.split("/").pop() ?? path
     return (
       <div class="file-binary">
         <p>
           Binary file ({result.contentType}, {formatSize(result.size)})
         </p>
-        <a href={result.url} download={name}>
-          Download {name}
+        <a href={`/api/raw${path}`} class="file-binary-open" target="_blank">
+          Open in app
         </a>
       </div>
     )
