@@ -32,7 +32,6 @@ export async function renderDbmlBlocks(container: HTMLElement): Promise<void> {
   const { run } = await import("@softwaretechnik/dbml-renderer")
 
   const jobs = Array.from(placeholders).flatMap((el) => {
-    // biome-ignore lint/complexity/useLiteralKeys: TS4111 requires bracket notation for index signatures
     const source = el.dataset["dbml"]
     if (!source) return []
     return [{ el, source }]

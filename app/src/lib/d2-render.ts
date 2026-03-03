@@ -29,7 +29,6 @@ export async function renderD2Blocks(container: HTMLElement): Promise<void> {
   const isDark = getIsDark()
 
   for (const el of placeholders) {
-    // biome-ignore lint/complexity/useLiteralKeys: TS4111 requires bracket notation for index signatures
     const source = el.dataset["d2"]
     if (!source) continue
 
@@ -50,7 +49,6 @@ export async function renderD2Blocks(container: HTMLElement): Promise<void> {
 }
 
 function getIsDark(): boolean {
-  // biome-ignore lint/complexity/useLiteralKeys: TS4111 requires bracket notation for index signatures
   const explicit = document.documentElement.dataset["theme"]
   if (explicit === "dark") return true
   if (explicit === "light") return false

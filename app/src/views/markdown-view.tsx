@@ -6,6 +6,7 @@ import { injectCopyButtons } from "../lib/code-copy"
 import { renderD2Blocks } from "../lib/d2-render"
 import { renderDbmlBlocks } from "../lib/dbml-render"
 import { renderGraphvizBlocks } from "../lib/graphviz-render"
+import { renderKatexBlocks } from "../lib/katex-render"
 import type { MarkdownResult } from "../lib/markdown"
 import { renderMarkdown } from "../lib/markdown"
 import { renderMermaidBlocks } from "../lib/mermaid-render"
@@ -63,6 +64,7 @@ export function MarkdownView({ path, content }: Props) {
       morphdom(el, tmp, { childrenOnly: true })
     }
 
+    void renderKatexBlocks(el)
     void renderMermaidBlocks(el)
     renderPlantumlBlocks(el)
     void renderGraphvizBlocks(el)

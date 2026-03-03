@@ -24,7 +24,6 @@ export async function renderGraphvizBlocks(
   const graphviz = await Graphviz.load()
 
   const jobs = Array.from(placeholders).flatMap((el) => {
-    // biome-ignore lint/complexity/useLiteralKeys: TS4111 requires bracket notation for index signatures
     const source = el.dataset["graphviz"]
     if (!source) return []
     return [{ el, source }]

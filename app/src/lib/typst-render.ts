@@ -53,7 +53,6 @@ export async function renderTypstBlocks(container: HTMLElement): Promise<void> {
   const t = await getTypst()
 
   for (const el of placeholders) {
-    // biome-ignore lint/complexity/useLiteralKeys: TS4111 requires bracket notation for index signatures
     const source = el.dataset["typst"]
     if (!source) continue
 

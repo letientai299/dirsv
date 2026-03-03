@@ -14,7 +14,6 @@ export function renderPlantumlBlocks(container: HTMLElement): void {
   if (placeholders.length === 0) return
 
   for (const el of placeholders) {
-    // biome-ignore lint/complexity/useLiteralKeys: TS4111 requires bracket notation for index signatures
     const source = el.dataset["plantuml"]
     if (!source) continue
 

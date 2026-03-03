@@ -1,6 +1,5 @@
 import rehypeShiki from "@shikijs/rehype"
 import rehypeColorChips from "rehype-color-chips"
-import rehypeKatex from "rehype-katex"
 import rehypeRaw from "rehype-raw"
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize"
 import rehypeSlug from "rehype-slug"
@@ -22,6 +21,7 @@ import { rehypeD2 } from "./rehype-d2"
 import { rehypeDbml } from "./rehype-dbml"
 import type { Heading } from "./rehype-extract-headings"
 import { rehypeGraphviz } from "./rehype-graphviz"
+import { rehypeKatexPlaceholder } from "./rehype-katex-placeholder"
 import { rehypeMermaid } from "./rehype-mermaid"
 import { rehypePlantuml } from "./rehype-plantuml"
 import { rehypeTypstDiagram } from "./rehype-typst-diagram"
@@ -35,8 +35,8 @@ export interface MarkdownResult {
 
 // Extend the default sanitize schema to allow classes/attributes produced by
 // remark plugins (math, alerts, mermaid) while still blocking XSS. Plugins that
-// run AFTER sanitization (KaTeX, Shiki) don't need allowlisting — their output
-// is never seen by the sanitizer.
+// run AFTER sanitization (katex-placeholder, Shiki) don't need allowlisting —
+// their output is never seen by the sanitizer.
 // Helper to pull per-element attribute defaults from the sanitize schema.
 // Uses bracket access to satisfy TS noPropertyAccessFromIndexSignature, wrapped
 // in a function so biome's useLiteralKeys rule doesn't trigger.
@@ -48,7 +48,7 @@ const sanitizeSchema: typeof defaultSchema = {
   ...defaultSchema,
   attributes: {
     ...defaultSchema.attributes,
-    // remark-math markers consumed by rehype-katex after sanitization
+    // remark-math markers consumed by rehype-katex-placeholder after sanitization
     code: [
       ...schemaAttrs("code"),
       ["className", "math-inline", "math-display"],
@@ -105,7 +105,7 @@ function getProcessor() {
       .use(rehypeColorChips)
       .use(rehypeVideo)
       .use(rehypeSanitize, sanitizeSchema)
-      .use(rehypeKatex)
+      .use(rehypeKatexPlaceholder)
       .use(rehypeMermaid)
       .use(rehypePlantuml)
       .use(rehypeGraphviz)
