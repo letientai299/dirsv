@@ -6,7 +6,19 @@ export default defineConfig({
   plugins: [preact()],
   server: {
     proxy: {
-      "/api": "http://localhost:8080",
+      "/api": {
+        target: "http://localhost:8080",
+        // Suppress ECONNREFUSED errors during startup while the Go server
+        // is still compiling. The browser retries automatically.
+        configure: (proxy) => {
+          proxy.on("error", (_err, _req, res) => {
+            if (!res.headersSent && "writeHead" in res) {
+              (res as import("http").ServerResponse).writeHead(502);
+              (res as import("http").ServerResponse).end();
+            }
+          });
+        },
+      },
     },
   },
 });
