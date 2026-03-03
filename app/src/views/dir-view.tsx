@@ -32,17 +32,29 @@ function handleDirNavKey(
   setActiveIndex: (fn: (i: number) => number) => void,
   onNavigate: (to: string) => void,
 ) {
-  if (e.key === "ArrowDown" || e.key === "j") {
+  if (e.key === "ArrowUp" && e.altKey) {
+    const parent = rows[0]
+    if (parent?.key === "..") {
+      e.preventDefault()
+      onNavigate(parent.href)
+    }
+  } else if (e.key === "ArrowDown" || e.key === "j") {
     e.preventDefault()
     setActiveIndex((i) => Math.min(i + 1, rows.length - 1))
   } else if (e.key === "ArrowUp" || e.key === "k") {
     e.preventDefault()
     setActiveIndex((i) => Math.max(i - 1, 0))
-  } else if (e.key === "Enter") {
+  } else if (e.key === "Enter" || e.key === "l") {
     const row = rows[activeIndex]
     if (activeIndex >= 0 && row) {
       e.preventDefault()
       onNavigate(row.href)
+    }
+  } else if (e.key === "h" || e.key === "Backspace") {
+    const parent = rows[0]
+    if (parent?.key === "..") {
+      e.preventDefault()
+      onNavigate(parent.href)
     }
   }
 }
