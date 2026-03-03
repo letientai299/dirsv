@@ -6,6 +6,7 @@ import { injectCopyButtons } from "../lib/code-copy"
 import type { MarkdownResult } from "../lib/markdown"
 import { renderMarkdown } from "../lib/markdown"
 import { renderMermaidBlocks } from "../lib/mermaid-render"
+import { renderPlantumlBlocks } from "../lib/plantuml-render"
 import "github-markdown-css/github-markdown.css"
 import "katex/dist/katex.min.css"
 import "remark-github-blockquote-alert/alert.css"
@@ -59,6 +60,7 @@ export function MarkdownView({ path, content }: Props) {
     }
 
     void renderMermaidBlocks(el)
+    renderPlantumlBlocks(el)
     injectCopyButtons(el)
   }, [result])
 

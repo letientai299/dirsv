@@ -82,6 +82,11 @@ description = "Format frontend code"
 dir = "app"
 run = "bun biome check --write ."
 
+[tasks."fmt:md"]
+description = "Format Markdown files"
+dir = "app"
+run = "bun prettier --write '../**/*.md' '!../node_modules' '!../.ai.dump'"
+
 [tasks.fmt]
 description = "Format all code"
-depends = ["fmt:be", "fmt:fe"]
+depends = ["fmt:be", "fmt:fe", "fmt:md"]

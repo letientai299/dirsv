@@ -83,7 +83,6 @@ body {
   text-decoration: underline;
 }
 
-
 .breadcrumb-sep {
   color: var(--text-dim);
   margin: 0 1px;
@@ -707,6 +706,19 @@ pre {
 
 /* Ensure mermaid SVGs respect container width */
 .mermaid-rendered svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ---------- plantuml ---------- */
+
+.plantuml-placeholder {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
+}
+
+.plantuml-rendered img {
   max-width: 100%;
   height: auto;
 }

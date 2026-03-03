@@ -1,12 +1,17 @@
 import rehypeShiki from "@shikijs/rehype"
+import rehypeColorChips from "rehype-color-chips"
 import rehypeKatex from "rehype-katex"
 import rehypeRaw from "rehype-raw"
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize"
 import rehypeSlug from "rehype-slug"
 import rehypeStringify from "rehype-stringify"
+import rehypeVideo from "rehype-video"
+import remarkDefinitionList from "remark-definition-list"
 import remarkEmoji from "remark-emoji"
+import remarkFrontmatter from "remark-frontmatter"
 import remarkGfm from "remark-gfm"
 import { remarkAlert } from "remark-github-blockquote-alert"
+import remarkGithubYamlMetadata from "remark-github-yaml-metadata"
 import remarkMath from "remark-math"
 import remarkParse from "remark-parse"
 import remarkRehype from "remark-rehype"
@@ -15,6 +20,7 @@ import type { Processor } from "unified"
 import { unified } from "unified"
 import type { Heading } from "./rehype-extract-headings"
 import { rehypeMermaid } from "./rehype-mermaid"
+import { rehypePlantuml } from "./rehype-plantuml"
 
 export type { Heading }
 
@@ -63,6 +69,10 @@ const sanitizeSchema: typeof defaultSchema = {
     // Media elements
     "video",
     "audio",
+    // Definition list elements
+    "dl",
+    "dt",
+    "dd",
   ],
 }
 
@@ -76,7 +86,10 @@ function getProcessor() {
   if (!cached) {
     cached = unified()
       .use(remarkParse)
+      .use(remarkFrontmatter)
+      .use(remarkGithubYamlMetadata)
       .use(remarkGfm)
+      .use(remarkDefinitionList)
       .use(remarkMath)
       .use(remarkAlert)
       .use(remarkEmoji)
@@ -86,8 +99,11 @@ function getProcessor() {
       .use(remarkRehype, { allowDangerousHtml: true })
       .use(rehypeRaw)
       .use(rehypeSanitize, sanitizeSchema)
+      .use(rehypeColorChips)
+      .use(rehypeVideo)
       .use(rehypeKatex)
       .use(rehypeMermaid)
+      .use(rehypePlantuml)
       .use(rehypeShiki, {
         themes: { light: "github-light", dark: "github-dark" },
         defaultColor: false,
