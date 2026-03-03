@@ -216,10 +216,19 @@ func (w *Watcher) unsubscribe(ch chan Event) {
 }
 
 // watchForClient resolves prefix to an absolute path under root and
-// ensures the subtree is watched. Safe to call from a goroutine.
+// ensures the subtree is watched. Rejects paths that escape the root.
 func (w *Watcher) watchForClient(prefix string) {
 	abs := filepath.Join(w.root, filepath.FromSlash(prefix))
-	w.ensureWatched(abs)
+	// Resolve symlinks so the containment check uses the real target.
+	resolved, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		return
+	}
+	if resolved != w.root &&
+		!strings.HasPrefix(resolved, w.root+string(filepath.Separator)) {
+		return
+	}
+	w.ensureWatched(resolved)
 }
 
 // cleanWatchPath normalizes the watch query parameter to match the format
