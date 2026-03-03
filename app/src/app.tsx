@@ -1,7 +1,13 @@
+import { lazy, Suspense } from "preact/compat"
 import { useCallback, useEffect, useState } from "preact/hooks"
 import { type BrowseResponse, browse } from "./lib/api"
-import { DirView } from "./views/dir-view"
-import { FileView } from "./views/file-view"
+
+const DirView = lazy(() =>
+  import("./views/dir-view").then((m) => ({ default: m.DirView })),
+)
+const FileView = lazy(() =>
+  import("./views/file-view").then((m) => ({ default: m.FileView })),
+)
 
 export function App() {
   const [path, setPath] = useState(decodeURIComponent(location.pathname))
@@ -34,13 +40,25 @@ export function App() {
   if (error) return <div class="error">Error: {error}</div>
   if (!data) return <div class="loading">Loading...</div>
 
+  const fallback = <div class="loading">Loading...</div>
+
   if (data.type === "dir") {
     return (
-      <DirView path={path} entries={data.entries ?? []} onNavigate={navigate} />
+      <Suspense fallback={fallback}>
+        <DirView
+          path={path}
+          entries={data.entries ?? []}
+          onNavigate={navigate}
+        />
+      </Suspense>
     )
   }
 
   // "index" response carries the resolved file path (e.g., "docs/index.html").
   const filePath = data.type === "index" ? `/${data.path}` : path
-  return <FileView path={filePath} />
+  return (
+    <Suspense fallback={fallback}>
+      <FileView path={filePath} />
+    </Suspense>
+  )
 }

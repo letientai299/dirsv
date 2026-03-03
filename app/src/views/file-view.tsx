@@ -1,19 +1,29 @@
+import { lazy, Suspense } from "preact/compat"
 import { useCallback, useEffect, useState } from "preact/hooks"
 import { parse as parseYaml } from "yaml"
 import { Toolbar } from "../components/toolbar"
 import { fetchRaw, type RawResult } from "../lib/api"
 import { useKeys } from "../lib/use-keys"
 import { useSSE } from "../lib/use-sse"
-import { CodeView } from "./code-view"
 import { D2View } from "./d2-view"
 import { DbmlView } from "./dbml-view"
-import { ExcalidrawView } from "./excalidraw-view"
 import { GraphvizView } from "./graphviz-view"
 import { HtmlView } from "./html-view"
-import { MarkdownView } from "./markdown-view"
 import { MediaView } from "./media-view"
-import { StructuredView } from "./structured-view"
 import { TypstView } from "./typst-view"
+
+const MarkdownView = lazy(() =>
+  import("./markdown-view").then((m) => ({ default: m.MarkdownView })),
+)
+const CodeView = lazy(() =>
+  import("./code-view").then((m) => ({ default: m.CodeView })),
+)
+const StructuredView = lazy(() =>
+  import("./structured-view").then((m) => ({ default: m.StructuredView })),
+)
+const ExcalidrawView = lazy(() =>
+  import("./excalidraw-view").then((m) => ({ default: m.ExcalidrawView })),
+)
 
 interface Props {
   path: string
@@ -110,8 +120,14 @@ export function FileView({ path }: Props) {
     )
   }
 
+  const fallback = <div class="loading">Loading...</div>
+
   if (/\.mdx?$/i.test(path)) {
-    return <MarkdownView path={path} content={result.content} />
+    return (
+      <Suspense fallback={fallback}>
+        <MarkdownView path={path} content={result.content} />
+      </Suspense>
+    )
   }
 
   if (/\.(gv|dot)$/i.test(path)) {
@@ -131,30 +147,42 @@ export function FileView({ path }: Props) {
   }
 
   if (/\.excalidraw$/i.test(path)) {
-    return <ExcalidrawView path={path} content={result.content} />
+    return (
+      <Suspense fallback={fallback}>
+        <ExcalidrawView path={path} content={result.content} />
+      </Suspense>
+    )
   }
 
   if (/\.json$/i.test(path)) {
     return (
-      <StructuredView
-        path={path}
-        content={result.content}
-        parse={JSON.parse}
-        lang="json"
-      />
+      <Suspense fallback={fallback}>
+        <StructuredView
+          path={path}
+          content={result.content}
+          parse={JSON.parse}
+          lang="json"
+        />
+      </Suspense>
     )
   }
 
   if (/\.ya?ml$/i.test(path)) {
     return (
-      <StructuredView
-        path={path}
-        content={result.content}
-        parse={parseYaml}
-        lang="yaml"
-      />
+      <Suspense fallback={fallback}>
+        <StructuredView
+          path={path}
+          content={result.content}
+          parse={parseYaml}
+          lang="yaml"
+        />
+      </Suspense>
     )
   }
 
-  return <CodeView path={path} content={result.content} />
+  return (
+    <Suspense fallback={fallback}>
+      <CodeView path={path} content={result.content} />
+    </Suspense>
+  )
 }
