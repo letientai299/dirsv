@@ -174,7 +174,7 @@ function resolve(fileName: string): [string, string] | string | null {
   if (nameMatch) return nameMatch
 
   for (const prefix in PREFIX_MAP) {
-    if (lower.startsWith(prefix)) return PREFIX_MAP[prefix]
+    if (lower.startsWith(prefix)) return PREFIX_MAP[prefix] ?? null
   }
 
   const ext = resolveExt(lower)

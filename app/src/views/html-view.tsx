@@ -14,7 +14,7 @@ export function HtmlView({ path }: Props) {
   return (
     <div>
       <Toolbar path={path} />
-      <iframe src={src} class="html-frame" />
+      <iframe src={src} class="html-frame" title="HTML preview" />
     </div>
   )
 }

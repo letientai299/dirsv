@@ -183,6 +183,16 @@ body {
   color: #54aeff;
 }
 
+/* ---------- file view ---------- */
+
+pre {
+  padding: 16px;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 /* ---------- code view ---------- */
 
 .code-view pre {
@@ -255,16 +265,6 @@ body {
 [data-theme="dark"] .shiki span {
   color: var(--shiki-dark);
   background-color: var(--shiki-dark-bg);
-}
-
-/* ---------- file view ---------- */
-
-pre {
-  padding: 16px;
-  overflow-x: auto;
-  font-family: var(--mono);
-  font-size: 13px;
-  line-height: 1.6;
 }
 
 /* ---------- status ---------- */

@@ -62,7 +62,7 @@ function Breadcrumbs({ path }: { path: string }) {
         /
       </a>
       {segments.map((seg, i) => {
-        const href = "/" + segments.slice(0, i + 1).join("/")
+        const href = `/${segments.slice(0, i + 1).join("/")}`
         const isLast = i === segments.length - 1
         return (
           <>

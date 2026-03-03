@@ -25,6 +25,28 @@ function formatDate(iso: string): string {
   return dateFmt.format(new Date(iso))
 }
 
+function handleDirNavKey(
+  e: KeyboardEvent,
+  rows: { href: string }[],
+  activeIndex: number,
+  setActiveIndex: (fn: (i: number) => number) => void,
+  onNavigate: (to: string) => void,
+) {
+  if (e.key === "ArrowDown" || e.key === "j") {
+    e.preventDefault()
+    setActiveIndex((i) => Math.min(i + 1, rows.length - 1))
+  } else if (e.key === "ArrowUp" || e.key === "k") {
+    e.preventDefault()
+    setActiveIndex((i) => Math.max(i - 1, 0))
+  } else if (e.key === "Enter") {
+    const row = rows[activeIndex]
+    if (activeIndex >= 0 && row) {
+      e.preventDefault()
+      onNavigate(row.href)
+    }
+  }
+}
+
 export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
   const [entries, setEntries] = useState(initialEntries)
   const [activeIndex, setActiveIndex] = useState(-1)
@@ -53,6 +75,7 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
   }, [parentPath, path, entries])
 
   // Reset active index on navigation
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset intentionally triggers on path change
   useEffect(() => {
     setActiveIndex(-1)
   }, [path])
@@ -72,18 +95,7 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
       const tag = (e.target as HTMLElement).tagName
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return
 
-      if (e.key === "ArrowDown" || e.key === "j") {
-        e.preventDefault()
-        setActiveIndex((i) => Math.min(i + 1, rows.length - 1))
-      } else if (e.key === "ArrowUp" || e.key === "k") {
-        e.preventDefault()
-        setActiveIndex((i) => Math.max(i - 1, 0))
-      } else if (e.key === "Enter") {
-        if (activeIndex >= 0 && activeIndex < rows.length) {
-          e.preventDefault()
-          onNavigate(rows[activeIndex].href)
-        }
-      }
+      handleDirNavKey(e, rows, activeIndex, setActiveIndex, onNavigate)
     }
     document.addEventListener("keydown", onKeyDown)
     return () => document.removeEventListener("keydown", onKeyDown)
