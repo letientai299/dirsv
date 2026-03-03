@@ -5,11 +5,14 @@ import { fetchRaw, type RawResult } from "../lib/api"
 import { useSSE } from "../lib/use-sse"
 import { CodeView } from "./code-view"
 import { D2View } from "./d2-view"
+import { DbmlView } from "./dbml-view"
+import { ExcalidrawView } from "./excalidraw-view"
 import { GraphvizView } from "./graphviz-view"
 import { HtmlView } from "./html-view"
 import { MarkdownView } from "./markdown-view"
 import { MediaView } from "./media-view"
 import { StructuredView } from "./structured-view"
+import { TypstView } from "./typst-view"
 
 interface Props {
   path: string
@@ -91,6 +94,18 @@ export function FileView({ path }: Props) {
 
   if (/\.d2$/i.test(path)) {
     return <D2View path={path} content={result.content} />
+  }
+
+  if (/\.dbml$/i.test(path)) {
+    return <DbmlView path={path} content={result.content} />
+  }
+
+  if (/\.typ$/i.test(path)) {
+    return <TypstView path={path} content={result.content} />
+  }
+
+  if (/\.excalidraw$/i.test(path)) {
+    return <ExcalidrawView path={path} content={result.content} />
   }
 
   if (/\.json$/i.test(path)) {

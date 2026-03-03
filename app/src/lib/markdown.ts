@@ -19,10 +19,12 @@ import { getSingletonHighlighter } from "shiki"
 import type { Processor } from "unified"
 import { unified } from "unified"
 import { rehypeD2 } from "./rehype-d2"
+import { rehypeDbml } from "./rehype-dbml"
 import type { Heading } from "./rehype-extract-headings"
 import { rehypeGraphviz } from "./rehype-graphviz"
 import { rehypeMermaid } from "./rehype-mermaid"
 import { rehypePlantuml } from "./rehype-plantuml"
+import { rehypeTypstDiagram } from "./rehype-typst-diagram"
 
 export type { Heading }
 
@@ -108,6 +110,8 @@ function getProcessor() {
       .use(rehypePlantuml)
       .use(rehypeGraphviz)
       .use(rehypeD2)
+      .use(rehypeDbml)
+      .use(rehypeTypstDiagram)
       .use(rehypeShiki, {
         themes: { light: "github-light", dark: "github-dark" },
         defaultColor: false,

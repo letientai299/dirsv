@@ -4,11 +4,13 @@ import { TableOfContents } from "../components/toc"
 import { Toolbar } from "../components/toolbar"
 import { injectCopyButtons } from "../lib/code-copy"
 import { renderD2Blocks } from "../lib/d2-render"
+import { renderDbmlBlocks } from "../lib/dbml-render"
 import { renderGraphvizBlocks } from "../lib/graphviz-render"
 import type { MarkdownResult } from "../lib/markdown"
 import { renderMarkdown } from "../lib/markdown"
 import { renderMermaidBlocks } from "../lib/mermaid-render"
 import { renderPlantumlBlocks } from "../lib/plantuml-render"
+import { renderTypstBlocks } from "../lib/typst-render"
 import "github-markdown-css/github-markdown.css"
 import "katex/dist/katex.min.css"
 import "remark-github-blockquote-alert/alert.css"
@@ -65,6 +67,8 @@ export function MarkdownView({ path, content }: Props) {
     renderPlantumlBlocks(el)
     void renderGraphvizBlocks(el)
     void renderD2Blocks(el)
+    void renderDbmlBlocks(el)
+    void renderTypstBlocks(el)
     injectCopyButtons(el)
   }, [result])
 

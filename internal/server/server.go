@@ -104,11 +104,14 @@ var errForbidden = errors.New("forbidden")
 // textMIME overrides Go's mime.TypeByExtension for extensions that are
 // misidentified as non-text (e.g., .ts → video/mp2t).
 var textMIME = map[string]string{
-	".ts":  "text/plain; charset=utf-8",
-	".tsx": "text/plain; charset=utf-8",
-	".mts": "text/plain; charset=utf-8",
-	".cts": "text/plain; charset=utf-8",
-	".sql": "text/plain; charset=utf-8",
+	".ts":         "text/plain; charset=utf-8",
+	".tsx":        "text/plain; charset=utf-8",
+	".mts":        "text/plain; charset=utf-8",
+	".cts":        "text/plain; charset=utf-8",
+	".sql":        "text/plain; charset=utf-8",
+	".dbml":       "text/plain; charset=utf-8",
+	".typ":        "text/plain; charset=utf-8",
+	".excalidraw": "application/json",
 }
 
 // resolvePath cleans, resolves symlinks, and validates a request path

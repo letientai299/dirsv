@@ -15,6 +15,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	flag "github.com/spf13/pflag"
 	dirsv "github.com/tai/dirsv"
@@ -155,6 +156,12 @@ func listenAutoPort(host string, startPort int) (net.Listener, error) {
 func devProxy(srv *server.Server) http.Handler {
 	viteURL, _ := url.Parse("http://localhost:5173")
 	proxy := httputil.NewSingleHostReverseProxy(viteURL)
+	// Vite's on-demand dep optimization can take a while for large WASM
+	// packages (typst, excalidraw). Increase the proxy timeout so the
+	// browser doesn't get a 504 on first load.
+	proxy.Transport = &http.Transport{
+		ResponseHeaderTimeout: 120 * time.Second,
+	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if isAPIPath(r.URL.Path) {
