@@ -18,8 +18,8 @@ events.
 - **Diagrams in markdown** — fenced code blocks for [Mermaid][mermaid],
   [PlantUML][plantuml], [Graphviz][graphviz], [D2][d2], [DBML][dbml], and
   [Typst][typst]. All rendered client-side via WASM or JS
-- **Standalone diagram files** — `.gv`/`.dot`, `.d2`, `.dbml`, `.typ`, and
-  `.excalidraw` files render directly
+- **Standalone diagram files** — `.gv`/`.dot`, `.d2`, `.dbml`, and `.typ`
+  files render directly
 - **Code view** — syntax highlighting for 100+ languages, line numbers, and a
   copy button
 - **JSON / YAML tree view** — collapsible tree with path filtering, keyboard
