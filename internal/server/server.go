@@ -466,7 +466,12 @@ func (s *Server) mountSPA(appFS fs.FS) {
 // If found and the client accepts gzip, it streams the .gz bytes directly.
 // If found but the client doesn't accept gzip, it decompresses on the fly.
 // Returns false if no .gz variant exists (caller should serve the raw file).
-func servePrecompressed(w http.ResponseWriter, r *http.Request, fsys fs.FS, name string) bool {
+func servePrecompressed(
+	w http.ResponseWriter,
+	r *http.Request,
+	fsys fs.FS,
+	name string,
+) bool {
 	gzName := name + ".gz"
 	f, err := fsys.Open(gzName)
 	if err != nil {
@@ -501,6 +506,6 @@ func servePrecompressed(w http.ResponseWriter, r *http.Request, fsys fs.FS, name
 	}
 	defer func() { _ = gr.Close() }()
 
-	_, _ = io.Copy(w, gr)
+	_, _ = io.Copy(w, gr) //nolint:gosec // G110: own embedded assets
 	return true
 }

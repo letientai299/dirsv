@@ -37,58 +37,64 @@ func main() {
 func run(root string) error {
 	// First pass: remove stale .gz files from a previous run so repeated
 	// invocations are idempotent.
-	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
-			return err
-		}
-		if strings.ToLower(filepath.Ext(path)) == ".gz" {
-			return os.Remove(path)
-		}
-		return nil
-	}); err != nil {
+	if err := filepath.WalkDir( //nolint:gosec // G703: build-time tool, root is a trusted project path
+		root,
+		func(path string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return err
+			}
+			if strings.ToLower(filepath.Ext(path)) == ".gz" {
+				return os.Remove(path)
+			}
+			return nil
+		},
+	); err != nil {
 		return err
 	}
 
 	// Second pass: compress matching files and remove originals.
 	var count int
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
-			return err
-		}
-		if !compressExt[strings.ToLower(filepath.Ext(path))] {
+	err := filepath.WalkDir( //nolint:gosec // G703: build-time tool, root is a trusted project path
+		root,
+		func(path string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return err
+			}
+			if !compressExt[strings.ToLower(filepath.Ext(path))] {
+				return nil
+			}
+
+			data, err := os.ReadFile(path) //nolint:gosec // G304: trusted path
+			if err != nil {
+				return err
+			}
+
+			gzPath := path + ".gz"
+			f, err := os.Create(gzPath) //nolint:gosec // G304: trusted path
+			if err != nil {
+				return err
+			}
+
+			w, _ := gzip.NewWriterLevel(f, gzip.BestCompression)
+			if _, err := w.Write(data); err != nil {
+				_ = f.Close()
+				return err
+			}
+			if err := w.Close(); err != nil {
+				_ = f.Close()
+				return err
+			}
+			if err := f.Close(); err != nil {
+				return err
+			}
+
+			if err := os.Remove(path); err != nil {
+				return err
+			}
+			count++
 			return nil
-		}
-
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-
-		gzPath := path + ".gz"
-		f, err := os.Create(gzPath)
-		if err != nil {
-			return err
-		}
-
-		w, _ := gzip.NewWriterLevel(f, gzip.BestCompression)
-		if _, err := w.Write(data); err != nil {
-			_ = f.Close()
-			return err
-		}
-		if err := w.Close(); err != nil {
-			_ = f.Close()
-			return err
-		}
-		if err := f.Close(); err != nil {
-			return err
-		}
-
-		if err := os.Remove(path); err != nil {
-			return err
-		}
-		count++
-		return nil
-	})
+		},
+	)
 	if err != nil {
 		return err
 	}
