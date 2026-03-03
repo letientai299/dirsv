@@ -1,6 +1,7 @@
 /** Maps file extensions to Devicon SVG icons from CDN. */
 
 const DEVICON_CDN = "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons"
+const FILE_ICONS_CDN = "https://cdn.jsdelivr.net/gh/file-icons/icons@master/svg"
 
 const SI = "https://cdn.simpleicons.org"
 
@@ -14,6 +15,8 @@ const EXT_URL_MAP: Record<string, string> = {
   v: `${SI}/v/5D87BF`,
   proto: `${SI}/protobuf/4285F4`,
   mdx: `${SI}/mdx/F9AC00`,
+  gv: `${FILE_ICONS_CDN}/GraphViz.svg`,
+  dot: `${FILE_ICONS_CDN}/GraphViz.svg`,
   env: `${SI}/dotenv/ECD53F`,
   // Platform binaries
   exe: `${SI}/windows/0078D4`,

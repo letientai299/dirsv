@@ -4,6 +4,7 @@ import { Toolbar } from "../components/toolbar"
 import { fetchRaw, type RawResult } from "../lib/api"
 import { useSSE } from "../lib/use-sse"
 import { CodeView } from "./code-view"
+import { GraphvizView } from "./graphviz-view"
 import { HtmlView } from "./html-view"
 import { MarkdownView } from "./markdown-view"
 import { MediaView } from "./media-view"
@@ -81,6 +82,10 @@ export function FileView({ path }: Props) {
 
   if (/\.mdx?$/i.test(path)) {
     return <MarkdownView path={path} content={result.content} />
+  }
+
+  if (/\.(gv|dot)$/i.test(path)) {
+    return <GraphvizView path={path} content={result.content} />
   }
 
   if (/\.json$/i.test(path)) {

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "preact/hooks"
 import { TableOfContents } from "../components/toc"
 import { Toolbar } from "../components/toolbar"
 import { injectCopyButtons } from "../lib/code-copy"
+import { renderGraphvizBlocks } from "../lib/graphviz-render"
 import type { MarkdownResult } from "../lib/markdown"
 import { renderMarkdown } from "../lib/markdown"
 import { renderMermaidBlocks } from "../lib/mermaid-render"
@@ -61,6 +62,7 @@ export function MarkdownView({ path, content }: Props) {
 
     void renderMermaidBlocks(el)
     renderPlantumlBlocks(el)
+    void renderGraphvizBlocks(el)
     injectCopyButtons(el)
   }, [result])
 

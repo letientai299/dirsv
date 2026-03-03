@@ -793,6 +793,37 @@ pre {
   height: auto;
 }
 
+/* ---------- graphviz ---------- */
+
+.graphviz-placeholder {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
+}
+
+.graphviz-error {
+  color: #f85149;
+  font-size: 13px;
+  padding: 16px;
+}
+
+.graphviz-rendered svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* standalone .gv/.dot file view */
+.graphviz-standalone {
+  display: flex;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.graphviz-standalone svg {
+  max-width: 100%;
+  height: auto;
+}
+
 /* ---------- responsive: collapse TOC ---------- */
 
 @media (max-width: 1024px) {

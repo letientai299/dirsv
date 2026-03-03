@@ -1,0 +1,128 @@
+// Complex Graphviz demo — Linux kernel subsystem overview
+digraph kernel {
+    rankdir=TB
+    compound=true
+    fontname="Helvetica"
+    node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=10]
+    edge [fontname="Helvetica", fontsize=9]
+
+    // ── Userspace ──
+    subgraph cluster_user {
+        label="Userspace"
+        style="rounded,filled"
+        color="#e8eaf6"
+        fillcolor="#e8eaf6"
+
+        apps [label="Applications\n(browsers, editors, shells)", fillcolor="#c5cae9"]
+        libc [label="glibc / musl", fillcolor="#9fa8da"]
+    }
+
+    // ── System Call Interface ──
+    syscall [label="System Call Interface\n(~450 syscalls)", shape=rectangle,
+             style="filled", fillcolor="#fff9c4", width=4]
+
+    // ── Kernel subsystems ──
+    subgraph cluster_kernel {
+        label="Kernel Space"
+        style="rounded,filled"
+        color="#e0f2f1"
+        fillcolor="#e0f2f1"
+
+        subgraph cluster_vfs {
+            label="Virtual File System"
+            style="rounded,filled"
+            color="#b2dfdb"
+            fillcolor="#b2dfdb"
+
+            vfs [label="VFS Layer", fillcolor="#80cbc4"]
+            page_cache [label="Page Cache", fillcolor="#80cbc4"]
+        }
+
+        subgraph cluster_net {
+            label="Network Stack"
+            style="rounded,filled"
+            color="#bbdefb"
+            fillcolor="#bbdefb"
+
+            socket [label="Socket API", fillcolor="#90caf9"]
+            tcp_ip [label="TCP/IP", fillcolor="#90caf9"]
+            netfilter [label="Netfilter\n(iptables/nftables)", fillcolor="#90caf9"]
+        }
+
+        subgraph cluster_proc {
+            label="Process Management"
+            style="rounded,filled"
+            color="#f8bbd0"
+            fillcolor="#f8bbd0"
+
+            sched [label="CFS Scheduler", fillcolor="#f48fb1"]
+            ipc [label="IPC\n(pipes, signals,\nshared memory)", fillcolor="#f48fb1"]
+            cgroups [label="cgroups v2", fillcolor="#f48fb1"]
+        }
+
+        subgraph cluster_mm {
+            label="Memory Management"
+            style="rounded,filled"
+            color="#d1c4e9"
+            fillcolor="#d1c4e9"
+
+            vmm [label="Virtual Memory\nManager", fillcolor="#b39ddb"]
+            slab [label="SLAB/SLUB\nAllocator", fillcolor="#b39ddb"]
+            oom [label="OOM Killer", fillcolor="#b39ddb"]
+        }
+
+        subgraph cluster_security {
+            label="Security"
+            style="rounded,filled"
+            color="#ffe0b2"
+            fillcolor="#ffe0b2"
+
+            selinux [label="SELinux /\nAppArmor", fillcolor="#ffcc80"]
+            seccomp [label="seccomp-BPF", fillcolor="#ffcc80"]
+            namespaces [label="Namespaces", fillcolor="#ffcc80"]
+        }
+    }
+
+    // ── Hardware Abstraction ──
+    subgraph cluster_hal {
+        label="Hardware Abstraction"
+        style="rounded,filled"
+        color="#ffcdd2"
+        fillcolor="#ffcdd2"
+
+        block [label="Block Layer\n(I/O schedulers)", fillcolor="#ef9a9a"]
+        nic [label="Network\nDrivers", fillcolor="#ef9a9a"]
+        gpu [label="DRM/KMS\n(GPU)", fillcolor="#ef9a9a"]
+        usb [label="USB\nSubsystem", fillcolor="#ef9a9a"]
+    }
+
+    // ── Hardware ──
+    hw [label="Hardware\n(CPU, RAM, NIC, GPU, Storage)",
+        shape=box3d, style=filled, fillcolor="#e0e0e0", width=4]
+
+    // ── Edges ──
+    apps -> libc
+    libc -> syscall
+
+    syscall -> vfs [lhead=cluster_vfs]
+    syscall -> socket [lhead=cluster_net]
+    syscall -> sched [lhead=cluster_proc]
+    syscall -> vmm [lhead=cluster_mm]
+    syscall -> seccomp [lhead=cluster_security]
+
+    vfs -> page_cache
+    page_cache -> block
+    socket -> tcp_ip -> netfilter -> nic
+    sched -> vmm [label="context\nswitch"]
+    vmm -> slab
+    slab -> oom [style=dashed, label="pressure"]
+    cgroups -> sched [label="limits"]
+    cgroups -> vmm [label="limits"]
+    namespaces -> cgroups [label="isolate"]
+    seccomp -> syscall [label="filter", style=dashed, dir=back]
+
+    block -> hw
+    nic -> hw
+    gpu -> hw
+    usb -> hw
+}

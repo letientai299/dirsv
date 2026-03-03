@@ -19,6 +19,7 @@ import { getSingletonHighlighter } from "shiki"
 import type { Processor } from "unified"
 import { unified } from "unified"
 import type { Heading } from "./rehype-extract-headings"
+import { rehypeGraphviz } from "./rehype-graphviz"
 import { rehypeMermaid } from "./rehype-mermaid"
 import { rehypePlantuml } from "./rehype-plantuml"
 
@@ -104,6 +105,7 @@ function getProcessor() {
       .use(rehypeKatex)
       .use(rehypeMermaid)
       .use(rehypePlantuml)
+      .use(rehypeGraphviz)
       .use(rehypeShiki, {
         themes: { light: "github-light", dark: "github-dark" },
         defaultColor: false,
