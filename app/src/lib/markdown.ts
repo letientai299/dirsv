@@ -52,11 +52,9 @@ const sanitizeSchema: typeof defaultSchema = {
   ...defaultSchema,
   attributes: {
     ...defaultSchema.attributes,
-    // remark-math markers consumed by rehype-katex-placeholder after sanitization
-    code: [
-      ...schemaAttrs("code"),
-      ["className", "math-inline", "math-display"],
-    ],
+    // remark-math v6 uses `language-math` which the default schema already
+    // allows via /^language-/. No extra allowlist needed for math classes.
+    code: [...schemaAttrs("code")],
     // remark-github-blockquote-alert
     div: [...schemaAttrs("div"), "dir", ["className", /^markdown-alert/]],
     p: [...schemaAttrs("p"), "dir", ["className", "markdown-alert-title"]],

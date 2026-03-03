@@ -6,9 +6,13 @@ import { visit } from "unist-util-visit"
  * placeholders for client-side KaTeX rendering. Moves KaTeX out of the unified
  * pipeline so it doesn't block initial HTML generation.
  *
- * Input from remark-math:
- * - Inline:  `<code class="math-inline">tex</code>`
- * - Display: `<pre><code class="math-display">tex</code></pre>`
+ * remark-math v6 produces:
+ * - Inline:  `<code class="language-math math-inline">tex</code>`
+ * - Display: `<pre><code class="language-math math-display">tex</code></pre>`
+ *
+ * After rehype-sanitize, only `language-math` may survive (the default schema
+ * allows `/^language-/`). We detect math nodes via `language-math` and infer
+ * display mode from context (`<pre>` wrapper = display).
  */
 export function rehypeKatexPlaceholder() {
   return (tree: Root) => {
@@ -22,30 +26,27 @@ export function rehypeKatexPlaceholder() {
 
 /** Try to convert a math node to a placeholder. Returns null if not math. */
 function toPlaceholder(node: Element, parent: Parent): Element | null {
-  // Case 1: <pre><code class="math-display">...</code></pre>
+  // Case 1: <pre><code class="language-math">...</code></pre> (display)
   if (node.tagName === "pre") {
     const code = node.children[0]
     if (
       !code ||
       code.type !== "element" ||
       code.tagName !== "code" ||
-      !hasClass(code, "math-display")
+      !isMathCode(code)
     )
       return null
     return makePlaceholder(collectText(code.children).trim(), true)
   }
 
-  // Case 2: standalone <code class="math-inline|math-display">
-  if (node.tagName !== "code") return null
-  const isDisplay = hasClass(node, "math-display")
-  const isInline = hasClass(node, "math-inline")
-  if (!isDisplay && !isInline) return null
+  // Case 2: standalone <code class="language-math"> (inline)
+  if (node.tagName !== "code" || !isMathCode(node)) return null
 
   // Skip if inside <pre> (handled by Case 1)
   if (parent.type === "element" && (parent as Element).tagName === "pre")
     return null
 
-  return makePlaceholder(collectText(node.children).trim(), isDisplay)
+  return makePlaceholder(collectText(node.children).trim(), false)
 }
 
 function makePlaceholder(tex: string, display: boolean): Element {
@@ -61,9 +62,15 @@ function makePlaceholder(tex: string, display: boolean): Element {
   }
 }
 
-function hasClass(node: Element, cls: string): boolean {
+/** Check if a code element is a math node (remark-math v6: `language-math`). */
+function isMathCode(node: Element): boolean {
   const val = node.properties?.["className"]
-  return Array.isArray(val) ? val.includes(cls) : false
+  if (!Array.isArray(val)) return false
+  return (
+    val.includes("language-math") ||
+    val.includes("math-inline") ||
+    val.includes("math-display")
+  )
 }
 
 function collectText(children: ElementContent[]): string {
