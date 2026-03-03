@@ -9,8 +9,11 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 
 	flag "github.com/spf13/pflag"
@@ -20,8 +23,8 @@ import (
 )
 
 func main() {
-	addr := flag.StringP("addr", "a", ":8080", "listen address")
-	root := flag.StringP("root", "r", ".", "root directory to serve")
+	host := flag.String("host", "localhost", "listen address")
+	port := flag.IntP("port", "p", 8080, "listen port")
 	browser := flag.StringP(
 		"browser",
 		"b",
@@ -30,9 +33,48 @@ func main() {
 	)
 	dev := flag.Bool("dev", false, "proxy frontend to Vite dev server")
 	noOpen := flag.Bool("no-open", false, "don't auto-open browser")
+	_ = flag.CommandLine.MarkHidden("dev")
 	flag.Parse()
 
-	w, err := watcher.New(*root)
+	// Determine target: no args → CWD; first positional arg → dir or file.
+	target := "."
+	if flag.NArg() > 0 {
+		target = flag.Arg(0)
+	}
+
+	absTarget, err := filepath.Abs(target)
+	if err != nil {
+		log.Fatal(err)
+	}
+	info, err := os.Stat(absTarget)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var root string
+	var singleFile string
+	if info.IsDir() {
+		root = absTarget
+	} else {
+		root = filepath.Dir(absTarget)
+		singleFile = info.Name()
+	}
+
+	// Resolve listen port: explicit -p > $PORT > default with auto-find.
+	listenPort := *port
+	portExplicit := flag.CommandLine.Changed("port")
+	if !portExplicit {
+		if envPort := os.Getenv("PORT"); envPort != "" {
+			p, parseErr := strconv.Atoi(envPort)
+			if parseErr != nil {
+				log.Fatalf("invalid PORT env: %s", envPort)
+			}
+			listenPort = p
+			portExplicit = true
+		}
+	}
+
+	w, err := watcher.New(root)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -44,7 +86,12 @@ func main() {
 		appFS = dirsv.AppDist
 	}
 
-	srv, err := server.New(*root, appFS, w)
+	var opts []server.Option
+	if singleFile != "" {
+		opts = append(opts, server.WithSingleFile(singleFile))
+	}
+
+	srv, err := server.New(root, appFS, w, opts...)
 	if err != nil {
 		_ = w.Close()
 		log.Fatal(err)
@@ -55,19 +102,33 @@ func main() {
 		handler = devProxy(srv)
 	}
 
-	ln, err := net.Listen("tcp", *addr)
-	if err != nil {
-		_ = w.Close()
-		log.Fatal(err)
+	var ln net.Listener
+	if portExplicit {
+		addr := net.JoinHostPort(*host, strconv.Itoa(listenPort))
+		ln, err = net.Listen("tcp", addr)
+		if err != nil {
+			_ = w.Close()
+			log.Fatal(err)
+		}
+	} else {
+		ln, err = listenAutoPort(*host, listenPort)
+		if err != nil {
+			_ = w.Close()
+			log.Fatal(err)
+		}
 	}
 
-	fmt.Printf("serving %s on %s\n", *root, ln.Addr())
+	fmt.Printf("serving %s on %s\n", target, ln.Addr())
 	if *dev {
 		fmt.Println("dev mode: proxying frontend to http://localhost:5173")
 	}
 
 	if !*noOpen {
-		openBrowser(browserURL(ln.Addr().String()), *browser)
+		u := browserURL(ln.Addr().String())
+		if singleFile != "" {
+			u += "/" + singleFile
+		}
+		openBrowser(u, *browser)
 	}
 
 	// Serve blocks until error; clean up watcher afterward.
@@ -76,6 +137,18 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+// listenAutoPort tries ports starting from startPort until a free one is found.
+func listenAutoPort(host string, startPort int) (net.Listener, error) {
+	for p := startPort; p < startPort+100; p++ {
+		addr := net.JoinHostPort(host, strconv.Itoa(p))
+		ln, err := net.Listen("tcp", addr)
+		if err == nil {
+			return ln, nil
+		}
+	}
+	return nil, fmt.Errorf("no free port in range %d–%d", startPort, startPort+99)
 }
 
 // devProxy wraps the server so that non-API requests are proxied to Vite.

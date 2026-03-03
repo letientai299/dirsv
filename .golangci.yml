@@ -76,6 +76,13 @@ linters:
           - gosec
         text: "G204"
 
+      # CLI flags and env vars flow into log messages and exec.Command;
+      # not user-controlled HTTP input.
+      - path: cmd/server/main\.go
+        linters:
+          - gosec
+        text: "G702|G706"
+
       # devProxy: reverse-proxy target is hardcoded localhost:5173.
       - path: cmd/server/main\.go
         linters:

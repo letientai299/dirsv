@@ -35,14 +35,29 @@ type BrowseResponse struct {
 
 // Server serves directory listings, raw files, and the SPA frontend.
 type Server struct {
-	root string
-	mux  *http.ServeMux
+	root       string
+	singleFile string // if non-empty, restrict serving to this one file
+	mux        *http.ServeMux
+}
+
+// Option configures a Server.
+type Option func(*Server)
+
+// WithSingleFile restricts the server to serving only the named file
+// (relative to root). Directory listings show only this file.
+func WithSingleFile(name string) Option {
+	return func(s *Server) { s.singleFile = name }
 }
 
 // New creates a Server rooted at the given filesystem path.
 // If appFS is non-nil, it serves the embedded SPA frontend for non-API paths.
 // The SSE handler (if any) should be mounted before calling this.
-func New(root string, appFS fs.FS, sseHandler http.Handler) (*Server, error) {
+func New(
+	root string,
+	appFS fs.FS,
+	sseHandler http.Handler,
+	opts ...Option,
+) (*Server, error) {
 	abs, err := filepath.Abs(root)
 	if err != nil {
 		return nil, err
@@ -62,6 +77,9 @@ func New(root string, appFS fs.FS, sseHandler http.Handler) (*Server, error) {
 	}
 
 	s := &Server{root: abs, mux: http.NewServeMux()}
+	for _, opt := range opts {
+		opt(s)
+	}
 	s.mux.HandleFunc("GET /api/browse/{path...}", s.handleBrowse)
 	s.mux.HandleFunc("GET /api/raw/{path...}", s.handleRaw)
 	s.mux.HandleFunc("GET /api/htmlpreview/{path...}", s.handleHTMLPreview)
@@ -129,6 +147,35 @@ func (s *Server) resolvePath(
 
 func (s *Server) handleBrowse(w http.ResponseWriter, r *http.Request) {
 	reqPath := r.PathValue("path")
+
+	// Single-file mode: only the target file and root listing are allowed.
+	if s.singleFile != "" {
+		if reqPath == "" {
+			full := filepath.Join(s.root, s.singleFile)
+			info, err := os.Stat(full)
+			if err != nil {
+				http.Error(w, "internal error", http.StatusInternalServerError)
+				return
+			}
+			entries := []Entry{{
+				Name:    s.singleFile,
+				IsDir:   false,
+				IsExec:  info.Mode()&0o111 != 0,
+				Size:    info.Size(),
+				ModTime: info.ModTime(),
+			}}
+			resp := BrowseResponse{Type: "dir", Entries: entries}
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Cache-Control", "no-cache")
+			_ = json.NewEncoder(w).Encode(resp)
+			return
+		}
+		if reqPath != s.singleFile {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+	}
+
 	full, info, err := s.resolvePath(reqPath)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -211,6 +258,10 @@ func (s *Server) serveDirEntries(
 
 func (s *Server) handleRaw(w http.ResponseWriter, r *http.Request) {
 	reqPath := r.PathValue("path")
+	if s.singleFile != "" && reqPath != s.singleFile {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
 	full, info, err := s.resolvePath(reqPath)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -277,6 +328,11 @@ var reAbsAttr = regexp.MustCompile(`((?:src|href|action)\s*=\s*["'])/([^/])`)
 // tag so all resources resolve through this endpoint. Non-HTML files are
 // served as-is. Directory requests auto-resolve to index.html.
 func (s *Server) handleHTMLPreview(w http.ResponseWriter, r *http.Request) {
+	if s.singleFile != "" {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+
 	// Use the raw (percent-encoded) URL to preserve %2F in the root
 	// segment. Go's mux decodes %2F before populating PathValue, so
 	// we extract from EscapedPath instead.
