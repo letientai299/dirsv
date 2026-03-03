@@ -14,10 +14,7 @@ const getTypst: () => Promise<any> = (() => {
   return () => {
     if (!cached) {
       cached = (async () => {
-        const { $typst } = await import(
-          /* @vite-ignore */
-          `${CDN}/@myriaddreamin/typst.ts@${VER}`
-        )
+        const { $typst } = await import(/* @vite-ignore */ `${CDN}/@myriaddreamin/typst.ts@${VER}`)
         $typst.setCompilerInitOptions({
           getModule: () =>
             `${WASM_CDN}/@myriaddreamin/typst-ts-web-compiler@${VER}/pkg/typst_ts_web_compiler_bg.wasm`,
