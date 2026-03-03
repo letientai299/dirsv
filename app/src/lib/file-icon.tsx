@@ -15,6 +15,18 @@ const EXT_URL_MAP: Record<string, string> = {
   proto: `${SI}/protobuf/4285F4`,
   mdx: `${SI}/mdx/F9AC00`,
   env: `${SI}/dotenv/ECD53F`,
+  // Platform binaries
+  exe: `${SI}/windows/0078D4`,
+  msi: `${SI}/windows/0078D4`,
+  dll: `${SI}/windows/0078D4`,
+  dmg: `${SI}/apple/000000`,
+  pkg: `${SI}/apple/000000`,
+  app: `${SI}/apple/000000`,
+  deb: `${SI}/debian/A81D33`,
+  rpm: `${SI}/redhat/EE0000`,
+  appimage: `${SI}/linux/FCC624`,
+  snap: `${SI}/snapcraft/82BEA0`,
+  flatpak: `${SI}/flatpak/4A90D9`,
 }
 
 // Extension → [deviconName, variant]
@@ -218,12 +230,29 @@ export function ParentIcon() {
   )
 }
 
+// Octicon terminal icon for extensionless executables.
+const EXEC_SVG = (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 16 16"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path d="M0 2.75C0 1.784.784 1 1.75 1h12.5c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 14.25 15H1.75A1.75 1.75 0 0 1 0 13.25Zm1.75-.25a.25.25 0 0 0-.25.25v10.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V2.75a.25.25 0 0 0-.25-.25ZM7.25 8a.749.749 0 0 1-.22.53l-2.25 2.25a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L5.44 8 3.72 6.28a.749.749 0 0 1 .326-1.275.749.749 0 0 1 .734.215l2.25 2.25c.141.14.22.331.22.53Zm1.5 1.5h3a.75.75 0 0 1 0 1.5h-3a.75.75 0 0 1 0-1.5Z" />
+  </svg>
+)
+
 /** Returns the appropriate icon element for a directory entry. */
-export function FileIcon({ name, isDir }: { name: string; isDir: boolean }) {
+export function FileIcon({
+  name,
+  isDir,
+  isExec,
+}: { name: string; isDir: boolean; isExec?: boolean }) {
   if (isDir) return FOLDER_SVG
 
   const match = resolve(name)
-  if (!match) return FILE_SVG
+  if (!match) return isExec ? EXEC_SVG : FILE_SVG
 
   const src = typeof match === "string" ? match : deviconUrl(match[0], match[1])
   return (

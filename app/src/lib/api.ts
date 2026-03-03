@@ -1,6 +1,7 @@
 export interface DirEntry {
   name: string
   isDir: boolean
+  isExec?: boolean
   size: number
   modTime: string
 }

@@ -19,6 +19,7 @@ import (
 type Entry struct {
 	Name    string    `json:"name"`
 	IsDir   bool      `json:"isDir"`
+	IsExec  bool      `json:"isExec,omitempty"`
 	Size    int64     `json:"size"`
 	ModTime time.Time `json:"modTime"`
 }
@@ -196,6 +197,7 @@ func (s *Server) serveDirEntries(
 		entries = append(entries, Entry{
 			Name:    de.Name(),
 			IsDir:   de.IsDir(),
+			IsExec:  !de.IsDir() && info.Mode()&0o111 != 0,
 			Size:    info.Size(),
 			ModTime: info.ModTime(),
 		})

@@ -138,7 +138,7 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
                     <span
                       class={`entry-icon${entry.isDir ? " entry-icon--folder" : ""}`}
                     >
-                      <FileIcon name={entry.name} isDir={entry.isDir} />
+                      <FileIcon name={entry.name} isDir={entry.isDir} isExec={entry.isExec ?? false} />
                     </span>
                     {entry.name}
                     {entry.isDir ? "/" : ""}
