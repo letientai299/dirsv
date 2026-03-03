@@ -18,6 +18,7 @@ import remarkRehype from "remark-rehype"
 import { getSingletonHighlighter } from "shiki"
 import type { Processor } from "unified"
 import { unified } from "unified"
+import { rehypeD2 } from "./rehype-d2"
 import type { Heading } from "./rehype-extract-headings"
 import { rehypeGraphviz } from "./rehype-graphviz"
 import { rehypeMermaid } from "./rehype-mermaid"
@@ -106,6 +107,7 @@ function getProcessor() {
       .use(rehypeMermaid)
       .use(rehypePlantuml)
       .use(rehypeGraphviz)
+      .use(rehypeD2)
       .use(rehypeShiki, {
         themes: { light: "github-light", dark: "github-dark" },
         defaultColor: false,

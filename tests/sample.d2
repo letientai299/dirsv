@@ -1,0 +1,33 @@
+network: {
+  cell tower: {
+    satellites: {
+      shape: stored_data
+      style.multiple: true
+    }
+
+    transmitter
+
+    satellites -> transmitter: send
+    satellites -> transmitter: send
+    satellites -> transmitter: send
+  }
+
+  online: {
+    database: {
+      shape: cylinder
+    }
+
+    server
+
+    server -> database: store
+  }
+
+  cell tower.transmitter -> online.server: connect
+}
+
+users: {
+  shape: sql_table
+  id: int {constraint: primary_key}
+  name: varchar(255)
+  email: varchar(255) {constraint: unique}
+}

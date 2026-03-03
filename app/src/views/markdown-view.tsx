@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "preact/hooks"
 import { TableOfContents } from "../components/toc"
 import { Toolbar } from "../components/toolbar"
 import { injectCopyButtons } from "../lib/code-copy"
+import { renderD2Blocks } from "../lib/d2-render"
 import { renderGraphvizBlocks } from "../lib/graphviz-render"
 import type { MarkdownResult } from "../lib/markdown"
 import { renderMarkdown } from "../lib/markdown"
@@ -63,6 +64,7 @@ export function MarkdownView({ path, content }: Props) {
     void renderMermaidBlocks(el)
     renderPlantumlBlocks(el)
     void renderGraphvizBlocks(el)
+    void renderD2Blocks(el)
     injectCopyButtons(el)
   }, [result])
 
@@ -75,7 +77,11 @@ export function MarkdownView({ path, content }: Props) {
     for (const rendered of el.querySelectorAll(".mermaid-rendered")) {
       rendered.classList.remove("mermaid-rendered")
     }
+    for (const rendered of el.querySelectorAll(".d2-rendered")) {
+      rendered.classList.remove("d2-rendered")
+    }
     void renderMermaidBlocks(el)
+    void renderD2Blocks(el)
   }, [])
 
   useEffect(() => {
