@@ -108,6 +108,7 @@ var textMIME = map[string]string{
 	".tsx": "text/plain; charset=utf-8",
 	".mts": "text/plain; charset=utf-8",
 	".cts": "text/plain; charset=utf-8",
+	".sql": "text/plain; charset=utf-8",
 }
 
 // resolvePath cleans, resolves symlinks, and validates a request path

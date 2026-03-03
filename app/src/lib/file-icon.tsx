@@ -2,6 +2,8 @@
 
 const DEVICON_CDN = "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons"
 const FILE_ICONS_CDN = "https://cdn.jsdelivr.net/gh/file-icons/icons@master/svg"
+const VSCODE_ICONS_CDN =
+  "https://cdn.jsdelivr.net/gh/vscode-icons/vscode-icons@master/icons"
 
 const SI = "https://cdn.simpleicons.org"
 
@@ -13,16 +15,19 @@ const EXT_URL_MAP: Record<string, string> = {
   graphql: `${SI}/graphql/E10098`,
   gql: `${SI}/graphql/E10098`,
   v: `${SI}/v/5D87BF`,
-  proto: `${SI}/protobuf/4285F4`,
+  proto: `${VSCODE_ICONS_CDN}/file_type_protobuf.svg`,
   mdx: `${SI}/mdx/F9AC00`,
   gv: `${FILE_ICONS_CDN}/GraphViz.svg`,
   dot: `${FILE_ICONS_CDN}/GraphViz.svg`,
   d2: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23007AD6'%3E%3Ctext x='1' y='13' font-size='13' font-weight='700' font-family='system-ui,sans-serif'%3ED2%3C/text%3E%3C/svg%3E",
+  dbml: `${SI}/diagramsdotnet/F08705`,
+  typ: `${FILE_ICONS_CDN}/Typst.svg`,
+  excalidraw: `${SI}/excalidraw/6965DB`,
   env: `${SI}/dotenv/ECD53F`,
   // Platform binaries
-  exe: `${SI}/windows/0078D4`,
-  msi: `${SI}/windows/0078D4`,
-  dll: `${SI}/windows/0078D4`,
+  exe: `${DEVICON_CDN}/windows11/windows11-original.svg`,
+  msi: `${DEVICON_CDN}/windows11/windows11-original.svg`,
+  dll: `${DEVICON_CDN}/windows11/windows11-original.svg`,
   dmg: `${SI}/apple/000000`,
   pkg: `${SI}/apple/000000`,
   app: `${SI}/apple/000000`,
