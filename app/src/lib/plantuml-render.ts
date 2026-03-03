@@ -1,4 +1,3 @@
-import { deflateRaw } from "pako"
 import { isRenderedAndUnchanged } from "./content-hash"
 
 const PLANTUML_SERVER = "https://www.plantuml.com/plantuml/svg"
@@ -19,34 +18,36 @@ export function renderPlantumlBlocks(container: HTMLElement): void {
     if (!source) continue
     if (isRenderedAndUnchanged(el, source, "plantuml")) continue
 
-    const encoded = encodePlantuml(source)
-    const url = `${PLANTUML_SERVER}/${encoded}`
+    void encodePlantuml(source).then((encoded) => {
+      const url = `${PLANTUML_SERVER}/${encoded}`
 
-    const img = document.createElement("img")
-    img.alt = "PlantUML diagram"
+      const img = document.createElement("img")
+      img.alt = "PlantUML diagram"
 
-    img.onload = () => {
-      el.innerHTML = ""
-      el.appendChild(img)
-      el.classList.add("plantuml-rendered")
-    }
+      img.onload = () => {
+        el.innerHTML = ""
+        el.appendChild(img)
+        el.classList.add("plantuml-rendered")
+      }
 
-    img.onerror = () => {
-      const pre = document.createElement("pre")
-      const code = document.createElement("code")
-      code.textContent = source
-      pre.appendChild(code)
-      el.innerHTML = ""
-      el.appendChild(pre)
-      el.classList.add("plantuml-error")
-    }
+      img.onerror = () => {
+        const pre = document.createElement("pre")
+        const code = document.createElement("code")
+        code.textContent = source
+        pre.appendChild(code)
+        el.innerHTML = ""
+        el.appendChild(pre)
+        el.classList.add("plantuml-error")
+      }
 
-    img.src = url
+      img.src = url
+    })
   }
 }
 
 /** Encode PlantUML source: UTF-8 → deflateRaw → PlantUML custom base64. */
-function encodePlantuml(source: string): string {
+async function encodePlantuml(source: string): Promise<string> {
+  const { deflateRaw } = await import("pako")
   const data = deflateRaw(new TextEncoder().encode(source), { level: 9 })
   return plantumlBase64Encode(data)
 }

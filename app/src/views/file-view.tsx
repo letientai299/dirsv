@@ -7,13 +7,25 @@ import { browse, type DirEntry, fetchRaw, type RawResult } from "../lib/api"
 import { FileIcon, ParentIcon } from "../lib/file-icon"
 import { useKeys } from "../lib/use-keys"
 import { useSSE } from "../lib/use-sse"
-import { D2View } from "./d2-view"
-import { DbmlView } from "./dbml-view"
-import { GraphvizView } from "./graphviz-view"
-import { HtmlView } from "./html-view"
-import { MediaView } from "./media-view"
-import { TypstView } from "./typst-view"
 
+const D2View = lazy(() =>
+  import("./d2-view").then((m) => ({ default: m.D2View })),
+)
+const DbmlView = lazy(() =>
+  import("./dbml-view").then((m) => ({ default: m.DbmlView })),
+)
+const GraphvizView = lazy(() =>
+  import("./graphviz-view").then((m) => ({ default: m.GraphvizView })),
+)
+const HtmlView = lazy(() =>
+  import("./html-view").then((m) => ({ default: m.HtmlView })),
+)
+const MediaView = lazy(() =>
+  import("./media-view").then((m) => ({ default: m.MediaView })),
+)
+const TypstView = lazy(() =>
+  import("./typst-view").then((m) => ({ default: m.TypstView })),
+)
 const MarkdownView = lazy(() =>
   import("./markdown-view").then((m) => ({ default: m.MarkdownView })),
 )
@@ -61,9 +73,24 @@ function renderFileContent(
   result: RawResult | null,
   error: string | null,
 ): JSX.Element {
-  if (/\.html?$/i.test(path)) return <HtmlView path={path} />
-  if (imageRe.test(path)) return <MediaView path={path} kind="image" />
-  if (videoRe.test(path)) return <MediaView path={path} kind="video" />
+  if (/\.html?$/i.test(path))
+    return (
+      <Suspense fallback={fallback}>
+        <HtmlView path={path} />
+      </Suspense>
+    )
+  if (imageRe.test(path))
+    return (
+      <Suspense fallback={fallback}>
+        <MediaView path={path} kind="image" />
+      </Suspense>
+    )
+  if (videoRe.test(path))
+    return (
+      <Suspense fallback={fallback}>
+        <MediaView path={path} kind="video" />
+      </Suspense>
+    )
   if (error) return <div class="error">Error: {error}</div>
   if (result === null) return fallback
   if (result.kind === "binary") {
@@ -87,10 +114,29 @@ function renderFileContent(
     )
   }
   if (/\.(gv|dot)$/i.test(path))
-    return <GraphvizView content={result.content} />
-  if (/\.d2$/i.test(path)) return <D2View content={result.content} />
-  if (/\.dbml$/i.test(path)) return <DbmlView content={result.content} />
-  if (/\.typ$/i.test(path)) return <TypstView content={result.content} />
+    return (
+      <Suspense fallback={fallback}>
+        <GraphvizView content={result.content} />
+      </Suspense>
+    )
+  if (/\.d2$/i.test(path))
+    return (
+      <Suspense fallback={fallback}>
+        <D2View content={result.content} />
+      </Suspense>
+    )
+  if (/\.dbml$/i.test(path))
+    return (
+      <Suspense fallback={fallback}>
+        <DbmlView content={result.content} />
+      </Suspense>
+    )
+  if (/\.typ$/i.test(path))
+    return (
+      <Suspense fallback={fallback}>
+        <TypstView content={result.content} />
+      </Suspense>
+    )
   if (/\.json$/i.test(path)) {
     return (
       <Suspense fallback={fallback}>
