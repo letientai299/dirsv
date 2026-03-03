@@ -54,10 +54,10 @@ type Event struct {
 
 // Watcher watches a directory tree and broadcasts changes to SSE subscribers.
 type Watcher struct {
-	root   string
-	silent bool
-	fsw    *fsnotify.Watcher
-	done   chan struct{}
+	root  string
+	debug bool
+	fsw   *fsnotify.Watcher
+	done  chan struct{}
 
 	mu      sync.RWMutex
 	clients map[chan Event]string // channel → watched path prefix
@@ -69,11 +69,11 @@ type Watcher struct {
 // Option configures a Watcher.
 type Option func(*Watcher)
 
-// Silent disables all watcher log output.
-func Silent(w *Watcher) { w.silent = true }
+// Debug enables verbose watcher log output (watches, events, connections).
+func Debug(w *Watcher) { w.debug = true }
 
 func (w *Watcher) logf(format string, args ...any) {
-	if !w.silent {
+	if w.debug {
 		//nolint:gosec // G706: all callers pass server-controlled data
 		log.Printf(format, args...)
 	}
