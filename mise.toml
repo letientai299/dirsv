@@ -43,7 +43,7 @@ run = "bun run dev"
 description = "Run Go server in dev mode with auto-reload"
 depends = ["dev:install"]
 usage = 'arg "[target]" help="Directory or file to serve"'
-run = "watchexec -r -e go -- go run ./cmd/server --dev {{usage.target | default(value='')}}"
+run = "watchexec -r -e go -- go run ./cmd/server --no-open --dev {{usage.target | default(value='')}}"
 
 [tasks.dev]
 description = "Run Go server and Vite dev server in parallel"
@@ -54,6 +54,16 @@ mise dev:vite &
 mise dev:server -- {{usage.target | default(value='')}} &
 wait
 '''
+
+[tasks."build:compress"]
+description = "Pre-compress frontend assets with gzip (replaces originals with .gz)"
+depends = ["build:fe"]
+run = "go run ./cmd/compress app/dist/assets"
+
+[tasks.release]
+description = "Build smallest production binary"
+depends = ["build:compress"]
+run = "CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o bin/server ./cmd/server"
 
 # -- test --
 

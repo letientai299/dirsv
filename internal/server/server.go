@@ -2,9 +2,12 @@
 package server
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"errors"
+	"io"
 	"io/fs"
+	"mime"
 	"net/http"
 	"net/url"
 	"os"
@@ -432,8 +435,11 @@ func (s *Server) mountSPA(appFS fs.FS) {
 				name = "index.html"
 			}
 
-			// Serve the asset directly if it exists; otherwise SPA fallback.
-			if _, err := fs.Stat(sub, name); err != nil {
+			// Resolve asset: original exists, or .gz variant exists
+			// (originals are removed for compressed files), or SPA fallback.
+			_, statErr := fs.Stat(sub, name)
+			_, gzErr := fs.Stat(sub, name+".gz")
+			if statErr != nil && gzErr != nil {
 				name = "index.html"
 			}
 
@@ -444,7 +450,57 @@ func (s *Server) mountSPA(appFS fs.FS) {
 				w.Header().Set("Cache-Control", "no-cache")
 			}
 
+			// Try pre-compressed .gz variant (exists when the compressor
+			// replaced the original). Serves gzip directly or decompresses
+			// on the fly depending on Accept-Encoding.
+			if servePrecompressed(w, r, sub, name) {
+				return
+			}
+
 			http.ServeFileFS(w, r, sub, name)
 		},
 	)
+}
+
+// servePrecompressed looks for a pre-compressed .gz variant of name in fsys.
+// If found and the client accepts gzip, it streams the .gz bytes directly.
+// If found but the client doesn't accept gzip, it decompresses on the fly.
+// Returns false if no .gz variant exists (caller should serve the raw file).
+func servePrecompressed(w http.ResponseWriter, r *http.Request, fsys fs.FS, name string) bool {
+	gzName := name + ".gz"
+	f, err := fsys.Open(gzName)
+	if err != nil {
+		return false
+	}
+	defer func() { _ = f.Close() }()
+
+	info, err := f.Stat()
+	if err != nil {
+		return false
+	}
+
+	ct := mime.TypeByExtension(filepath.Ext(name))
+	if ct == "" {
+		ct = "application/octet-stream"
+	}
+
+	w.Header().Set("Content-Type", ct)
+	w.Header().Set("Vary", "Accept-Encoding")
+	w.Header().Set("Last-Modified", info.ModTime().UTC().Format(http.TimeFormat))
+
+	if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+		w.Header().Set("Content-Encoding", "gzip")
+		_, _ = io.Copy(w, f)
+		return true
+	}
+
+	// Client doesn't accept gzip — decompress on the fly.
+	gr, err := gzip.NewReader(f)
+	if err != nil {
+		return false
+	}
+	defer func() { _ = gr.Close() }()
+
+	_, _ = io.Copy(w, gr)
+	return true
 }
