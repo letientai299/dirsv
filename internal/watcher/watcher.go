@@ -31,6 +31,7 @@ type Watcher struct {
 	root    string
 	fsw     *fsnotify.Watcher
 	done    chan struct{}
+	ready   chan struct{} // closed when background walk completes
 	mu      sync.RWMutex
 	clients map[chan Event]string // channel → watched path prefix
 }
@@ -51,17 +52,25 @@ func New(root string) (*Watcher, error) {
 		root:    abs,
 		fsw:     fsw,
 		done:    make(chan struct{}),
+		ready:   make(chan struct{}),
 		clients: make(map[chan Event]string),
 	}
 
-	if err := w.addRecursive(abs); err != nil {
-		_ = fsw.Close()
-		return nil, err
-	}
-
 	go w.loop()
+	go func() {
+		if err := w.addRecursive(abs); err != nil {
+			log.Printf("watcher: background walk failed: %v", err)
+		}
+		close(w.ready)
+	}()
+
 	return w, nil
 }
+
+// Ready returns a channel that is closed when the initial directory walk
+// completes. Callers that need all directories watched before proceeding
+// can <-w.Ready().
+func (w *Watcher) Ready() <-chan struct{} { return w.ready }
 
 // Close stops the watcher, unblocks SSE subscribers, and releases resources.
 func (w *Watcher) Close() error {
@@ -78,6 +87,12 @@ func (w *Watcher) addRecursive(dir string) error {
 	return filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
+		}
+		// Abort walk early if the watcher is closing.
+		select {
+		case <-w.done:
+			return filepath.SkipAll
+		default:
 		}
 		if d.IsDir() {
 			// Never skip the walk root itself — it may start with "."
