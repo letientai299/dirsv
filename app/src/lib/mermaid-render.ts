@@ -27,29 +27,21 @@ export async function renderMermaidBlocks(
     suppressErrorRendering: true,
   })
 
-  const jobs = Array.from(placeholders).flatMap((el) => {
+  // Mermaid uses shared DOM state internally — concurrent render() calls break
+  // certain diagram types (ER, git graph, etc.). Render sequentially.
+  for (const el of placeholders) {
     const source = getData(el, "mermaid")
-    if (!source) return []
-    if (isRenderedAndUnchanged(el, source, "mermaid")) return []
-    return [{ el, source, graphId: `mermaid-${++idCounter}` }]
-  })
+    if (!source) continue
+    if (isRenderedAndUnchanged(el, source, "mermaid")) continue
 
-  const results = await Promise.all(
-    jobs.map(({ el, graphId, source }) =>
-      mermaid
-        .render(graphId, source)
-        .then(({ svg }) => ({ el, ok: true as const, svg }))
-        .catch(() => ({ el, ok: false as const })),
-    ),
-  )
-
-  for (const r of results) {
-    if (r.ok) {
-      r.el.innerHTML = sanitizeSvg(r.svg)
-      r.el.classList.add("mermaid-rendered")
-    } else {
-      r.el.textContent = "Mermaid render error for diagram"
-      r.el.classList.add("mermaid-error")
+    const graphId = `mermaid-${++idCounter}`
+    try {
+      const { svg } = await mermaid.render(graphId, source)
+      el.innerHTML = sanitizeSvg(svg)
+      el.classList.add("mermaid-rendered")
+    } catch {
+      el.textContent = "Mermaid render error for diagram"
+      el.classList.add("mermaid-error")
     }
   }
 }

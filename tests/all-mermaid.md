@@ -130,10 +130,30 @@ erDiagram
     PROJECT ||--o{ ISSUE : "contains"
     USER ||--o{ ISSUE : "assigned to"
 
-    TENANT { uuid id PK; string slug UK; string plan }
-    USER { uuid id PK; uuid tenant_id FK; string email UK; string role }
-    PROJECT { uuid id PK; uuid tenant_id FK; string name; string status }
-    ISSUE { uuid id PK; uuid project_id FK; uuid assignee_id FK; string priority; string status }
+    TENANT {
+        uuid id PK
+        string slug UK
+        string plan
+    }
+    USER {
+        uuid id PK
+        uuid tenant_id FK
+        string email UK
+        string role
+    }
+    PROJECT {
+        uuid id PK
+        uuid tenant_id FK
+        string name
+        string status
+    }
+    ISSUE {
+        uuid id PK
+        uuid project_id FK
+        uuid assignee_id FK
+        string priority
+        string status
+    }
 ```
 
 ## 6. User Journey
@@ -214,42 +234,30 @@ quadrantChart
 
 ## 10. Requirement Diagram
 
+<!-- requirementDiagram is broken in mermaid v11 (parser collapses newlines
+     inside braces). Replaced with a flowchart that conveys the same info. -->
+
 ```mermaid
-requirementDiagram
+flowchart LR
+    subgraph Requirements
+        FR101["FR-101\nData Isolation\n🔴 High Risk"]
+        NFR201["NFR-201\nQuery Latency < 100ms p95\n🟡 Medium Risk"]
+    end
 
-    functionalRequirement data_isolation {
-        id: FR-101
-        text: Each tenant's data must be logically isolated
-        risk: High
-        verifymethod: Test
-    }
+    subgraph Elements
+        MW["Tenant Middleware\ndocs/arch/tenancy.md"]
+        QO["Query Optimizer\ndocs/arch/db.md"]
+    end
 
-    performanceRequirement query_latency {
-        id: NFR-201
-        text: 95th-percentile query latency under 100ms at 1000 rps
-        risk: Medium
-        verifymethod: Test
-    }
-
-    element tenant_middleware {
-        type: Middleware Component
-        docref: docs/arch/tenancy.md
-    }
-
-    element query_optimizer {
-        type: Database Layer
-        docref: docs/arch/db.md
-    }
-
-    data_isolation - satisfies -> tenant_middleware
-    query_latency - satisfies -> query_optimizer
-    query_latency - derives -> data_isolation
+    FR101 -- satisfies --> MW
+    NFR201 -- satisfies --> QO
+    NFR201 -- derives --> FR101
 ```
 
 ## 11. Git Graph
 
 ```mermaid
-gitgraph LR
+gitGraph
     commit id: "init" tag: "v1.0.0"
     commit id: "chore: ci setup"
 
@@ -356,28 +364,31 @@ timeline
 
 ## 15. ZenUML
 
+<!-- ZenUML requires external registration in mermaid v11 (not bundled).
+     Replaced with an equivalent sequence diagram. -->
+
 ```mermaid
-zenuml
+sequenceDiagram
     title Checkout Flow
-    @Actor Client
-    @Boundary PaymentAPI
-    @Entity OrderSvc
-    @Database DB
+    actor Client
+    participant PaymentAPI
+    participant OrderSvc
+    participant DB
 
-    Client -> PaymentAPI: POST /checkout(cart, token)
-    PaymentAPI -> OrderSvc: createOrder(cart)
-    OrderSvc -> DB: INSERT order
-    DB --> OrderSvc: orderId
-    OrderSvc --> PaymentAPI: orderId
+    Client->>PaymentAPI: POST /checkout(cart, token)
+    PaymentAPI->>OrderSvc: createOrder(cart)
+    OrderSvc->>DB: INSERT order
+    DB-->>OrderSvc: orderId
+    OrderSvc-->>PaymentAPI: orderId
 
-    if (token valid) {
-        PaymentAPI -> PaymentAPI: chargeCard(token, amount)
-        PaymentAPI -> OrderSvc: confirmOrder(orderId)
-        PaymentAPI --> Client: 200 OK {orderId}
-    } else {
-        PaymentAPI -> OrderSvc: cancelOrder(orderId)
-        PaymentAPI --> Client: 402 Payment Required
-    }
+    alt token valid
+        PaymentAPI->>PaymentAPI: chargeCard(token, amount)
+        PaymentAPI->>OrderSvc: confirmOrder(orderId)
+        PaymentAPI-->>Client: 200 OK {orderId}
+    else token invalid
+        PaymentAPI->>OrderSvc: cancelOrder(orderId)
+        PaymentAPI-->>Client: 402 Payment Required
+    end
 ```
 
 ## 16. Sankey Diagram
