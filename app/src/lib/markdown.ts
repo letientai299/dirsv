@@ -24,6 +24,10 @@ import { rehypeGraphviz } from "./rehype-graphviz"
 import { rehypeKatexPlaceholder } from "./rehype-katex-placeholder"
 import { rehypeMermaid } from "./rehype-mermaid"
 import { rehypePlantuml } from "./rehype-plantuml"
+import {
+  rehypeShikiCachedPost,
+  rehypeShikiCachedPre,
+} from "./rehype-shiki-cached"
 import { rehypeTypstDiagram } from "./rehype-typst-diagram"
 
 export type { Heading }
@@ -112,6 +116,7 @@ function getProcessor() {
       .use(rehypeD2)
       .use(rehypeDbml)
       .use(rehypeTypstDiagram)
+      .use(rehypeShikiCachedPre)
       .use(rehypeShiki, {
         themes: { light: "github-light", dark: "github-dark" },
         defaultColor: false,
@@ -120,6 +125,7 @@ function getProcessor() {
         lazy: true,
         fallbackLanguage: "text",
       })
+      .use(rehypeShikiCachedPost)
       .use(rehypeSlug)
       .use(rehypeStringify)
   }
