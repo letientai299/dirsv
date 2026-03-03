@@ -3,8 +3,7 @@
 A local directory browser with live reload. Single Go binary, embedded web UI.
 
 Browse filesystem contents with a clean table view, render markdown with
-syntax-highlighted code blocks, and see changes instantly via server-sent
-events.
+syntax-highlighted code blocks, and see changes instantly via WebSocket.
 
 |            Directory browsing            |                JSON tree view                 |
 | :--------------------------------------: | :-------------------------------------------: |
@@ -16,7 +15,10 @@ events.
 
 - **Directory browsing** — table view with [Devicon][devicon] file-type icons,
   sizes, and modification dates. Keyboard navigation (arrow keys, `j`/`k`,
-  Enter to open)
+  Enter to open). Directories with `index.html` auto-route to HTML preview
+- **File sidebar** — resizable panel listing sibling files with type icons.
+  Prev/next navigation across siblings
+- **Breadcrumb navigation** — clickable path segments in the toolbar
 - **Markdown rendering** — [GFM][gfm] via [unified/remark][remark] with
   [Shiki][shiki] syntax highlighting, [KaTeX][katex] math, definition lists,
   color chips, GitHub-style alerts, emoji, raw HTML blocks, video embeds, and a
@@ -28,17 +30,22 @@ events.
   files render directly
 - **Code view** — syntax highlighting for 100+ languages, line numbers, and a
   copy button
-- **JSON / YAML tree view** — collapsible tree with path filtering, keyboard
-  shortcuts, and copy-to-clipboard per node
+- **JSON / YAML tree view** — collapsible tree with path filtering, Tree/Raw
+  toggle, and copy-to-clipboard per node. Large files (>500 KB) default to raw
 - **Image viewer** — gallery navigation between sibling images with arrow keys,
   preloading, and fade transitions
-- **Video player** — HTML5 controls for `.mp4`, `.webm`, `.ogg`, `.mov`
+- **Video player** — HTML5 controls with gallery navigation for `.mp4`, `.webm`,
+  `.ogg`, `.mov`
 - **HTML preview** — iframe sandbox with automatic URL rewriting for static
   sites
-- **Live reload** — granular SSE updates per file and directory
-- **Dark/light theme** — toggle with persistent override
-- **Single binary** — frontend assets embedded via `go:embed`, no runtime
-  dependencies
+- **Binary files** — detected by MIME type, shown with an "Open in app" link
+- **Live reload** — per-path WebSocket updates with server-side filtering. Only
+  watched paths are broadcast to each client
+- **Dark/light theme** — toggle with persistent override, respects
+  `prefers-color-scheme`
+- **Keyboard shortcuts** — `?` opens a help popover listing all bindings
+- **Single binary** — frontend assets embedded via `go:embed` with
+  pre-compressed gzip, no runtime dependencies
 
 ## Install
 
@@ -87,12 +94,13 @@ mise run
 ### CLI flags
 
 ```
-server [path]            directory or file to serve (default ".")
+dirsv [path]             directory or file to serve (default ".")
     --host <addr>        listen address (default "localhost")
 -p, --port <port>        listen port (default 8080, or $PORT)
 -b, --browser <name>     browser to open (default: system default)
     --no-open            don't auto-open browser
 -d, --debug              enable verbose watcher logs
+-v, --version            print version and exit
 ```
 
 When `[path]` is a file, the server restricts browsing to that single file.
