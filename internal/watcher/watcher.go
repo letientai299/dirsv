@@ -62,7 +62,7 @@ type watchMsg struct {
 // prefixes it cares about. Prefixes are updated dynamically via
 // messages on the socket without reconnecting.
 type wsClient struct {
-	ch       chan Event
+	ch       chan []byte
 	mu       sync.RWMutex
 	prefixes []string
 }
@@ -386,16 +386,21 @@ func matchesClient(c *wsClient, evPath string) bool {
 	return false
 }
 
-// broadcast sends each pending event to matching clients.
+// broadcast marshals each pending event once and sends the pre-marshalled
+// bytes to matching clients, avoiding redundant per-client JSON encoding.
 func (w *Watcher) broadcast(pending map[string]Event) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 	for _, ev := range pending {
+		data, err := json.Marshal(ev)
+		if err != nil {
+			continue
+		}
 		var notified int
 		for c := range w.clients {
 			if matchesClient(c, ev.Path) {
 				select {
-				case c.ch <- ev:
+				case c.ch <- data:
 					notified++
 				default:
 				}
@@ -411,7 +416,7 @@ func (w *Watcher) broadcast(pending map[string]Event) {
 
 // subscribe registers a new client with no initial prefixes.
 func (w *Watcher) subscribe() *wsClient {
-	c := &wsClient{ch: make(chan Event, 16)}
+	c := &wsClient{ch: make(chan []byte, 16)}
 	w.mu.Lock()
 	w.clients[c] = struct{}{}
 	w.mu.Unlock()
@@ -501,7 +506,10 @@ func (w *Watcher) watchForClient(prefix string) {
 	if statErr == nil && !info.IsDir() {
 		resolved = filepath.Dir(resolved)
 	}
-	w.ensureWatched(resolved)
+	// Run asynchronously so the client's read loop isn't blocked by
+	// the WalkDir inside ensureWatched. Events during the walk are
+	// buffered in the client's channel (cap 16).
+	go w.ensureWatched(resolved)
 }
 
 // cleanWatchPath normalizes the watch query parameter to match the format
@@ -553,11 +561,7 @@ func (w *Watcher) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		case <-w.done:
 			_ = conn.Close(websocket.StatusGoingAway, "server shutting down")
 			return
-		case ev := <-c.ch:
-			data, err := json.Marshal(ev)
-			if err != nil {
-				continue
-			}
+		case data := <-c.ch:
 			if err := conn.Write(readCtx, websocket.MessageText, data); err != nil {
 				return
 			}

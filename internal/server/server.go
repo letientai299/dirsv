@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -36,11 +37,22 @@ type BrowseResponse struct {
 	ModTime time.Time `json:"modTime,omitempty"`
 }
 
+// pathCacheEntry caches the result of resolvePath to avoid redundant
+// EvalSymlinks + Stat syscalls on hot paths.
+type pathCacheEntry struct {
+	resolved string
+	info     os.FileInfo
+	cachedAt time.Time
+}
+
+const pathCacheTTL = 2 * time.Second
+
 // Server serves directory listings, raw files, and the SPA frontend.
 type Server struct {
 	root       string
 	singleFile string // if non-empty, restrict serving to this one file
 	mux        *http.ServeMux
+	pathCache  sync.Map // cleaned request path → *pathCacheEntry
 }
 
 // Option configures a Server.
@@ -130,6 +142,16 @@ func (s *Server) resolvePath(
 	reqPath string,
 ) (resolved string, info os.FileInfo, err error) {
 	cleaned := filepath.FromSlash(path.Clean("/" + reqPath))
+
+	// Check cache first.
+	if v, ok := s.pathCache.Load(cleaned); ok {
+		entry, ok := v.(*pathCacheEntry)
+		if ok && time.Since(entry.cachedAt) < pathCacheTTL {
+			return entry.resolved, entry.info, nil
+		}
+		s.pathCache.Delete(cleaned)
+	}
+
 	full := filepath.Join(s.root, cleaned)
 
 	// Resolve symlinks so the containment check uses the real target.
@@ -153,6 +175,12 @@ func (s *Server) resolvePath(
 	if statErr != nil {
 		return "", nil, statErr
 	}
+
+	s.pathCache.Store(cleaned, &pathCacheEntry{
+		resolved: resolved,
+		info:     fi,
+		cachedAt: time.Now(),
+	})
 
 	return resolved, fi, nil
 }
@@ -245,19 +273,51 @@ func (s *Server) serveDirEntries(
 	w http.ResponseWriter,
 	dirEntries []os.DirEntry,
 ) {
-	entries := make([]Entry, 0, len(dirEntries))
-	for _, de := range dirEntries {
-		info, err := de.Info()
-		if err != nil {
-			continue
+	numWorkers := 16
+	chunkSize := (len(dirEntries) + numWorkers - 1) / numWorkers
+
+	type result struct {
+		entries []Entry
+	}
+
+	results := make([]result, numWorkers)
+	var wg sync.WaitGroup
+
+	for i := 0; i < numWorkers; i++ {
+		start := i * chunkSize
+		if start >= len(dirEntries) {
+			break
 		}
-		entries = append(entries, Entry{
-			Name:    de.Name(),
-			IsDir:   de.IsDir(),
-			IsExec:  !de.IsDir() && info.Mode()&0o111 != 0,
-			Size:    info.Size(),
-			ModTime: info.ModTime(),
-		})
+		end := start + chunkSize
+		if end > len(dirEntries) {
+			end = len(dirEntries)
+		}
+
+		wg.Add(1)
+		go func(idx int, entries []os.DirEntry) {
+			defer wg.Done()
+			var localEntries []Entry
+			for _, de := range entries {
+				info, err := de.Info()
+				if err != nil {
+					continue
+				}
+				localEntries = append(localEntries, Entry{
+					Name:    de.Name(),
+					IsDir:   de.IsDir(),
+					IsExec:  !de.IsDir() && info.Mode()&0o111 != 0,
+					Size:    info.Size(),
+					ModTime: info.ModTime(),
+				})
+			}
+			results[idx].entries = localEntries
+		}(i, dirEntries[start:end])
+	}
+	wg.Wait()
+
+	entries := make([]Entry, 0, len(dirEntries))
+	for _, res := range results {
+		entries = append(entries, res.entries...)
 	}
 
 	resp := BrowseResponse{Type: "dir", Entries: entries}
