@@ -195,17 +195,14 @@ export function FileView({ path }: Props) {
 
   useSSE(parentDir.replace(/^\//, "") || ".", () => loadSiblings())
 
-  // Prev/next among non-directory siblings
+  // Prev/next among all siblings (dirs included) so navigation matches
+  // the sidebar order instead of mysteriously jumping over directories.
   const currentName = path.split("/").pop() ?? ""
-  const fileEntries = useMemo(
-    () => siblings.filter((e) => !e.isDir),
-    [siblings],
-  )
-  const currentIdx = fileEntries.findIndex((e) => e.name === currentName)
-  const prevFile = currentIdx > 0 ? fileEntries[currentIdx - 1] : null
-  const nextFile =
-    currentIdx >= 0 && currentIdx < fileEntries.length - 1
-      ? fileEntries[currentIdx + 1]
+  const currentIdx = siblings.findIndex((e) => e.name === currentName)
+  const prevEntry = currentIdx > 0 ? siblings[currentIdx - 1] : null
+  const nextEntry =
+    currentIdx >= 0 && currentIdx < siblings.length - 1
+      ? siblings[currentIdx + 1]
       : null
 
   const siblingHref = (name: string) =>
@@ -270,33 +267,33 @@ export function FileView({ path }: Props) {
           {content}
         </div>
       </div>
-      {(prevFile || nextFile) && (
+      {(prevEntry || nextEntry) && (
         <footer class="file-footer">
-          {prevFile ? (
+          {prevEntry ? (
             <a
               rel="prev"
-              href={siblingHref(prevFile.name)}
+              href={siblingHref(prevEntry.name)}
               onClick={(e) => {
                 e.preventDefault()
-                navigate(siblingHref(prevFile.name))
+                navigate(siblingHref(prevEntry.name))
               }}
             >
               <ChevronLeft />
-              {prevFile.name}
+              {prevEntry.name}
             </a>
           ) : (
             <span />
           )}
-          {nextFile ? (
+          {nextEntry ? (
             <a
               rel="next"
-              href={siblingHref(nextFile.name)}
+              href={siblingHref(nextEntry.name)}
               onClick={(e) => {
                 e.preventDefault()
-                navigate(siblingHref(nextFile.name))
+                navigate(siblingHref(nextEntry.name))
               }}
             >
-              {nextFile.name}
+              {nextEntry.name}
               <ChevronRight />
             </a>
           ) : (
