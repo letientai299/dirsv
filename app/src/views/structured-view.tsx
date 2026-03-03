@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "preact/hooks"
 import { JsonToolbar } from "../components/json-toolbar"
 import { JsonTree } from "../components/json-tree"
-import { Toolbar } from "../components/toolbar"
 import {
   collectAllPaths,
   computeFlatVisiblePaths,
@@ -11,7 +10,6 @@ import {
 import { useShiki } from "../lib/use-shiki"
 
 interface Props {
-  path: string
   content: string
   parse: (content: string) => JsonValue
   lang: string
@@ -19,7 +17,7 @@ interface Props {
 
 const LARGE_THRESHOLD = 500_000
 
-export function StructuredView({ path, content, parse, lang }: Props) {
+export function StructuredView({ content, parse, lang }: Props) {
   const [parsed, setParsed] = useState<JsonValue | undefined>(undefined)
   const [parseError, setParseError] = useState(false)
   const [filter, setFilter] = useState("")
@@ -112,7 +110,6 @@ export function StructuredView({ path, content, parse, lang }: Props) {
 
   return (
     <div>
-      <Toolbar path={path} />
       <JsonToolbar
         filter={filter}
         onFilterChange={setFilter}

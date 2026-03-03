@@ -1,7 +1,6 @@
 import morphdom from "morphdom"
 import { useCallback, useEffect, useRef, useState } from "preact/hooks"
 import { TableOfContents } from "../components/toc"
-import { Toolbar } from "../components/toolbar"
 import { injectCopyButtons } from "../lib/code-copy"
 import { renderD2Blocks } from "../lib/d2-render"
 import { renderDbmlBlocks } from "../lib/dbml-render"
@@ -21,7 +20,7 @@ interface Props {
   content: string
 }
 
-export function MarkdownView({ path, content }: Props) {
+export function MarkdownView({ content }: Props) {
   const [result, setResult] = useState<MarkdownResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const contentRef = useRef<HTMLElement>(null)
@@ -120,12 +119,9 @@ export function MarkdownView({ path, content }: Props) {
   if (result === null) return <div class="loading">Rendering...</div>
 
   return (
-    <div>
-      <Toolbar path={path} />
-      <div class="md-layout">
-        <article ref={contentRef} class="markdown-body" />
-        <TableOfContents headings={result.headings} contentRef={contentRef} />
-      </div>
+    <div class="md-layout">
+      <article ref={contentRef} class="markdown-body" />
+      <TableOfContents headings={result.headings} contentRef={contentRef} />
     </div>
   )
 }

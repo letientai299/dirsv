@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from "preact/hooks"
-import { Toolbar } from "../components/toolbar"
 import { renderDbml } from "../lib/dbml-render"
 
 interface Props {
-  path: string
   content: string
 }
 
-export function DbmlView({ path, content }: Props) {
+export function DbmlView({ content }: Props) {
   const [svg, setSvg] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -37,10 +35,5 @@ export function DbmlView({ path, content }: Props) {
   if (error) return <div class="error">DBML render error: {error}</div>
   if (svg === null) return <div class="loading">Rendering...</div>
 
-  return (
-    <div>
-      <Toolbar path={path} />
-      <div class="dbml-standalone" ref={containerRef} />
-    </div>
-  )
+  return <div class="dbml-standalone" ref={containerRef} />
 }

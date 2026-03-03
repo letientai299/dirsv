@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "preact/hooks"
-import { Toolbar } from "../components/toolbar"
 import { browse } from "../lib/api"
 import { useKeys } from "../lib/use-keys"
 import { useSSE } from "../lib/use-sse"
@@ -122,48 +121,45 @@ export function MediaView({ path, kind }: Props) {
   }, [prevPath, nextPath, kind])
 
   return (
-    <div>
-      <Toolbar path={path} />
-      <div class="media-viewer">
-        <div class="media-container">
-          {kind === "image" ? (
-            <img
-              key={rawUrl}
-              src={rawUrl}
-              alt={fileName}
-              class={`media-content media-fade ${loaded ? "media-fade--in" : ""}`}
-              onLoad={() => setLoaded(true)}
-            />
-          ) : (
-            <video src={rawUrl} controls class="media-content">
-              <track kind="captions" />
-            </video>
-          )}
-        </div>
-        {siblings.length > 1 && (
-          <div class="media-nav">
-            <button
-              type="button"
-              class="media-nav-btn"
-              disabled={!prevPath}
-              onClick={() => prevPath && navigate(prevPath)}
-              aria-label={`Previous ${kind}`}
-            >
-              <ChevronLeft />
-            </button>
-            <span class="media-nav-pos">{position}</span>
-            <button
-              type="button"
-              class="media-nav-btn"
-              disabled={!nextPath}
-              onClick={() => nextPath && navigate(nextPath)}
-              aria-label={`Next ${kind}`}
-            >
-              <ChevronRight />
-            </button>
-          </div>
+    <div class="media-viewer">
+      <div class="media-container">
+        {kind === "image" ? (
+          <img
+            key={rawUrl}
+            src={rawUrl}
+            alt={fileName}
+            class={`media-content media-fade ${loaded ? "media-fade--in" : ""}`}
+            onLoad={() => setLoaded(true)}
+          />
+        ) : (
+          <video src={rawUrl} controls class="media-content">
+            <track kind="captions" />
+          </video>
         )}
       </div>
+      {siblings.length > 1 && (
+        <div class="media-nav">
+          <button
+            type="button"
+            class="media-nav-btn"
+            disabled={!prevPath}
+            onClick={() => prevPath && navigate(prevPath)}
+            aria-label={`Previous ${kind}`}
+          >
+            <ChevronLeft />
+          </button>
+          <span class="media-nav-pos">{position}</span>
+          <button
+            type="button"
+            class="media-nav-btn"
+            disabled={!nextPath}
+            onClick={() => nextPath && navigate(nextPath)}
+            aria-label={`Next ${kind}`}
+          >
+            <ChevronRight />
+          </button>
+        </div>
+      )}
     </div>
   )
 }

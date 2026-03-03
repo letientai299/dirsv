@@ -165,6 +165,7 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
   return (
     <div>
       <Toolbar path={path} />
+      <hr class="file-separator" />
       <table class="dir-table">
         <thead>
           <tr>
@@ -178,6 +179,7 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
             <tr class={activeIndex === 0 ? "row-active" : ""}>
               <td>
                 <a
+                  rel="up"
                   href={parentPath}
                   onClick={(e) => {
                     e.preventDefault()

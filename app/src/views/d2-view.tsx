@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from "preact/hooks"
-import { Toolbar } from "../components/toolbar"
 import { renderD2 } from "../lib/d2-render"
 
 interface Props {
-  path: string
   content: string
 }
 
-export function D2View({ path, content }: Props) {
+export function D2View({ content }: Props) {
   const [svg, setSvg] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -37,10 +35,5 @@ export function D2View({ path, content }: Props) {
   if (error) return <div class="error">D2 render error: {error}</div>
   if (svg === null) return <div class="loading">Rendering...</div>
 
-  return (
-    <div>
-      <Toolbar path={path} />
-      <div class="d2-standalone" ref={containerRef} />
-    </div>
-  )
+  return <div class="d2-standalone" ref={containerRef} />
 }

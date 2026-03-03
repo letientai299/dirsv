@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from "preact/hooks"
-import { Toolbar } from "../components/toolbar"
 import { renderGraphviz } from "../lib/graphviz-render"
 
 interface Props {
-  path: string
   content: string
 }
 
-export function GraphvizView({ path, content }: Props) {
+export function GraphvizView({ content }: Props) {
   const [svg, setSvg] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -37,10 +35,5 @@ export function GraphvizView({ path, content }: Props) {
   if (error) return <div class="error">Graphviz render error: {error}</div>
   if (svg === null) return <div class="loading">Rendering...</div>
 
-  return (
-    <div>
-      <Toolbar path={path} />
-      <div class="graphviz-standalone" ref={containerRef} />
-    </div>
-  )
+  return <div class="graphviz-standalone" ref={containerRef} />
 }

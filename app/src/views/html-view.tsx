@@ -1,5 +1,3 @@
-import { Toolbar } from "../components/toolbar"
-
 interface Props {
   path: string
 }
@@ -12,14 +10,11 @@ export function HtmlView({ path }: Props) {
   const fileName = path.split("/").pop() ?? ""
   const src = `/api/htmlpreview/${encodeURIComponent(dir)}/${encodeURIComponent(fileName)}`
   return (
-    <div>
-      <Toolbar path={path} />
-      <iframe
-        src={src}
-        class="html-frame"
-        title="HTML preview"
-        sandbox="allow-scripts allow-forms allow-popups"
-      />
-    </div>
+    <iframe
+      src={src}
+      class="html-frame"
+      title="HTML preview"
+      sandbox="allow-scripts allow-forms allow-popups"
+    />
   )
 }
