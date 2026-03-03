@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
+import { AppFooter } from "../components/app-footer"
 import { Toolbar } from "../components/toolbar"
 import { browse, type DirEntry } from "../lib/api"
 import { FileIcon, ParentIcon } from "../lib/file-icon"
@@ -234,6 +235,7 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
           })}
         </tbody>
       </table>
+      <AppFooter />
     </div>
   )
 }

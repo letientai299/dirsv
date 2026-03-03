@@ -86,6 +86,7 @@ func New(
 	s.mux.HandleFunc("GET /api/browse/{path...}", s.handleBrowse)
 	s.mux.HandleFunc("GET /api/raw/{path...}", s.handleRaw)
 	s.mux.HandleFunc("GET /api/htmlpreview/{path...}", s.handleHTMLPreview)
+	s.mux.HandleFunc("GET /api/info", handleInfo)
 
 	if sseHandler != nil {
 		s.mux.Handle("GET /api/events", sseHandler)
@@ -100,6 +101,11 @@ func New(
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mux.ServeHTTP(w, r)
+}
+
+func handleInfo(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]int{"pid": os.Getpid()})
 }
 
 var errForbidden = errors.New("forbidden")

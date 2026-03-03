@@ -2,6 +2,7 @@ import type { JSX } from "preact"
 import { lazy, Suspense } from "preact/compat"
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import { parse as parseYaml } from "yaml"
+import { AppFooter } from "../components/app-footer"
 import { Toolbar } from "../components/toolbar"
 import { browse, type DirEntry, fetchRaw, type RawResult } from "../lib/api"
 import { FileIcon, ParentIcon } from "../lib/file-icon"
@@ -373,9 +374,9 @@ export function FileView({ path }: Props) {
           {content}
         </div>
       </div>
-      {(prevEntry || nextEntry) && (
-        <footer class="file-footer">
-          {prevEntry ? (
+      <footer class="file-footer">
+        <span class="file-footer-prev">
+          {prevEntry && (
             <a
               rel="prev"
               href={siblingHref(prevEntry.name)}
@@ -387,10 +388,11 @@ export function FileView({ path }: Props) {
               <ChevronLeft />
               {prevEntry.name}
             </a>
-          ) : (
-            <span />
           )}
-          {nextEntry ? (
+        </span>
+        <AppFooter />
+        <span class="file-footer-next">
+          {nextEntry && (
             <a
               rel="next"
               href={siblingHref(nextEntry.name)}
@@ -402,11 +404,9 @@ export function FileView({ path }: Props) {
               {nextEntry.name}
               <ChevronRight />
             </a>
-          ) : (
-            <span />
           )}
-        </footer>
-      )}
+        </span>
+      </footer>
     </div>
   )
 }

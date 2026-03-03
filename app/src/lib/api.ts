@@ -28,6 +28,21 @@ export type RawResult =
 const textTypes =
   /^(text\/|application\/(json|xml|javascript|typescript|x-sh|x-httpd-php|toml|yaml|x-yaml))/
 
+export interface ServerInfo {
+  pid: number
+}
+
+let cachedInfo: ServerInfo | null = null
+
+export async function fetchInfo(): Promise<ServerInfo> {
+  if (cachedInfo) return cachedInfo
+  const res = await fetch("/api/info")
+  if (!res.ok) throw new Error(`info: ${res.status}`)
+  const info: ServerInfo = await res.json()
+  cachedInfo = info
+  return info
+}
+
 export async function fetchRaw(
   path: string,
   signal?: AbortSignal,

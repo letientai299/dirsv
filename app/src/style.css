@@ -198,6 +198,10 @@ body {
   vertical-align: middle;
 }
 
+.dir-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
 .dir-table tbody tr:hover,
 .dir-table tbody tr.row-active {
   background: var(--surface);
@@ -344,12 +348,24 @@ body {
 
 .file-footer {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: 8px 16px;
   border-top: 1px solid var(--border);
   font-size: 13px;
   font-family: var(--mono);
+}
+
+.file-footer-prev,
+.file-footer-next {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-footer-next {
+  text-align: right;
 }
 
 .file-footer a {
@@ -362,6 +378,28 @@ body {
 
 .file-footer a:hover {
   color: var(--text);
+}
+
+.app-footer {
+  color: var(--text-dim);
+  font-size: 13px;
+  text-align: center;
+  padding: 8px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.app-footer a {
+  color: var(--accent, #58a6ff);
+  text-decoration: none;
+}
+
+.app-footer a:hover {
+  text-decoration: underline;
+}
+
+.file-footer .app-footer {
+  border: none;
+  padding: 0;
 }
 
 /* ---------- file view ---------- */
@@ -1114,6 +1152,10 @@ pre {
 @media (max-width: 768px) {
   .file-sidebar,
   .file-sidebar-handle {
+    display: none;
+  }
+
+  .file-footer .app-footer {
     display: none;
   }
 }
