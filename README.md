@@ -9,11 +9,20 @@ events.
 ## Features
 
 - **Directory browsing** -- table view with [Devicon][devicon] file-type icons,
-  sizes, and modification dates
+  sizes, and modification dates. Keyboard navigation (arrow keys, `j`/`k`,
+  Enter to open)
 - **Markdown rendering** -- GFM via [unified/remark][remark] with [Shiki][shiki]
-  syntax highlighting
+  syntax highlighting, [KaTeX][katex] math, [Mermaid][mermaid] and
+  [PlantUML][plantuml] diagrams, GitHub-style alerts, emoji, and a sticky table
+  of contents sidebar
+- **Code view** -- syntax highlighting for 100+ languages, line numbers, and a
+  copy button
+- **JSON / YAML tree view** -- collapsible tree with path filtering, keyboard
+  shortcuts, and copy-to-clipboard per node
+- **HTML preview** -- iframe sandbox with automatic URL rewriting for static
+  sites
 - **Live reload** -- granular SSE updates per file and directory
-- **Dark/light theme** -- system preference detection with manual override
+- **Dark/light theme** -- system / light / dark cycle with persistent override
 - **Single binary** -- frontend assets embedded via `go:embed`, no runtime
   dependencies
 
@@ -85,6 +94,9 @@ MIT
 [devicon]: https://devicon.dev/
 [remark]: https://github.com/remarkjs/remark
 [shiki]: https://shiki.style/
+[katex]: https://katex.org/
+[mermaid]: https://mermaid.js.org/
+[plantuml]: https://plantuml.com/
 [mise]: https://mise.jdx.dev/
 [fsnotify]: https://github.com/fsnotify/fsnotify
 [pflag]: https://github.com/spf13/pflag
