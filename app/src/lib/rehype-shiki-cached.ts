@@ -69,23 +69,26 @@ export function rehypeShikiCachedPre() {
   }
 }
 
+/** Cache a single newly-highlighted Shiki block if it's valid and uncached. */
+function cacheNewBlock(node: Element): void {
+  if (node.tagName !== "pre") return
+  if (!getClassList(node).includes("shiki")) return
+  if (node.properties["dataShikiCached"]) return
+
+  const lang = node.properties["dataLanguage"] as string | undefined
+  if (!lang) return
+
+  const code = node.children[0]
+  if (!code || code.type !== "element" || code.tagName !== "code") return
+
+  const source = collectTextDeep(code.children)
+  cache.set(cacheKey(lang, source), cloneElement(node))
+}
+
 /** Post-pass: store newly highlighted blocks in cache. */
 export function rehypeShikiCachedPost() {
   return (tree: Root) => {
-    visit(tree, "element", (node: Element) => {
-      if (node.tagName !== "pre") return
-      if (!getClassList(node).includes("shiki")) return
-      if (node.properties["dataShikiCached"]) return
-
-      const lang = node.properties["dataLanguage"] as string | undefined
-      if (!lang) return
-
-      const code = node.children[0]
-      if (!code || code.type !== "element" || code.tagName !== "code") return
-
-      const source = collectTextDeep(code.children)
-      cache.set(cacheKey(lang, source), cloneElement(node))
-    })
+    visit(tree, "element", cacheNewBlock)
   }
 }
 

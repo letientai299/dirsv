@@ -37,6 +37,21 @@ function navigateToParent(
   onNavigate(parent.href)
 }
 
+function handleGG(
+  e: KeyboardEvent,
+  setActiveIndex: (fn: (i: number) => number) => void,
+  pendingG: { current: number },
+): void {
+  const now = Date.now()
+  if (now - pendingG.current < 500) {
+    e.preventDefault()
+    setActiveIndex(() => 0)
+    pendingG.current = 0
+  } else {
+    pendingG.current = now
+  }
+}
+
 function handleDirNavKey(
   e: KeyboardEvent,
   rows: { href: string; key: string }[],
@@ -45,42 +60,49 @@ function handleDirNavKey(
   onNavigate: (to: string) => void,
   pendingG: { current: number },
 ) {
-  // Clear pending g on any non-g key
-  if (e.key !== "g") {
-    pendingG.current = 0
-  }
+  if (e.key !== "g") pendingG.current = 0
 
   if (e.key === "ArrowUp" && e.altKey) {
     navigateToParent(e, rows, onNavigate)
-  } else if (e.key === "ArrowDown" || e.key === "j") {
-    e.preventDefault()
-    setActiveIndex((i) => Math.min(i + 1, rows.length - 1))
-  } else if (e.key === "ArrowUp" || e.key === "k") {
-    e.preventDefault()
-    setActiveIndex((i) => Math.max(i - 1, 0))
-  } else if (e.key === "Enter" || e.key === "l") {
-    const row = rows[activeIndex]
-    if (activeIndex >= 0 && row) {
+    return
+  }
+
+  switch (e.key) {
+    case "ArrowDown":
+    case "j":
       e.preventDefault()
-      onNavigate(row.href)
+      setActiveIndex((i) => Math.min(i + 1, rows.length - 1))
+      break
+    case "ArrowUp":
+    case "k":
+      e.preventDefault()
+      setActiveIndex((i) => Math.max(i - 1, 0))
+      break
+    case "Enter":
+    case "l": {
+      const row = rows[activeIndex]
+      if (activeIndex >= 0 && row) {
+        e.preventDefault()
+        onNavigate(row.href)
+      }
+      break
     }
-  } else if (e.key === "h" || e.key === "Backspace") {
-    navigateToParent(e, rows, onNavigate)
-  } else if (e.key === "Home") {
-    e.preventDefault()
-    setActiveIndex(() => 0)
-  } else if (e.key === "End" || e.key === "G") {
-    e.preventDefault()
-    setActiveIndex(() => rows.length - 1)
-  } else if (e.key === "g") {
-    const now = Date.now()
-    if (now - pendingG.current < 500) {
+    case "h":
+    case "Backspace":
+      navigateToParent(e, rows, onNavigate)
+      break
+    case "Home":
       e.preventDefault()
       setActiveIndex(() => 0)
-      pendingG.current = 0
-    } else {
-      pendingG.current = now
-    }
+      break
+    case "End":
+    case "G":
+      e.preventDefault()
+      setActiveIndex(() => rows.length - 1)
+      break
+    case "g":
+      handleGG(e, setActiveIndex, pendingG)
+      break
   }
 }
 
