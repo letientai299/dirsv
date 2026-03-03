@@ -80,11 +80,15 @@ export function MarkdownView({ path, content }: Props) {
   const reRenderDiagrams = useCallback(() => {
     const el = contentRef.current
     if (!el) return
-    for (const rendered of el.querySelectorAll(".mermaid-rendered")) {
+    for (const rendered of el.querySelectorAll<HTMLElement>(
+      ".mermaid-rendered",
+    )) {
       rendered.classList.remove("mermaid-rendered")
+      delete rendered.dataset["mermaidHash"]
     }
-    for (const rendered of el.querySelectorAll(".d2-rendered")) {
+    for (const rendered of el.querySelectorAll<HTMLElement>(".d2-rendered")) {
       rendered.classList.remove("d2-rendered")
+      delete rendered.dataset["d2Hash"]
     }
     void renderMermaidBlocks(el)
     void renderD2Blocks(el)

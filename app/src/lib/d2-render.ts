@@ -1,3 +1,4 @@
+import { isRenderedAndUnchanged } from "./content-hash"
 import { sanitizeSvg } from "./sanitize-svg"
 
 /** Render a single D2 source string to SVG. Lazy-loads the WASM engine. */
@@ -20,7 +21,7 @@ export async function renderD2(source: string): Promise<string> {
  */
 export async function renderD2Blocks(container: HTMLElement): Promise<void> {
   const placeholders = container.querySelectorAll<HTMLElement>(
-    ".d2-placeholder:not(.d2-rendered):not(.d2-error)",
+    ".d2-placeholder",
   )
   if (placeholders.length === 0) return
 
@@ -31,6 +32,7 @@ export async function renderD2Blocks(container: HTMLElement): Promise<void> {
   for (const el of placeholders) {
     const source = el.dataset["d2"]
     if (!source) continue
+    if (isRenderedAndUnchanged(el, source, "d2")) continue
 
     try {
       const result = await d2.compile(source)

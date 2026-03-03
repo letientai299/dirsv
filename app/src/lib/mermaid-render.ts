@@ -1,3 +1,4 @@
+import { isRenderedAndUnchanged } from "./content-hash"
 import { sanitizeSvg } from "./sanitize-svg"
 
 let idCounter = 0
@@ -29,6 +30,7 @@ export async function renderMermaidBlocks(
   const jobs = Array.from(placeholders).flatMap((el) => {
     const source = getData(el, "mermaid")
     if (!source) return []
+    if (isRenderedAndUnchanged(el, source, "mermaid")) return []
     return [{ el, source, graphId: `mermaid-${++idCounter}` }]
   })
 

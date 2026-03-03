@@ -1,11 +1,12 @@
+import { isRenderedAndUnchanged } from "./content-hash"
+
 /**
  * Post-process `.katex-placeholder` elements by rendering them with KaTeX.
  * Runs after morphdom patches the DOM, outside the unified pipeline.
  */
 export async function renderKatexBlocks(container: HTMLElement): Promise<void> {
-  const placeholders = container.querySelectorAll<HTMLElement>(
-    ".katex-placeholder:not(.katex-rendered)",
-  )
+  const placeholders =
+    container.querySelectorAll<HTMLElement>(".katex-placeholder")
   if (placeholders.length === 0) return
 
   const katex = await import("katex")
@@ -13,6 +14,7 @@ export async function renderKatexBlocks(container: HTMLElement): Promise<void> {
   for (const el of placeholders) {
     const tex = el.dataset["katex"]
     if (!tex) continue
+    if (isRenderedAndUnchanged(el, tex, "katex")) continue
 
     const display = el.dataset["display"] === "true"
 

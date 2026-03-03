@@ -1,4 +1,5 @@
 import { deflateRaw } from "pako"
+import { isRenderedAndUnchanged } from "./content-hash"
 
 const PLANTUML_SERVER = "https://www.plantuml.com/plantuml/svg"
 
@@ -8,14 +9,14 @@ const PLANTUML_SERVER = "https://www.plantuml.com/plantuml/svg"
  * Falls back to a `<pre><code>` block if the image fails to load.
  */
 export function renderPlantumlBlocks(container: HTMLElement): void {
-  const placeholders = container.querySelectorAll<HTMLElement>(
-    ".plantuml-placeholder:not(.plantuml-rendered):not(.plantuml-error)",
-  )
+  const placeholders =
+    container.querySelectorAll<HTMLElement>(".plantuml-placeholder")
   if (placeholders.length === 0) return
 
   for (const el of placeholders) {
     const source = el.dataset["plantuml"]
     if (!source) continue
+    if (isRenderedAndUnchanged(el, source, "plantuml")) continue
 
     const encoded = encodePlantuml(source)
     const url = `${PLANTUML_SERVER}/${encoded}`

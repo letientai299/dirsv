@@ -1,3 +1,4 @@
+import { isRenderedAndUnchanged } from "./content-hash"
 import { renderGraphviz } from "./graphviz-render"
 import { sanitizeSvg } from "./sanitize-svg"
 
@@ -25,7 +26,7 @@ export async function renderDbml(source: string): Promise<string> {
  */
 export async function renderDbmlBlocks(container: HTMLElement): Promise<void> {
   const placeholders = container.querySelectorAll<HTMLElement>(
-    ".dbml-placeholder:not(.dbml-rendered):not(.dbml-error)",
+    ".dbml-placeholder",
   )
   if (placeholders.length === 0) return
 
@@ -34,6 +35,7 @@ export async function renderDbmlBlocks(container: HTMLElement): Promise<void> {
   const jobs = Array.from(placeholders).flatMap((el) => {
     const source = el.dataset["dbml"]
     if (!source) return []
+    if (isRenderedAndUnchanged(el, source, "dbml")) return []
     return [{ el, source }]
   })
 

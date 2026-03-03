@@ -1,3 +1,4 @@
+import { isRenderedAndUnchanged } from "./content-hash"
 import { sanitizeSvg } from "./sanitize-svg"
 
 const CDN = "https://esm.sh"
@@ -45,9 +46,8 @@ export async function renderTypst(source: string): Promise<string> {
  * WASM loaded from CDN on first use — no bundling needed.
  */
 export async function renderTypstBlocks(container: HTMLElement): Promise<void> {
-  const placeholders = container.querySelectorAll<HTMLElement>(
-    ".typst-placeholder:not(.typst-rendered):not(.typst-error)",
-  )
+  const placeholders =
+    container.querySelectorAll<HTMLElement>(".typst-placeholder")
   if (placeholders.length === 0) return
 
   const t = await getTypst()
@@ -55,6 +55,7 @@ export async function renderTypstBlocks(container: HTMLElement): Promise<void> {
   for (const el of placeholders) {
     const source = el.dataset["typst"]
     if (!source) continue
+    if (isRenderedAndUnchanged(el, source, "typst")) continue
 
     try {
       const svg = await t.svg({ mainContent: source })

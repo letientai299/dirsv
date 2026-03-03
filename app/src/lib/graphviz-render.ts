@@ -1,3 +1,4 @@
+import { isRenderedAndUnchanged } from "./content-hash"
 import { sanitizeSvg } from "./sanitize-svg"
 
 /** Render a single Graphviz source string to SVG. Lazy-loads the WASM engine. */
@@ -16,7 +17,7 @@ export async function renderGraphvizBlocks(
   container: HTMLElement,
 ): Promise<void> {
   const placeholders = container.querySelectorAll<HTMLElement>(
-    ".graphviz-placeholder:not(.graphviz-rendered):not(.graphviz-error)",
+    ".graphviz-placeholder",
   )
   if (placeholders.length === 0) return
 
@@ -26,6 +27,7 @@ export async function renderGraphvizBlocks(
   const jobs = Array.from(placeholders).flatMap((el) => {
     const source = el.dataset["graphviz"]
     if (!source) return []
+    if (isRenderedAndUnchanged(el, source, "graphviz")) return []
     return [{ el, source }]
   })
 
