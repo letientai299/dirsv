@@ -2,10 +2,24 @@
 go = "latest"
 bun = "latest"
 golangci-lint = "2"
+prek = "latest"
 watchexec = "2"
 
 [env]
 _.path = ["bin"]
+
+[hooks.enter]
+script = '''
+{% if os_family() == "unix" %}
+if command -v prek >/dev/null 2>&1; then
+  if [ -f "$MISE_PROJECT_ROOT/prek.toml" ] && [ -d "$MISE_PROJECT_ROOT/.git" ]; then
+    if [ ! -x "$MISE_PROJECT_ROOT/.git/hooks/pre-commit" ]; then
+      prek install --install-hooks --config "$MISE_PROJECT_ROOT/prek.toml" --quiet
+    fi
+  fi
+fi
+{% endif %}
+'''
 
 # -- build / run / dev --
 

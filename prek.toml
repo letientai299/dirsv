@@ -1,0 +1,9 @@
+[[repos]]
+repo = "local"
+hooks = [
+  { id = "fmt-be", name = "fmt be", entry = "mise fmt:be", language = "system", pass_filenames = false, files = "\\.go$", stages = ["pre-commit"] },
+  { id = "fmt-fe", name = "fmt fe", entry = "mise fmt:fe", language = "system", pass_filenames = false, files = "^app/src/", stages = ["pre-commit"] },
+  { id = "lint-be", name = "lint be", entry = "mise lint:be", language = "system", pass_filenames = false, files = "\\.go$", stages = ["pre-commit"] },
+  { id = "lint-fe", name = "lint fe", entry = "mise lint:fe", language = "system", pass_filenames = false, files = "^app/src/.*\\.(ts|tsx|js|jsx)$", stages = ["pre-commit"] },
+  { id = "test", name = "test", entry = "mise test", language = "system", pass_filenames = false, files = "\\.go$", stages = ["pre-commit"] },
+]
