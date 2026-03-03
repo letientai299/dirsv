@@ -110,7 +110,10 @@ func (w *Watcher) ensureWatched(dir string) {
 	})
 }
 
-const coalesceDuration = 100 * time.Millisecond
+const (
+	coalesceDuration = 100 * time.Millisecond
+	maxClients       = 128
+)
 
 func (w *Watcher) loop() {
 	pending := make(map[string]Event)
@@ -251,6 +254,15 @@ func (w *Watcher) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	watchPath := cleanWatchPath(r.URL.Query().Get("watch"))
+
+	w.mu.RLock()
+	full := len(w.clients) >= maxClients
+	w.mu.RUnlock()
+	if full {
+		http.Error(rw, "too many SSE clients", http.StatusServiceUnavailable)
+		return
+	}
+
 	ch := w.subscribe(watchPath)
 	defer w.unsubscribe(ch)
 

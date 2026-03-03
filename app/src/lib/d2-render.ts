@@ -1,3 +1,5 @@
+import { sanitizeSvg } from "./sanitize-svg"
+
 /** Render a single D2 source string to SVG. Lazy-loads the WASM engine. */
 export async function renderD2(source: string): Promise<string> {
   const { D2 } = await import("@terrastruct/d2")
@@ -38,7 +40,7 @@ export async function renderD2Blocks(container: HTMLElement): Promise<void> {
         noXMLTag: true,
         themeID: isDark ? 200 : 0,
       })
-      el.innerHTML = svg
+      el.innerHTML = sanitizeSvg(svg)
       el.classList.add("d2-rendered")
     } catch {
       el.textContent = "D2 render error"

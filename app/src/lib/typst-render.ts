@@ -1,3 +1,5 @@
+import { sanitizeSvg } from "./sanitize-svg"
+
 const CDN = "https://esm.sh"
 const VER = "0.6.0"
 const WASM_CDN = "https://cdn.jsdelivr.net/npm"
@@ -14,7 +16,9 @@ const getTypst: () => Promise<any> = (() => {
   return () => {
     if (!cached) {
       cached = (async () => {
-        const { $typst } = await import(/* @vite-ignore */ `${CDN}/@myriaddreamin/typst.ts@${VER}`)
+        const { $typst } = await import(
+          /* @vite-ignore */ `${CDN}/@myriaddreamin/typst.ts@${VER}`
+        )
         $typst.setCompilerInitOptions({
           getModule: () =>
             `${WASM_CDN}/@myriaddreamin/typst-ts-web-compiler@${VER}/pkg/typst_ts_web_compiler_bg.wasm`,
@@ -55,7 +59,7 @@ export async function renderTypstBlocks(container: HTMLElement): Promise<void> {
 
     try {
       const svg = await t.svg({ mainContent: source })
-      el.innerHTML = svg
+      el.innerHTML = sanitizeSvg(svg)
       el.classList.add("typst-rendered")
     } catch {
       el.textContent = "Typst render error"

@@ -102,9 +102,9 @@ function getProcessor() {
       // anything unsafe. This allows <kbd>, <sub>, <sup>, <details>, etc.
       .use(remarkRehype, { allowDangerousHtml: true })
       .use(rehypeRaw)
-      .use(rehypeSanitize, sanitizeSchema)
       .use(rehypeColorChips)
       .use(rehypeVideo)
+      .use(rehypeSanitize, sanitizeSchema)
       .use(rehypeKatex)
       .use(rehypeMermaid)
       .use(rehypePlantuml)

@@ -1,3 +1,5 @@
+import { sanitizeSvg } from "./sanitize-svg"
+
 /** Render a single Graphviz source string to SVG. Lazy-loads the WASM engine. */
 export async function renderGraphviz(source: string): Promise<string> {
   const { Graphviz } = await import("@hpcc-js/wasm-graphviz")
@@ -25,7 +27,7 @@ export async function renderGraphvizBlocks(
 
     try {
       const svg = await renderGraphviz(source)
-      el.innerHTML = svg
+      el.innerHTML = sanitizeSvg(svg)
       el.classList.add("graphviz-rendered")
     } catch {
       el.textContent = "Graphviz render error"

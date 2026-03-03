@@ -1,4 +1,5 @@
 import { renderGraphviz } from "./graphviz-render"
+import { sanitizeSvg } from "./sanitize-svg"
 
 /**
  * Convert DBML source to DOT format using @softwaretechnik/dbml-renderer.
@@ -38,7 +39,7 @@ export async function renderDbmlBlocks(container: HTMLElement): Promise<void> {
     try {
       const dot = run(source, "dot")
       const svg = await renderGraphviz(dot)
-      el.innerHTML = svg
+      el.innerHTML = sanitizeSvg(svg)
       el.classList.add("dbml-rendered")
     } catch {
       el.textContent = "DBML render error"

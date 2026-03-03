@@ -133,7 +133,11 @@ func main() {
 	}
 
 	// Serve blocks until error; clean up watcher afterward.
-	err = http.Serve(ln, handler)
+	httpSrv := &http.Server{
+		Handler:           handler,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+	err = httpSrv.Serve(ln)
 	_ = w.Close()
 	if err != nil {
 		log.Fatal(err)

@@ -1,3 +1,5 @@
+import { sanitizeSvg } from "./sanitize-svg"
+
 let idCounter = 0
 
 /**
@@ -31,7 +33,7 @@ export async function renderMermaidBlocks(
     const graphId = `mermaid-${++idCounter}`
     try {
       const { svg } = await mermaid.render(graphId, source)
-      el.innerHTML = svg
+      el.innerHTML = sanitizeSvg(svg)
       el.classList.add("mermaid-rendered")
     } catch {
       el.textContent = `Mermaid render error for diagram`
