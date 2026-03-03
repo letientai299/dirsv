@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -21,6 +22,29 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 )
+
+// ANSI color helpers for terminal output.
+var (
+	colorReset  = "\033[0m"
+	colorCyan   = "\033[36m"
+	colorYellow = "\033[33m"
+	colorGreen  = "\033[32m"
+	colorRed    = "\033[31m"
+	colorDim    = "\033[2m"
+)
+
+func init() {
+	// Disable colors when stderr is not a terminal.
+	info, err := os.Stderr.Stat()
+	if err != nil || info.Mode()&os.ModeCharDevice == 0 {
+		colorReset = ""
+		colorCyan = ""
+		colorYellow = ""
+		colorGreen = ""
+		colorRed = ""
+		colorDim = ""
+	}
+}
 
 // Event represents a file system change event sent over SSE.
 type Event struct {
@@ -76,12 +100,39 @@ func shouldSkipDir(name string) bool {
 	return strings.HasPrefix(name, ".") || name == "node_modules"
 }
 
+// isEditorTempFile reports whether name looks like an editor backup, swap,
+// or temporary file that should be ignored (vim ~, .swp, .swx, 4913;
+// emacs #autosave#, .#lock; kate .kate-swp; etc.).
+func isEditorTempFile(name string) bool {
+	base := filepath.Base(name)
+	switch {
+	case strings.HasSuffix(base, "~"):
+		return true
+	case strings.HasPrefix(base, ".#"):
+		return true
+	case strings.HasPrefix(base, "#") && strings.HasSuffix(base, "#"):
+		return true
+	}
+	ext := filepath.Ext(base)
+	switch ext {
+	case ".swp", ".swx", ".swo", ".tmp", ".bak":
+		return true
+	}
+	// vim writes to a file named "4913" (or higher) to test directory
+	// writability before saving.
+	if base == "4913" {
+		return true
+	}
+	return false
+}
+
 // ensureWatched walks dir and adds all sub-directories to the fsnotify
 // watcher, skipping subtrees that are already watched.
 func (w *Watcher) ensureWatched(dir string) {
 	w.watchMu.Lock()
 	defer w.watchMu.Unlock()
 
+	var dirs []string
 	_ = filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -106,8 +157,24 @@ func (w *Watcher) ensureWatched(dir string) {
 			return err
 		}
 		w.watched[p] = struct{}{}
+		rel, _ := filepath.Rel(w.root, p)
+		dirs = append(dirs, filepath.ToSlash(rel))
 		return nil
 	})
+	if len(dirs) > 0 {
+		//nolint:gosec // G706: dirs derived from filepath.Abs
+		log.Printf("%s%-10s%s %s",
+			colorDim, "watch", colorReset,
+			strings.Join(dirs, ", "))
+	}
+}
+
+// removeWatched cleans up tracking state for a physically deleted directory.
+// No log — the delete event itself is already logged by broadcast.
+func (w *Watcher) removeWatched(absPath string) {
+	w.watchMu.Lock()
+	defer w.watchMu.Unlock()
+	delete(w.watched, absPath)
 }
 
 const (
@@ -154,6 +221,10 @@ func (w *Watcher) loop() {
 // toEvent converts an fsnotify event to an SSE Event. It also watches
 // newly created directories. Returns nil for ignored operations.
 func (w *Watcher) toEvent(ev fsnotify.Event) *Event {
+	if isEditorTempFile(ev.Name) {
+		return nil
+	}
+
 	rel, err := filepath.Rel(w.root, ev.Name)
 	if err != nil {
 		return nil
@@ -176,8 +247,10 @@ func (w *Watcher) toEvent(ev fsnotify.Event) *Event {
 		eventType = "change"
 	case ev.Op.Has(fsnotify.Remove):
 		eventType = "delete"
+		w.removeWatched(ev.Name)
 	case ev.Op.Has(fsnotify.Rename):
 		eventType = "rename"
+		w.removeWatched(ev.Name)
 	default:
 		return nil
 	}
@@ -185,20 +258,61 @@ func (w *Watcher) toEvent(ev fsnotify.Event) *Event {
 	return &Event{Type: eventType, Path: rel}
 }
 
+// clientAddr returns a safe-to-log representation of the remote address.
+func clientAddr(remoteAddr string) string {
+	host, port, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		return "unknown"
+	}
+	return net.JoinHostPort(host, port)
+}
+
+func logClient(connected bool, addr, watchPath string) {
+	verb := "disconnect"
+	if connected {
+		verb = "connect"
+	}
+	//nolint:gosec // G706: addr is from net.SplitHostPort(RemoteAddr)
+	log.Printf("%s%-10s%s %s %swatching %s%s",
+		colorCyan, verb, colorReset,
+		addr, colorDim, watchPath, colorReset)
+}
+
+// eventColor returns the ANSI color for a given event type.
+func eventColor(typ string) string {
+	switch typ {
+	case "create":
+		return colorGreen
+	case "change":
+		return colorYellow
+	case "delete", "rename":
+		return colorRed
+	default:
+		return colorReset
+	}
+}
+
 // broadcast sends each pending event to matching SSE clients.
 func (w *Watcher) broadcast(pending map[string]Event) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 	for _, ev := range pending {
+		var notified int
 		for ch, prefix := range w.clients {
 			if prefix == "" || strings.HasPrefix(ev.Path, prefix) ||
 				strings.HasPrefix(prefix, ev.Path) {
 				select {
 				case ch <- ev:
+					notified++
 				default:
 				}
 			}
 		}
+		c := eventColor(ev.Type)
+		log.Printf("%s%-10s%s %s %s→ %d client(s)%s",
+			c, ev.Type, colorReset,
+			ev.Path,
+			colorDim, notified, colorReset)
 	}
 }
 
@@ -216,6 +330,52 @@ func (w *Watcher) unsubscribe(ch chan Event) {
 	delete(w.clients, ch)
 	w.mu.Unlock()
 	close(ch)
+
+	w.pruneWatches()
+}
+
+// pruneWatches removes fsnotify watches for directories that no remaining
+// SSE client needs. Called after a client disconnects.
+func (w *Watcher) pruneWatches() {
+	w.mu.RLock()
+	prefixes := make([]string, 0, len(w.clients))
+	for _, p := range w.clients {
+		prefixes = append(prefixes, p)
+	}
+	w.mu.RUnlock()
+
+	w.watchMu.Lock()
+	defer w.watchMu.Unlock()
+
+	var dirs []string
+	for dir := range w.watched {
+		rel, err := filepath.Rel(w.root, dir)
+		if err != nil {
+			continue
+		}
+		rel = filepath.ToSlash(rel)
+
+		needed := false
+		for _, prefix := range prefixes {
+			if prefix == "" ||
+				strings.HasPrefix(rel, prefix) ||
+				strings.HasPrefix(prefix, rel) {
+				needed = true
+				break
+			}
+		}
+		if needed {
+			continue
+		}
+		_ = w.fsw.Remove(dir)
+		delete(w.watched, dir)
+		dirs = append(dirs, rel)
+	}
+	if len(dirs) > 0 {
+		log.Printf("%s%-10s%s %s",
+			colorDim, "unwatch", colorReset,
+			strings.Join(dirs, ", "))
+	}
 }
 
 // watchForClient resolves prefix to an absolute path under root and
@@ -265,6 +425,14 @@ func (w *Watcher) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	ch := w.subscribe(watchPath)
 	defer w.unsubscribe(ch)
+
+	displayPath := watchPath
+	if displayPath == "" {
+		displayPath = "/"
+	}
+	clientID := clientAddr(r.RemoteAddr)
+	logClient(true, clientID, displayPath)
+	defer logClient(false, clientID, displayPath)
 
 	rw.Header().Set("Content-Type", "text/event-stream")
 	rw.Header().Set("Cache-Control", "no-cache")
