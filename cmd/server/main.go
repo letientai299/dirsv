@@ -19,11 +19,13 @@ import (
 
 	flag "github.com/spf13/pflag"
 	dirsv "github.com/tai/dirsv"
+	"github.com/tai/dirsv/internal/appinfo"
 	"github.com/tai/dirsv/internal/server"
 	"github.com/tai/dirsv/internal/watcher"
 )
 
 func main() {
+	showVersion := flag.BoolP("version", "v", false, "print version and exit")
 	host := flag.String("host", "localhost", "listen address")
 	port := flag.IntP("port", "p", 8080, "listen port")
 	browser := flag.StringP(
@@ -36,7 +38,40 @@ func main() {
 	noOpen := flag.Bool("no-open", false, "don't auto-open browser")
 	debug := flag.BoolP("debug", "d", false, "enable verbose watcher logs")
 	_ = flag.CommandLine.MarkHidden("dev")
+
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "dirsv %s\n\n", appinfo.String())
+		fmt.Fprintln(
+			os.Stderr,
+			"Local directory browser with live reload. Single binary, embedded web UI.",
+		)
+		fmt.Fprintln(os.Stderr)
+		fmt.Fprintln(
+			os.Stderr,
+			"  Directories    table view with file icons, sizes, and dates",
+		)
+		fmt.Fprintln(
+			os.Stderr,
+			"  Markdown       GFM, syntax highlighting, KaTeX math, diagrams",
+		)
+		fmt.Fprintln(os.Stderr, "  Code           100+ languages with line numbers")
+		fmt.Fprintln(
+			os.Stderr,
+			"  JSON/YAML      collapsible tree with path filtering",
+		)
+		fmt.Fprintln(os.Stderr, "  Images/Video   gallery navigation, HTML5 player")
+		fmt.Fprintln(os.Stderr, "  Live reload    file changes reflected instantly")
+		fmt.Fprintln(os.Stderr)
+		fmt.Fprintf(os.Stderr, "Usage: dirsv [flags] [path]\n\n")
+		flag.PrintDefaults()
+	}
+
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Println(appinfo.String())
+		return
+	}
 
 	// Determine target: no args → CWD; first positional arg → dir or file.
 	target := "."

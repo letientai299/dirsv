@@ -31,7 +31,12 @@ run = ["bun install --frozen-lockfile 2>/dev/null || bun install", "bun run buil
 [tasks."build:be"]
 description = "Build Go server binary"
 depends = ["build:fe"]
-run = "go build -o bin/server ./cmd/server"
+run = """
+commit=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+dirty=$(git diff --quiet 2>/dev/null || echo "true")
+ldflags="-X github.com/tai/dirsv/internal/appinfo.commit=${commit} -X github.com/tai/dirsv/internal/appinfo.dirty=${dirty}"
+go build -ldflags="$ldflags" -o bin/server ./cmd/server
+"""
 
 [tasks.build]
 description = "Build frontend and server binary"
@@ -57,7 +62,12 @@ run = "bun run dev"
 description = "Run Go server in dev mode with auto-reload"
 depends = ["dev:install"]
 usage = 'arg "[target]" help="Directory or file to serve"'
-run = "watchexec -r -e go -- go run ./cmd/server --no-open --dev {{usage.target | default(value='')}}"
+run = """
+commit=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+dirty=$(git diff --quiet 2>/dev/null || echo "true")
+ldflags="-X github.com/tai/dirsv/internal/appinfo.commit=${commit} -X github.com/tai/dirsv/internal/appinfo.dirty=${dirty}"
+watchexec -r -e go -- go run -ldflags="$ldflags" ./cmd/server --no-open --dev {{usage.target | default(value='')}}
+"""
 
 [tasks.dev]
 description = "Run Go server and Vite dev server in parallel"
@@ -77,7 +87,10 @@ run = "go run ./cmd/compress app/dist/assets"
 [tasks.release]
 description = "Build smallest production binary"
 depends = ["build:compress"]
-run = "CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o bin/dirsv ./cmd/server"
+run = """
+tag=$(git describe --tags --exact-match 2>/dev/null || true)
+CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X github.com/tai/dirsv/internal/appinfo.tag=${tag}" -o bin/dirsv ./cmd/server
+"""
 
 # -- test --
 

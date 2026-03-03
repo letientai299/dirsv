@@ -57,7 +57,10 @@ jobs:
         run: |
           ext=""
           if [ "$GOOS" = "windows" ]; then ext=".exe"; fi
-          go build -trimpath -ldflags='-s -w' -o "dirsv${ext}" ./cmd/server
+          tag="${GITHUB_REF_NAME}"
+          go build -trimpath \
+            -ldflags="-s -w -X github.com/tai/dirsv/internal/appinfo.tag=${tag}" \
+            -o "dirsv${ext}" ./cmd/server
 
       - name: Package archive
         run: |
