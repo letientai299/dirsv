@@ -85,7 +85,7 @@ run = "bun biome check --write ."
 [tasks."fmt:md"]
 description = "Format Markdown files"
 dir = "app"
-run = "bun prettier --write '../**/*.md' '!../node_modules' '!../.ai.dump'"
+run = "bun prettier --write --ignore-path ../.prettierignore '../**/*.md'"
 
 [tasks.fmt]
 description = "Format all code"
