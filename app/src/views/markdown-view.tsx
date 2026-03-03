@@ -8,6 +8,7 @@ import { renderGraphvizBlocks } from "../lib/graphviz-render"
 import { renderKatexBlocks } from "../lib/katex-render"
 import type { MarkdownResult } from "../lib/markdown"
 import { renderMarkdown, renderMarkdownHighlighted } from "../lib/markdown"
+import { handleRelativeLinkClick, rewriteMediaSrc } from "../lib/markdown-urls"
 import { renderMermaidBlocks } from "../lib/mermaid-render"
 import { renderPlantumlBlocks } from "../lib/plantuml-render"
 import { renderTypstBlocks } from "../lib/typst-render"
@@ -20,7 +21,7 @@ interface Props {
   content: string
 }
 
-export function MarkdownView({ content }: Props) {
+export function MarkdownView({ content, path }: Props) {
   const [result, setResult] = useState<MarkdownResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const contentRef = useRef<HTMLElement>(null)
@@ -80,6 +81,7 @@ export function MarkdownView({ content }: Props) {
       morphdom(el, tmp, { childrenOnly: true })
     }
 
+    rewriteMediaSrc(el, path)
     void renderKatexBlocks(el)
     void renderMermaidBlocks(el)
     renderPlantumlBlocks(el)
@@ -88,11 +90,22 @@ export function MarkdownView({ content }: Props) {
     void renderDbmlBlocks(el)
     void renderTypstBlocks(el)
     injectCopyButtons(el)
-  }, [result])
+  }, [result, path])
 
   // Re-render mermaid diagrams when the user toggles the colour scheme.
   // Mermaid has built-in dark/default themes. Graphviz and PlantUML use
   // explicit colours from the source — they're theme-agnostic.
+  const onLinkClick = useCallback(
+    (e: MouseEvent) => handleRelativeLinkClick(e, path),
+    [path],
+  )
+
+  // Enter on a focused <a> fires a click event in browsers, so onClick covers
+  // keyboard nav. This handler satisfies the a11y lint rule (useKeyWithClickEvents).
+  const onLinkKeyDown = useCallback(() => {
+    // Handled by the browser's native click dispatch on Enter.
+  }, [])
+
   const reRenderDiagrams = useCallback(() => {
     const el = contentRef.current
     if (!el) return
@@ -120,7 +133,12 @@ export function MarkdownView({ content }: Props) {
 
   return (
     <div class="md-layout">
-      <article ref={contentRef} class="markdown-body" />
+      <article
+        ref={contentRef}
+        class="markdown-body"
+        onClick={onLinkClick}
+        onKeyDown={onLinkKeyDown}
+      />
       <TableOfContents
         headings={result.headings.filter((h) => h.depth > 1)}
         contentRef={contentRef}
