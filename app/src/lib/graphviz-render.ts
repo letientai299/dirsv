@@ -20,18 +20,32 @@ export async function renderGraphvizBlocks(
   )
   if (placeholders.length === 0) return
 
-  for (const el of placeholders) {
+  const { Graphviz } = await import("@hpcc-js/wasm-graphviz")
+  const graphviz = await Graphviz.load()
+
+  const jobs = Array.from(placeholders).flatMap((el) => {
     // biome-ignore lint/complexity/useLiteralKeys: TS4111 requires bracket notation for index signatures
     const source = el.dataset["graphviz"]
-    if (!source) continue
+    if (!source) return []
+    return [{ el, source }]
+  })
 
-    try {
-      const svg = await renderGraphviz(source)
-      el.innerHTML = sanitizeSvg(svg)
-      el.classList.add("graphviz-rendered")
-    } catch {
-      el.textContent = "Graphviz render error"
-      el.classList.add("graphviz-error")
+  const results = await Promise.all(
+    jobs.map(({ el, source }) =>
+      Promise.resolve()
+        .then(() => graphviz.dot(source))
+        .then((svg) => ({ el, ok: true as const, svg }))
+        .catch(() => ({ el, ok: false as const })),
+    ),
+  )
+
+  for (const r of results) {
+    if (r.ok) {
+      r.el.innerHTML = sanitizeSvg(r.svg)
+      r.el.classList.add("graphviz-rendered")
+    } else {
+      r.el.textContent = "Graphviz render error"
+      r.el.classList.add("graphviz-error")
     }
   }
 }

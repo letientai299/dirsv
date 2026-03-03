@@ -31,19 +31,32 @@ export async function renderDbmlBlocks(container: HTMLElement): Promise<void> {
 
   const { run } = await import("@softwaretechnik/dbml-renderer")
 
-  for (const el of placeholders) {
+  const jobs = Array.from(placeholders).flatMap((el) => {
     // biome-ignore lint/complexity/useLiteralKeys: TS4111 requires bracket notation for index signatures
     const source = el.dataset["dbml"]
-    if (!source) continue
+    if (!source) return []
+    return [{ el, source }]
+  })
 
-    try {
-      const dot = run(source, "dot")
-      const svg = await renderGraphviz(dot)
-      el.innerHTML = sanitizeSvg(svg)
-      el.classList.add("dbml-rendered")
-    } catch {
-      el.textContent = "DBML render error"
-      el.classList.add("dbml-error")
+  const results = await Promise.all(
+    jobs.map(({ el, source }) =>
+      Promise.resolve()
+        .then(() => {
+          const dot = run(source, "dot")
+          return renderGraphviz(dot)
+        })
+        .then((svg) => ({ el, ok: true as const, svg }))
+        .catch(() => ({ el, ok: false as const })),
+    ),
+  )
+
+  for (const r of results) {
+    if (r.ok) {
+      r.el.innerHTML = sanitizeSvg(r.svg)
+      r.el.classList.add("dbml-rendered")
+    } else {
+      r.el.textContent = "DBML render error"
+      r.el.classList.add("dbml-error")
     }
   }
 }
