@@ -121,7 +121,10 @@ export function MarkdownView({ content }: Props) {
   return (
     <div class="md-layout">
       <article ref={contentRef} class="markdown-body" />
-      <TableOfContents headings={result.headings} contentRef={contentRef} />
+      <TableOfContents
+        headings={result.headings.filter((h) => h.depth > 1)}
+        contentRef={contentRef}
+      />
     </div>
   )
 }
