@@ -42,13 +42,18 @@ run = "bun run dev"
 [tasks."dev:server"]
 description = "Run Go server in dev mode with auto-reload"
 depends = ["dev:install"]
-run = "watchexec -r -e go -- go run ./cmd/server --dev --no-open"
+usage = 'arg "[target]" help="Directory or file to serve"'
+run = "watchexec -r -e go -- go run ./cmd/server --dev {{usage.target | default(value='')}}"
 
 [tasks.dev]
 description = "Run Go server and Vite dev server in parallel"
-run = [
-  { tasks = ["dev:vite", "dev:server"] },
-]
+usage = 'arg "[target]" help="Directory or file to serve"'
+run = '''
+trap 'kill 0' EXIT
+mise dev:vite &
+mise dev:server -- {{usage.target | default(value='')}} &
+wait
+'''
 
 # -- test --
 
