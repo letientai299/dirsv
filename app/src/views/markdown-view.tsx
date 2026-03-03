@@ -68,7 +68,7 @@ export function MarkdownView({ content, path }: Props) {
   useEffect(() => {
     if (!result) return
     const h1 = result.headings.find((h) => h.depth === 1)
-    document.title = h1 ? `dirsv | ${h1.text} — ${path}` : `dirsv | ${path}`
+    document.title = h1 ? `${h1.text} - ${path}` : path
   }, [result, path])
 
   // Patch the DOM incrementally instead of replacing innerHTML wholesale.

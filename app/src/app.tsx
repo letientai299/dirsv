@@ -21,7 +21,7 @@ export function App() {
   }, [])
 
   useEffect(() => {
-    document.title = path === "/" ? "dirsv" : `dirsv | ${path}`
+    document.title = path === "/" ? "/" : path
   }, [path])
 
   useEffect(() => {
