@@ -13,25 +13,28 @@ export function TableOfContents({ headings, contentRef }: Props) {
     const container = contentRef.current
     if (!container || headings.length === 0) return
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        // Find the topmost visible heading
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setActiveId(entry.target.id)
-            break
-          }
-        }
-      },
-      { rootMargin: "0px 0px -80% 0px", threshold: 0.1 },
-    )
-
     const elements = headings
       .map((h) => container.querySelector(`#${CSS.escape(h.id)}`))
-      .filter(Boolean) as Element[]
+      .filter(Boolean) as HTMLElement[]
 
-    for (const el of elements) observer.observe(el)
-    return () => observer.disconnect()
+    if (elements.length === 0) return
+
+    function update() {
+      // Find the last heading that scrolled past the top (with a small offset)
+      let current = elements[0]
+      for (const el of elements) {
+        if (el.getBoundingClientRect().top <= 80) {
+          current = el
+        } else {
+          break
+        }
+      }
+      setActiveId(current.id)
+    }
+
+    update()
+    window.addEventListener("scroll", update, { passive: true })
+    return () => window.removeEventListener("scroll", update)
   }, [headings, contentRef])
 
   if (headings.length === 0) return null
