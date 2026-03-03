@@ -20,9 +20,8 @@ export async function renderD2(source: string): Promise<string> {
  * Runs entirely client-side via WASM — no external server needed.
  */
 export async function renderD2Blocks(container: HTMLElement): Promise<void> {
-  const placeholders = container.querySelectorAll<HTMLElement>(
-    ".d2-placeholder",
-  )
+  const placeholders =
+    container.querySelectorAll<HTMLElement>(".d2-placeholder")
   if (placeholders.length === 0) return
 
   const { D2 } = await import("@terrastruct/d2")

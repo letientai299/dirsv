@@ -9,8 +9,9 @@ const PLANTUML_SERVER = "https://www.plantuml.com/plantuml/svg"
  * Falls back to a `<pre><code>` block if the image fails to load.
  */
 export function renderPlantumlBlocks(container: HTMLElement): void {
-  const placeholders =
-    container.querySelectorAll<HTMLElement>(".plantuml-placeholder")
+  const placeholders = container.querySelectorAll<HTMLElement>(
+    ".plantuml-placeholder",
+  )
   if (placeholders.length === 0) return
 
   for (const el of placeholders) {

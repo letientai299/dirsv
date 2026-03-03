@@ -25,9 +25,8 @@ export async function renderDbml(source: string): Promise<string> {
  * and @hpcc-js/wasm-graphviz.
  */
 export async function renderDbmlBlocks(container: HTMLElement): Promise<void> {
-  const placeholders = container.querySelectorAll<HTMLElement>(
-    ".dbml-placeholder",
-  )
+  const placeholders =
+    container.querySelectorAll<HTMLElement>(".dbml-placeholder")
   if (placeholders.length === 0) return
 
   const { run } = await import("@softwaretechnik/dbml-renderer")

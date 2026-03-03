@@ -44,7 +44,10 @@ function extractCodeInfo(
   const langClass = classes.find((c) => c.startsWith("language-"))
   if (!langClass) return null
 
-  return { lang: langClass.slice("language-".length), source: collectText(code.children) }
+  return {
+    lang: langClass.slice("language-".length),
+    source: collectText(code.children),
+  }
 }
 
 /** Pre-pass: replace code blocks with cached Shiki output where available. */
