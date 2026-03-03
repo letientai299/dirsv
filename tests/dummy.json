@@ -1,0 +1,246 @@
+{
+  "meta": {
+    "exportedAt": "2026-03-03T10:45:00Z",
+    "version": "2.4.1",
+    "totalUsers": 5,
+    "filters": {
+      "activeOnly": false,
+      "roles": ["admin", "editor", "viewer"],
+      "createdAfter": null
+    }
+  },
+  "users": [
+    {
+      "id": 1001,
+      "username": "alice.chen",
+      "email": "alice@example.com",
+      "active": true,
+      "role": "admin",
+      "profile": {
+        "displayName": "Alice Chen",
+        "bio": "Platform engineer. Likes Rust and sourdough.",
+        "avatar": "https://i.pravatar.cc/150?u=alice",
+        "location": {
+          "city": "Portland",
+          "state": "OR",
+          "country": "US",
+          "coordinates": {
+            "lat": 45.5152,
+            "lng": -122.6784
+          }
+        },
+        "social": {
+          "github": "alicec",
+          "twitter": null,
+          "website": "https://alice.dev"
+        }
+      },
+      "permissions": ["users.read", "users.write", "users.delete", "settings.manage", "audit.view"],
+      "loginHistory": [
+        { "timestamp": "2026-03-02T08:12:33Z", "ip": "203.0.113.42", "userAgent": "Mozilla/5.0", "success": true },
+        { "timestamp": "2026-03-01T19:45:01Z", "ip": "203.0.113.42", "userAgent": "Mozilla/5.0", "success": true },
+        { "timestamp": "2026-02-28T14:22:09Z", "ip": "198.51.100.7", "userAgent": "curl/8.5.0", "success": false }
+      ],
+      "tags": ["team-lead", "on-call"],
+      "preferences": {
+        "theme": "dark",
+        "locale": "en-US",
+        "notifications": {
+          "email": true,
+          "push": false,
+          "digest": "weekly"
+        },
+        "dashboardLayout": [
+          { "widget": "activity-feed", "position": 0, "size": "large" },
+          { "widget": "quick-stats", "position": 1, "size": "small" },
+          { "widget": "recent-files", "position": 2, "size": "medium" }
+        ]
+      },
+      "createdAt": "2024-06-15T09:00:00Z",
+      "updatedAt": "2026-03-02T08:12:33Z"
+    },
+    {
+      "id": 1002,
+      "username": "bob.martinez",
+      "email": "bob@example.com",
+      "active": true,
+      "role": "editor",
+      "profile": {
+        "displayName": "Bob Martinez",
+        "bio": "Full-stack dev, coffee snob.",
+        "avatar": "https://i.pravatar.cc/150?u=bob",
+        "location": {
+          "city": "Austin",
+          "state": "TX",
+          "country": "US",
+          "coordinates": {
+            "lat": 30.2672,
+            "lng": -97.7431
+          }
+        },
+        "social": {
+          "github": "bobmtz",
+          "twitter": "@bobcodes",
+          "website": null
+        }
+      },
+      "permissions": ["users.read", "content.write", "content.publish"],
+      "loginHistory": [
+        { "timestamp": "2026-03-03T06:30:00Z", "ip": "192.0.2.88", "userAgent": "Mozilla/5.0", "success": true }
+      ],
+      "tags": [],
+      "preferences": {
+        "theme": "light",
+        "locale": "en-US",
+        "notifications": {
+          "email": true,
+          "push": true,
+          "digest": "daily"
+        },
+        "dashboardLayout": [
+          { "widget": "quick-stats", "position": 0, "size": "large" }
+        ]
+      },
+      "createdAt": "2024-09-01T14:30:00Z",
+      "updatedAt": "2026-03-03T06:30:00Z"
+    },
+    {
+      "id": 1003,
+      "username": "carol.okonkwo",
+      "email": "carol@example.com",
+      "active": false,
+      "role": "viewer",
+      "profile": {
+        "displayName": "Carol Okonkwo",
+        "bio": null,
+        "avatar": null,
+        "location": {
+          "city": "London",
+          "state": null,
+          "country": "GB",
+          "coordinates": {
+            "lat": 51.5074,
+            "lng": -0.1278
+          }
+        },
+        "social": {
+          "github": null,
+          "twitter": null,
+          "website": null
+        }
+      },
+      "permissions": ["content.read"],
+      "loginHistory": [],
+      "tags": ["deactivated", "former-contractor"],
+      "preferences": {
+        "theme": "system",
+        "locale": "en-GB",
+        "notifications": {
+          "email": false,
+          "push": false,
+          "digest": "none"
+        },
+        "dashboardLayout": []
+      },
+      "createdAt": "2025-01-10T11:00:00Z",
+      "updatedAt": "2025-12-01T16:45:00Z"
+    },
+    {
+      "id": 1004,
+      "username": "dave.nakamura",
+      "email": "dave@example.com",
+      "active": true,
+      "role": "editor",
+      "profile": {
+        "displayName": "Dave Nakamura",
+        "bio": "Design systems, accessibility, type nerd.",
+        "avatar": "https://i.pravatar.cc/150?u=dave",
+        "location": {
+          "city": "Tokyo",
+          "state": null,
+          "country": "JP",
+          "coordinates": {
+            "lat": 35.6762,
+            "lng": 139.6503
+          }
+        },
+        "social": {
+          "github": "daven",
+          "twitter": "@dave_designs",
+          "website": "https://dave.design"
+        }
+      },
+      "permissions": ["content.write", "content.publish", "media.upload"],
+      "loginHistory": [
+        { "timestamp": "2026-03-03T01:15:00Z", "ip": "203.0.113.99", "userAgent": "Mozilla/5.0", "success": true },
+        { "timestamp": "2026-03-02T23:50:00Z", "ip": "203.0.113.99", "userAgent": "Mozilla/5.0", "success": true }
+      ],
+      "tags": ["design-team"],
+      "preferences": {
+        "theme": "dark",
+        "locale": "ja-JP",
+        "notifications": {
+          "email": true,
+          "push": true,
+          "digest": "weekly"
+        },
+        "dashboardLayout": [
+          { "widget": "activity-feed", "position": 0, "size": "medium" },
+          { "widget": "media-library", "position": 1, "size": "large" }
+        ]
+      },
+      "createdAt": "2025-03-20T04:00:00Z",
+      "updatedAt": "2026-03-03T01:15:00Z"
+    },
+    {
+      "id": 1005,
+      "username": "eve.johansson",
+      "email": "eve@example.com",
+      "active": true,
+      "role": "admin",
+      "profile": {
+        "displayName": "Eve Johansson",
+        "bio": "Security engineer. CTF player. Cat person.",
+        "avatar": "https://i.pravatar.cc/150?u=eve",
+        "location": {
+          "city": "Stockholm",
+          "state": null,
+          "country": "SE",
+          "coordinates": {
+            "lat": 59.3293,
+            "lng": 18.0686
+          }
+        },
+        "social": {
+          "github": "evej",
+          "twitter": "@eve_sec",
+          "website": "https://eve.security"
+        }
+      },
+      "permissions": ["users.read", "users.write", "users.delete", "settings.manage", "audit.view", "security.manage"],
+      "loginHistory": [
+        { "timestamp": "2026-03-03T07:00:00Z", "ip": "198.51.100.22", "userAgent": "Mozilla/5.0", "success": true },
+        { "timestamp": "2026-03-02T15:30:00Z", "ip": "198.51.100.22", "userAgent": "Mozilla/5.0", "success": true },
+        { "timestamp": "2026-03-02T15:29:50Z", "ip": "198.51.100.22", "userAgent": "Mozilla/5.0", "success": false },
+        { "timestamp": "2026-03-01T09:00:00Z", "ip": "198.51.100.55", "userAgent": "httpie/3.2", "success": true }
+      ],
+      "tags": ["team-lead", "security-team", "on-call"],
+      "preferences": {
+        "theme": "dark",
+        "locale": "sv-SE",
+        "notifications": {
+          "email": true,
+          "push": true,
+          "digest": "daily"
+        },
+        "dashboardLayout": [
+          { "widget": "security-alerts", "position": 0, "size": "large" },
+          { "widget": "audit-log", "position": 1, "size": "large" },
+          { "widget": "quick-stats", "position": 2, "size": "small" }
+        ]
+      },
+      "createdAt": "2024-08-01T12:00:00Z",
+      "updatedAt": "2026-03-03T07:00:00Z"
+    }
+  ]
+}

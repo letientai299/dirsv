@@ -132,15 +132,15 @@ draft = true
 
 GitLab renders backtick-wrapped color values as inline swatches:
 
-| Format | Example | Code |
-| --- | --- | --- |
-| Hex | `#FF5733` | `#FF5733` |
-| Hex short | `#F00` | `#F00` |
-| Hex + alpha | `#FF573380` | `#FF573380` |
-| RGB | `RGB(66, 135, 245)` | `RGB(66, 135, 245)` |
-| RGBA | `RGBA(66, 135, 245, 0.5)` | `RGBA(66, 135, 245, 0.5)` |
-| HSL | `HSL(210, 90%, 61%)` | `HSL(210, 90%, 61%)` |
-| HSLA | `HSLA(210, 90%, 61%, 0.8)` | `HSLA(210, 90%, 61%, 0.8)` |
+| Format      | Example                    | Code                       |
+| ----------- | -------------------------- | -------------------------- |
+| Hex         | `#FF5733`                  | `#FF5733`                  |
+| Hex short   | `#F00`                     | `#F00`                     |
+| Hex + alpha | `#FF573380`                | `#FF573380`                |
+| RGB         | `RGB(66, 135, 245)`        | `RGB(66, 135, 245)`        |
+| RGBA        | `RGBA(66, 135, 245, 0.5)`  | `RGBA(66, 135, 245, 0.5)`  |
+| HSL         | `HSL(210, 90%, 61%)`       | `HSL(210, 90%, 61%)`       |
+| HSLA        | `HSLA(210, 90%, 61%, 0.8)` | `HSLA(210, 90%, 61%, 0.8)` |
 
 A palette: `#2E3440` `#3B4252` `#434C5E` `#4C566A` `#D8DEE9` `#E5E9F0`
 `#ECEFF4` `#8FBCBB` `#88C0D0` `#81A1C1` `#5E81AC` (Nord theme)
@@ -188,8 +188,7 @@ Standard blockquote (per-line `>`):
 
 GitLab multiline blockquote (no per-line prefix):
 
->>>
-This entire block is a blockquote.
+> > > This entire block is a blockquote.
 
 It can contain multiple paragraphs, **bold text**, `inline code`, and even lists:
 
@@ -198,7 +197,8 @@ It can contain multiple paragraphs, **bold text**, `inline code`, and even lists
 - Item three
 
 No `>` prefix needed on each line.
->>>
+
+> > >
 
 ---
 
@@ -213,24 +213,24 @@ HTTP Methods
 
 Latency
 : The time between a request being sent and the first byte of the response
-  being received.
+being received.
 
 Throughput
 : The number of requests a system can handle per unit of time, typically
-  measured in requests per second (RPS).
+measured in requests per second (RPS).
 
 ---
 
 ## 9. Abbreviations
 
-*[GLFM]: GitLab Flavored Markdown
-*[FFT]: Fast Fourier Transform
-*[NTT]: Number Theoretic Transform
-*[DFT]: Discrete Fourier Transform
-*[WASM]: WebAssembly
-*[SSR]: Server-Side Rendering
-*[CSR]: Client-Side Rendering
-*[HMR]: Hot Module Replacement
+_[GLFM]: GitLab Flavored Markdown
+_[FFT]: Fast Fourier Transform
+_[NTT]: Number Theoretic Transform
+_[DFT]: Discrete Fourier Transform
+_[WASM]: WebAssembly
+_[SSR]: Server-Side Rendering
+_[CSR]: Client-Side Rendering
+_[HMR]: Hot Module Replacement
 
 GLFM extends standard markdown with features like math blocks and diagram
 rendering. When building a high-performance web app, choosing between SSR and CSR
@@ -370,12 +370,12 @@ deploy:
 <details>
 <summary>Click to expand: Performance benchmarks</summary>
 
-| Input Size | Naive DFT | FFT | Speedup |
-| --- | --- | --- | --- |
-| 256 | 65,536 ops | 2,048 ops | 32x |
-| 1,024 | 1,048,576 ops | 10,240 ops | 102x |
-| 65,536 | 4.3 B ops | 1.05 M ops | 4,096x |
-| 1,048,576 | 1.1 T ops | 21 M ops | 52,429x |
+| Input Size | Naive DFT     | FFT        | Speedup |
+| ---------- | ------------- | ---------- | ------- |
+| 256        | 65,536 ops    | 2,048 ops  | 32x     |
+| 1,024      | 1,048,576 ops | 10,240 ops | 102x    |
+| 65,536     | 4.3 B ops     | 1.05 M ops | 4,096x  |
+| 1,048,576  | 1.1 T ops     | 21 M ops   | 52,429x |
 
 </details>
 
@@ -404,9 +404,9 @@ Three styles (all render identically):
 
 ---
 
-***
+---
 
-___
+---
 
 ### Line Breaks
 

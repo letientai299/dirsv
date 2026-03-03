@@ -60,7 +60,9 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
   // Scroll active row into view
   useEffect(() => {
     if (activeIndex < 0 || !tbodyRef.current) return
-    const row = tbodyRef.current.children[activeIndex] as HTMLElement | undefined
+    const row = tbodyRef.current.children[activeIndex] as
+      | HTMLElement
+      | undefined
     row?.scrollIntoView({ block: "nearest" })
   }, [activeIndex])
 
@@ -138,7 +140,11 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
                     <span
                       class={`entry-icon${entry.isDir ? " entry-icon--folder" : ""}`}
                     >
-                      <FileIcon name={entry.name} isDir={entry.isDir} isExec={entry.isExec ?? false} />
+                      <FileIcon
+                        name={entry.name}
+                        isDir={entry.isDir}
+                        isExec={entry.isExec ?? false}
+                      />
                     </span>
                     {entry.name}
                     {entry.isDir ? "/" : ""}

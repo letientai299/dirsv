@@ -82,10 +82,29 @@ linters:
           - gosec
         text: "G704"
 
+      # http.Serve in main: local dev tool, timeouts not needed.
+      - path: cmd/server/main\.go
+        linters:
+          - gosec
+        text: "G114"
+
       # net.Listen in main: CLI entry point, no parent context.
       - path: cmd/server/main\.go
         linters:
           - noctx
+
+      # resolvePath validates containment before os.Stat/Open/ReadFile.
+      # Taint-analysis rules (G703, G304) can't see the boundary check.
+      - path: internal/server/server\.go
+        linters:
+          - gosec
+        text: "G703|G304"
+
+      # HTML preview response is built from local files, not user input.
+      - path: internal/server/server\.go
+        linters:
+          - gosec
+        text: "G705"
 
 formatters:
   enable:

@@ -248,7 +248,11 @@ export function FileIcon({
   name,
   isDir,
   isExec,
-}: { name: string; isDir: boolean; isExec?: boolean }) {
+}: {
+  name: string
+  isDir: boolean
+  isExec?: boolean
+}) {
   if (isDir) return FOLDER_SVG
 
   const match = resolve(name)

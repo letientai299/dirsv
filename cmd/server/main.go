@@ -71,10 +71,7 @@ func main() {
 	}
 
 	// Serve blocks until error; clean up watcher afterward.
-	err = http.Serve(
-		ln,
-		handler,
-	) //nolint:gosec // G114: local dev tool; timeouts not needed
+	err = http.Serve(ln, handler)
 	_ = w.Close()
 	if err != nil {
 		log.Fatal(err)

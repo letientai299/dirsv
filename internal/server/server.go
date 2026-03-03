@@ -119,9 +119,7 @@ func (s *Server) resolvePath(
 	}
 
 	// Containment check above ensures resolved is within s.root.
-	fi, statErr := os.Stat(
-		resolved,
-	) //nolint:gosec // G703: path validated by containment check
+	fi, statErr := os.Stat(resolved)
 	if statErr != nil {
 		return "", nil, statErr
 	}
@@ -238,9 +236,7 @@ func (s *Server) serveFile(
 	full string,
 	info os.FileInfo,
 ) {
-	f, err := os.Open(
-		full,
-	) //nolint:gosec // G304: path validated by resolvePath containment check
+	f, err := os.Open(full)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -327,9 +323,7 @@ func (s *Server) handleHTMLPreview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Read HTML content for URL rewriting.
-	content, readErr := os.ReadFile(
-		full,
-	) //nolint:gosec // G304: path validated by resolvePath containment check
+	content, readErr := os.ReadFile(full)
 	if readErr != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
