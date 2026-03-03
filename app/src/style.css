@@ -50,6 +50,7 @@ body {
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
+  overflow: hidden;
 }
 
 /* ---------- toolbar ---------- */
@@ -248,7 +249,7 @@ body {
 .file-layout {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
 }
 
 .file-separator {
@@ -265,13 +266,28 @@ body {
 }
 
 .file-sidebar {
-  width: 220px;
   flex-shrink: 0;
   border-right: 1px solid var(--border);
   overflow-y: auto;
   padding: 4px 0;
   font-size: 13px;
   scrollbar-width: thin;
+}
+
+.file-sidebar-handle {
+  width: 4px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: transparent;
+  border: none;
+  margin: 0;
+  padding: 0;
+  transition: background 0.15s;
+}
+
+.file-sidebar-handle:hover,
+.file-sidebar-handle:active {
+  background: var(--accent, #58a6ff);
 }
 
 .file-sidebar::-webkit-scrollbar {
@@ -1095,7 +1111,8 @@ pre {
 }
 
 @media (max-width: 768px) {
-  .file-sidebar {
+  .file-sidebar,
+  .file-sidebar-handle {
     display: none;
   }
 }

@@ -1,6 +1,6 @@
 import type { JSX } from "preact"
 import { lazy, Suspense } from "preact/compat"
-import { useCallback, useEffect, useMemo, useState } from "preact/hooks"
+import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import { parse as parseYaml } from "yaml"
 import { Toolbar } from "../components/toolbar"
 import { browse, type DirEntry, fetchRaw, type RawResult } from "../lib/api"
@@ -166,10 +166,61 @@ function renderFileContent(
   )
 }
 
+const SIDEBAR_WIDTH_KEY = "dirsv-sidebar-width"
+const SIDEBAR_DEFAULT = 220
+const SIDEBAR_MIN = 140
+const SIDEBAR_MAX = 400
+
+function readSavedWidth(): number {
+  try {
+    const v = localStorage.getItem(SIDEBAR_WIDTH_KEY)
+    if (v) {
+      const n = Number(v)
+      if (n >= SIDEBAR_MIN && n <= SIDEBAR_MAX) return n
+    }
+  } catch {
+    // localStorage may be unavailable
+  }
+  return SIDEBAR_DEFAULT
+}
+
 export function FileView({ path }: Props) {
   const isHtml = /\.html?$/i.test(path)
   const isImage = imageRe.test(path)
   const isVideo = videoRe.test(path)
+
+  // Resizable sidebar
+  const [sidebarWidth, setSidebarWidth] = useState(readSavedWidth)
+  const dragging = useRef(false)
+
+  const onHandleMouseDown = useCallback((e: MouseEvent) => {
+    e.preventDefault()
+    dragging.current = true
+
+    const onMove = (ev: MouseEvent) => {
+      const next = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, ev.clientX))
+      setSidebarWidth(next)
+    }
+    const onUp = () => {
+      dragging.current = false
+      document.removeEventListener("mousemove", onMove)
+      document.removeEventListener("mouseup", onUp)
+      document.body.style.cursor = ""
+      document.body.style.userSelect = ""
+      setSidebarWidth((w) => {
+        try {
+          localStorage.setItem(SIDEBAR_WIDTH_KEY, String(w))
+        } catch {
+          // ignore
+        }
+        return w
+      })
+    }
+    document.body.style.cursor = "col-resize"
+    document.body.style.userSelect = "none"
+    document.addEventListener("mousemove", onMove)
+    document.addEventListener("mouseup", onUp)
+  }, [])
   // Pair result with the path it belongs to so stale content can be shown
   // dimmed while the next file loads, avoiding a flash to "Loading...".
   const [loaded, setLoaded] = useState<{
@@ -267,7 +318,7 @@ export function FileView({ path }: Props) {
       <Toolbar path={path} />
       <hr class="file-separator" />
       <div class="file-body">
-        <aside class="file-sidebar">
+        <aside class="file-sidebar" style={{ width: `${sidebarWidth}px` }}>
           <a
             rel="up"
             href={parentDir}
@@ -309,6 +360,15 @@ export function FileView({ path }: Props) {
             )
           })}
         </aside>
+        <hr
+          class="file-sidebar-handle"
+          onMouseDown={onHandleMouseDown}
+          tabIndex={0}
+          aria-valuenow={sidebarWidth}
+          aria-valuemin={SIDEBAR_MIN}
+          aria-valuemax={SIDEBAR_MAX}
+          aria-orientation="vertical"
+        />
         <div class={`file-content${stale ? " file-content--stale" : ""}`}>
           {content}
         </div>

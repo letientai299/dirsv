@@ -13,6 +13,12 @@ export function TableOfContents({ headings, contentRef }: Props) {
     const container = contentRef.current
     if (!container || headings.length === 0) return
 
+    // The scroll container is .file-content, an ancestor of the markdown content.
+    const scrollContainer = container.closest(".file-content") as
+      | HTMLElement
+      | undefined
+    if (!scrollContainer) return
+
     const elements = headings
       .map((h) => container.querySelector(`#${CSS.escape(h.id)}`))
       .filter(Boolean) as HTMLElement[]
@@ -33,8 +39,8 @@ export function TableOfContents({ headings, contentRef }: Props) {
     }
 
     update()
-    window.addEventListener("scroll", update, { passive: true })
-    return () => window.removeEventListener("scroll", update)
+    scrollContainer.addEventListener("scroll", update, { passive: true })
+    return () => scrollContainer.removeEventListener("scroll", update)
   }, [headings, contentRef])
 
   if (headings.length === 0) return null
