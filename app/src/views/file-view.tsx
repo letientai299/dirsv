@@ -14,7 +14,7 @@ import { parentOfFile } from "../lib/path"
 import { useAbortEffect } from "../lib/use-abort-effect"
 import { useKeys } from "../lib/use-keys"
 import { useSiblings } from "../lib/use-siblings"
-import { useSSE } from "../lib/use-sse"
+import { useWS } from "../lib/use-ws"
 
 const D2View = lazy(() =>
   import("./d2-view").then((m) => ({ default: m.D2View })),
@@ -243,7 +243,7 @@ export function FileView({ path }: Props) {
   useAbortEffect((signal) => load(signal), [load])
 
   // Re-fetch on file changes
-  useSSE(path.replace(/^\//, ""), () => load())
+  useWS(path.replace(/^\//, ""), () => load())
 
   // Prev/next among all siblings (dirs included) so navigation matches
   // the sidebar order instead of mysteriously jumping over directories.

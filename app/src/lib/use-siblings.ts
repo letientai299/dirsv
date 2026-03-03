@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "preact/hooks"
 import { browse, type DirEntry } from "./api"
 import { useAbortEffect } from "./use-abort-effect"
-import { useSSE } from "./use-sse"
+import { useWS } from "./use-ws"
 
 /** Fetches sibling entries from `parentDir` and refreshes on SSE changes. */
 export function useSiblings(parentDir: string): DirEntry[] {
@@ -33,7 +33,7 @@ export function useSiblings(parentDir: string): DirEntry[] {
     [load],
   )
 
-  useSSE(parentDir.replace(/^\//, "") || ".", () => {
+  useWS(parentDir.replace(/^\//, "") || ".", () => {
     sseController.current?.abort()
     const controller = new AbortController()
     sseController.current = controller

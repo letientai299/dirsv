@@ -1,6 +1,6 @@
-// Package watcher provides filesystem watching with SSE broadcasting.
+// Package watcher provides filesystem watching with WebSocket broadcasting.
 //
-// Watches are added lazily: when an SSE client subscribes, only the
+// Watches are added lazily: when a WebSocket client subscribes, only the
 // requested subtree is walked and added to the underlying fsnotify
 // watcher. This avoids the startup cost of walking the entire tree
 // and keeps the watch count proportional to what clients actually
@@ -9,7 +9,6 @@ package watcher
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -20,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/coder/websocket"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -46,13 +46,13 @@ func init() {
 	}
 }
 
-// Event represents a file system change event sent over SSE.
+// Event represents a file system change event sent over WebSocket.
 type Event struct {
 	Type string `json:"type"`
 	Path string `json:"path"`
 }
 
-// Watcher watches a directory tree and broadcasts changes to SSE subscribers.
+// Watcher watches a directory tree and broadcasts changes to WebSocket subscribers.
 type Watcher struct {
 	root  string
 	debug bool
@@ -106,7 +106,7 @@ func New(root string, opts ...Option) (*Watcher, error) {
 	return w, nil
 }
 
-// Close stops the watcher, unblocks SSE subscribers, and releases resources.
+// Close stops the watcher and releases resources.
 func (w *Watcher) Close() error {
 	close(w.done)
 	return w.fsw.Close()
@@ -210,11 +210,11 @@ func (w *Watcher) loop() {
 			if !ok {
 				return
 			}
-			sseEvent := w.toEvent(ev)
-			if sseEvent == nil {
+			fsEvent := w.toEvent(ev)
+			if fsEvent == nil {
 				continue
 			}
-			pending[sseEvent.Path] = *sseEvent
+			pending[fsEvent.Path] = *fsEvent
 			if timer == nil {
 				timer = time.NewTimer(coalesceDuration)
 				timerC = timer.C
@@ -235,7 +235,7 @@ func (w *Watcher) loop() {
 	}
 }
 
-// toEvent converts an fsnotify event to an SSE Event. It also watches
+// toEvent converts an fsnotify event to a broadcast Event. It also watches
 // newly created directories. Returns nil for ignored operations.
 func (w *Watcher) toEvent(ev fsnotify.Event) *Event {
 	if isEditorTempFile(ev.Name) {
@@ -355,7 +355,7 @@ func eventColor(typ string) string {
 	}
 }
 
-// broadcast sends each pending event to matching SSE clients.
+// broadcast sends each pending event to matching clients.
 func (w *Watcher) broadcast(pending map[string]Event) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
@@ -398,7 +398,7 @@ func (w *Watcher) unsubscribe(ch chan Event) {
 }
 
 // pruneWatches removes fsnotify watches for directories that no remaining
-// SSE client needs. Called after a client disconnects.
+// client needs. Called after a client disconnects.
 func (w *Watcher) pruneWatches() {
 	w.mu.RLock()
 	prefixes := make([]string, 0, len(w.clients))
@@ -483,23 +483,24 @@ func cleanWatchPath(raw string) string {
 	return cleaned
 }
 
-// ServeHTTP handles SSE connections at /api/events?watch=<path>.
+// ServeHTTP handles WebSocket connections at /api/events?watch=<path>.
 func (w *Watcher) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	flusher, ok := rw.(http.Flusher)
-	if !ok {
-		http.Error(rw, "streaming unsupported", http.StatusInternalServerError)
-		return
-	}
-
 	watchPath := cleanWatchPath(r.URL.Query().Get("watch"))
 
 	w.mu.RLock()
 	full := len(w.clients) >= maxClients
 	w.mu.RUnlock()
 	if full {
-		http.Error(rw, "too many SSE clients", http.StatusServiceUnavailable)
+		http.Error(rw, "too many clients", http.StatusServiceUnavailable)
 		return
 	}
+
+	conn, err := websocket.Accept(rw, r, nil)
+	if err != nil {
+		// Accept already wrote an HTTP error response.
+		return
+	}
+	defer conn.CloseNow() //nolint:errcheck // best-effort cleanup
 
 	ch := w.subscribe(watchPath)
 	defer w.unsubscribe(ch)
@@ -512,13 +513,7 @@ func (w *Watcher) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	w.logConnect(clientID, displayPath, r.UserAgent())
 	defer w.logDisconnect(clientID, displayPath)
 
-	rw.Header().Set("Content-Type", "text/event-stream")
-	rw.Header().Set("Cache-Control", "no-cache")
-	rw.Header().Set("Connection", "keep-alive")
-	rw.Header().Set("X-Accel-Buffering", "no")
-	flusher.Flush()
-
-	// Lazily watch the requested subtree after SSE headers are sent.
+	// Lazily watch the requested subtree after the upgrade.
 	go w.watchForClient(watchPath)
 
 	ctx := r.Context()
@@ -527,14 +522,16 @@ func (w *Watcher) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		case <-ctx.Done():
 			return
 		case <-w.done:
+			_ = conn.Close(websocket.StatusGoingAway, "server shutting down")
 			return
 		case ev := <-ch:
 			data, err := json.Marshal(ev)
 			if err != nil {
 				continue
 			}
-			_, _ = fmt.Fprintf(rw, "data: %s\n\n", data)
-			flusher.Flush()
+			if err := conn.Write(ctx, websocket.MessageText, data); err != nil {
+				return
+			}
 		}
 	}
 }

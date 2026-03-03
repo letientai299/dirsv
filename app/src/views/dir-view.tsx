@@ -6,7 +6,7 @@ import { FileIcon, ParentIcon } from "../lib/file-icon"
 import { formatSize } from "../lib/format"
 import { parentOf } from "../lib/path"
 import { useKeys } from "../lib/use-keys"
-import { useSSE } from "../lib/use-sse"
+import { useWS } from "../lib/use-ws"
 
 interface Props {
   path: string
@@ -119,7 +119,7 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
       })
   }, [path])
 
-  useSSE(path === "/" ? "" : path.replace(/^\//, ""), refresh)
+  useWS(path === "/" ? "" : path.replace(/^\//, ""), refresh)
 
   const parentPath = path === "/" ? null : parentOf(path)
 
