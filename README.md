@@ -57,6 +57,7 @@ server [path]            directory or file to serve (default ".")
 -p, --port <port>        listen port (default 8080, or $PORT)
 -b, --browser <name>     browser to open (default: system default)
     --no-open            don't auto-open browser
+-s, --silent             suppress watcher logs
 ```
 
 When `[path]` is a file, the server restricts browsing to that single file.

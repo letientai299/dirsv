@@ -74,6 +74,7 @@ func Silent(w *Watcher) { w.silent = true }
 
 func (w *Watcher) logf(format string, args ...any) {
 	if !w.silent {
+		//nolint:gosec // G706: all callers pass server-controlled data
 		log.Printf(format, args...)
 	}
 }
@@ -283,14 +284,60 @@ func clientAddr(remoteAddr string) string {
 	return net.JoinHostPort(host, port)
 }
 
-func (w *Watcher) logClient(connected bool, addr, watchPath string) {
-	verb := "disconnect"
-	if connected {
-		verb = "connect"
+// shortUA extracts a short "Browser/Version" from a User-Agent string.
+func shortUA(ua string) string {
+	// Order matters — check specific browsers before generic engines.
+	// substr is the token prefix to find; name is the display label.
+	for _, p := range []struct{ substr, name string }{
+		{"Arc/", "Arc"},
+		{"OPR/", "Opera"},
+		{"Edg/", "Edge"},
+		{"Vivaldi/", "Vivaldi"},
+		{"Brave/", "Brave"},
+		{"Chrome/", "Chrome"},
+		{"Firefox/", "Firefox"},
+		{"Version/", "Safari"}, // Safari uses "Version/X" for its version
+	} {
+		if i := strings.Index(ua, p.substr); i >= 0 {
+			return p.name + "/" + uaVersion(ua[i+len(p.substr):])
+		}
 	}
+	if ua == "" {
+		return "unknown"
+	}
+	if i := strings.IndexByte(ua, '/'); i > 0 {
+		return ua[:i]
+	}
+	return ua
+}
+
+// uaVersion extracts the major.minor version from the start of s,
+// stopping at the first space or end of string.
+func uaVersion(s string) string {
+	end := strings.IndexByte(s, ' ')
+	if end < 0 {
+		end = len(s)
+	}
+	ver := s[:end]
+	// Keep only major version (e.g., "136" from "136.0.7103.114").
+	if dot := strings.IndexByte(ver, '.'); dot > 0 {
+		ver = ver[:dot]
+	}
+	return ver
+}
+
+func (w *Watcher) logConnect(addr, watchPath, ua string) {
+	browser := shortUA(ua)
+	//nolint:gosec // G706: addr is from net.SplitHostPort(RemoteAddr)
+	w.logf("%s%-10s%s %s %s%s watching %s%s",
+		colorCyan, "connect", colorReset,
+		addr, colorDim, browser, watchPath, colorReset)
+}
+
+func (w *Watcher) logDisconnect(addr, watchPath string) {
 	//nolint:gosec // G706: addr is from net.SplitHostPort(RemoteAddr)
 	w.logf("%s%-10s%s %s %swatching %s%s",
-		colorCyan, verb, colorReset,
+		colorCyan, "disconnect", colorReset,
 		addr, colorDim, watchPath, colorReset)
 }
 
@@ -462,8 +509,8 @@ func (w *Watcher) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		displayPath = "/"
 	}
 	clientID := clientAddr(r.RemoteAddr)
-	w.logClient(true, clientID, displayPath)
-	defer w.logClient(false, clientID, displayPath)
+	w.logConnect(clientID, displayPath, r.UserAgent())
+	defer w.logDisconnect(clientID, displayPath)
 
 	rw.Header().Set("Content-Type", "text/event-stream")
 	rw.Header().Set("Cache-Control", "no-cache")
