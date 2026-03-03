@@ -29,7 +29,7 @@ export function TableOfContents({ headings, contentRef }: Props) {
           break
         }
       }
-      setActiveId(current.id)
+      if (current) setActiveId(current.id)
     }
 
     update()
