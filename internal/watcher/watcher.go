@@ -54,9 +54,10 @@ type Event struct {
 
 // Watcher watches a directory tree and broadcasts changes to SSE subscribers.
 type Watcher struct {
-	root string
-	fsw  *fsnotify.Watcher
-	done chan struct{}
+	root   string
+	silent bool
+	fsw    *fsnotify.Watcher
+	done   chan struct{}
 
 	mu      sync.RWMutex
 	clients map[chan Event]string // channel → watched path prefix
@@ -65,8 +66,20 @@ type Watcher struct {
 	watched map[string]struct{} // abs paths of dirs added to fsw
 }
 
+// Option configures a Watcher.
+type Option func(*Watcher)
+
+// Silent disables all watcher log output.
+func Silent(w *Watcher) { w.silent = true }
+
+func (w *Watcher) logf(format string, args ...any) {
+	if !w.silent {
+		log.Printf(format, args...)
+	}
+}
+
 // New creates a Watcher for the given root directory.
-func New(root string) (*Watcher, error) {
+func New(root string, opts ...Option) (*Watcher, error) {
 	abs, err := filepath.Abs(root)
 	if err != nil {
 		return nil, err
@@ -83,6 +96,9 @@ func New(root string) (*Watcher, error) {
 		done:    make(chan struct{}),
 		clients: make(map[chan Event]string),
 		watched: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(w)
 	}
 
 	go w.loop()
@@ -163,7 +179,7 @@ func (w *Watcher) ensureWatched(dir string) {
 	})
 	if len(dirs) > 0 {
 		//nolint:gosec // G706: dirs derived from filepath.Abs
-		log.Printf("%s%-10s%s %s",
+		w.logf("%s%-10s%s %s",
 			colorDim, "watch", colorReset,
 			strings.Join(dirs, ", "))
 	}
@@ -267,13 +283,13 @@ func clientAddr(remoteAddr string) string {
 	return net.JoinHostPort(host, port)
 }
 
-func logClient(connected bool, addr, watchPath string) {
+func (w *Watcher) logClient(connected bool, addr, watchPath string) {
 	verb := "disconnect"
 	if connected {
 		verb = "connect"
 	}
 	//nolint:gosec // G706: addr is from net.SplitHostPort(RemoteAddr)
-	log.Printf("%s%-10s%s %s %swatching %s%s",
+	w.logf("%s%-10s%s %s %swatching %s%s",
 		colorCyan, verb, colorReset,
 		addr, colorDim, watchPath, colorReset)
 }
@@ -309,7 +325,7 @@ func (w *Watcher) broadcast(pending map[string]Event) {
 			}
 		}
 		c := eventColor(ev.Type)
-		log.Printf("%s%-10s%s %s %s→ %d client(s)%s",
+		w.logf("%s%-10s%s %s %s→ %d client(s)%s",
 			c, ev.Type, colorReset,
 			ev.Path,
 			colorDim, notified, colorReset)
@@ -379,7 +395,7 @@ func (w *Watcher) pruneWatches() {
 		dirs = append(dirs, rel)
 	}
 	if len(dirs) > 0 {
-		log.Printf("%s%-10s%s %s",
+		w.logf("%s%-10s%s %s",
 			colorDim, "unwatch", colorReset,
 			strings.Join(dirs, ", "))
 	}
@@ -446,8 +462,8 @@ func (w *Watcher) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		displayPath = "/"
 	}
 	clientID := clientAddr(r.RemoteAddr)
-	logClient(true, clientID, displayPath)
-	defer logClient(false, clientID, displayPath)
+	w.logClient(true, clientID, displayPath)
+	defer w.logClient(false, clientID, displayPath)
 
 	rw.Header().Set("Content-Type", "text/event-stream")
 	rw.Header().Set("Cache-Control", "no-cache")

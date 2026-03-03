@@ -34,6 +34,7 @@ func main() {
 	)
 	dev := flag.Bool("dev", false, "proxy frontend to Vite dev server")
 	noOpen := flag.Bool("no-open", false, "don't auto-open browser")
+	silent := flag.BoolP("silent", "s", false, "suppress watcher logs")
 	_ = flag.CommandLine.MarkHidden("dev")
 	flag.Parse()
 
@@ -75,7 +76,11 @@ func main() {
 		}
 	}
 
-	w, err := watcher.New(root)
+	var watcherOpts []watcher.Option
+	if *silent {
+		watcherOpts = append(watcherOpts, watcher.Silent)
+	}
+	w, err := watcher.New(root, watcherOpts...)
 	if err != nil {
 		log.Fatal(err)
 	}
