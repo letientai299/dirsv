@@ -170,6 +170,18 @@ body {
 
 /* ---------- dir view ---------- */
 
+.dir-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.dir-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
 .dir-table {
   width: 100%;
   border-collapse: collapse;

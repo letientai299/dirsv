@@ -164,77 +164,79 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
   )
 
   return (
-    <div>
+    <div class="dir-layout">
       <Toolbar path={path} />
       <hr class="file-separator" />
-      <table class="dir-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th class="col-size">Size</th>
-            <th>Modified</th>
-          </tr>
-        </thead>
-        <tbody ref={tbodyRef}>
-          {parentPath && (
-            <tr class={activeIndex === 0 ? "row-active" : ""}>
-              <td>
-                <a
-                  rel="up"
-                  href={parentPath}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    onNavigate(parentPath)
-                  }}
-                >
-                  <span class="entry-icon">
-                    <ParentIcon />
-                  </span>
-                  ..
-                </a>
-              </td>
-              <td class="col-size" />
-              <td class="col-date" />
+      <div class="dir-scroll">
+        <table class="dir-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th class="col-size">Size</th>
+              <th>Modified</th>
             </tr>
-          )}
-          {entries.map((entry, i) => {
-            const href = (path === "/" ? "/" : `${path}/`) + entry.name
-            const rowIndex = parentPath ? i + 1 : i
-            return (
-              <tr
-                key={entry.name}
-                class={activeIndex === rowIndex ? "row-active" : ""}
-              >
+          </thead>
+          <tbody ref={tbodyRef}>
+            {parentPath && (
+              <tr class={activeIndex === 0 ? "row-active" : ""}>
                 <td>
                   <a
-                    href={href}
+                    rel="up"
+                    href={parentPath}
                     onClick={(e) => {
                       e.preventDefault()
-                      onNavigate(href)
+                      onNavigate(parentPath)
                     }}
                   >
-                    <span
-                      class={`entry-icon${entry.isDir ? " entry-icon--folder" : ""}`}
-                    >
-                      <FileIcon
-                        name={entry.name}
-                        isDir={entry.isDir}
-                        isExec={entry.isExec ?? false}
-                      />
+                    <span class="entry-icon">
+                      <ParentIcon />
                     </span>
-                    {entry.name}
-                    {entry.isDir ? "/" : ""}
+                    ..
                   </a>
                 </td>
-                <td class="col-size">
-                  {entry.isDir ? "\u2013" : formatSize(entry.size)}
-                </td>
-                <td class="col-date">{formatDate(entry.modTime)}</td>
+                <td class="col-size" />
+                <td class="col-date" />
               </tr>
-            )
-          })}
-        </tbody>
-      </table>
+            )}
+            {entries.map((entry, i) => {
+              const href = (path === "/" ? "/" : `${path}/`) + entry.name
+              const rowIndex = parentPath ? i + 1 : i
+              return (
+                <tr
+                  key={entry.name}
+                  class={activeIndex === rowIndex ? "row-active" : ""}
+                >
+                  <td>
+                    <a
+                      href={href}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        onNavigate(href)
+                      }}
+                    >
+                      <span
+                        class={`entry-icon${entry.isDir ? " entry-icon--folder" : ""}`}
+                      >
+                        <FileIcon
+                          name={entry.name}
+                          isDir={entry.isDir}
+                          isExec={entry.isExec ?? false}
+                        />
+                      </span>
+                      {entry.name}
+                      {entry.isDir ? "/" : ""}
+                    </a>
+                  </td>
+                  <td class="col-size">
+                    {entry.isDir ? "\u2013" : formatSize(entry.size)}
+                  </td>
+                  <td class="col-date">{formatDate(entry.modTime)}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
       <AppFooter />
     </div>
   )
