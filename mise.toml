@@ -53,7 +53,7 @@ run = "watchexec -r -e go -- go run ./cmd/server --no-open --dev"
 
 [tasks.dev]
 description = "Run Go server and Vite dev server in parallel"
-run = "mise dev:vite ::: dev:server"
+run = "bun run scripts/dev.ts"
 
 [tasks."build:compress"]
 description = "Pre-compress frontend assets with gzip (replaces originals with .gz)"

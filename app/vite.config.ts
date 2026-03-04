@@ -2,6 +2,8 @@
 import { defineConfig } from "vite";
 import preact from "@preact/preset-vite";
 
+const apiPort = process.env.DEV_API_PORT || "8080";
+
 export default defineConfig({
   clearScreen: false,
   plugins: [preact()],
@@ -11,7 +13,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://localhost:8080",
+        target: `http://localhost:${apiPort}`,
         // Suppress ECONNREFUSED errors during startup while the Go server
         // is still compiling. The browser retries automatically.
         configure: (proxy) => {
