@@ -124,13 +124,14 @@ mise run
 ### CLI flags
 
 ```
-dirsv [path]             directory or file to serve (default ".")
-    --host <addr>        listen address (default "localhost")
--p, --port <port>        listen port (default 8080, or $PORT)
--b, --browser <name>     browser to open (default: system default)
-    --no-open            don't auto-open browser
--d, --debug              enable verbose watcher logs
--v, --version            print version and exit
+Usage: dirsv [flags] [path]
+
+  -b, --browser string   browser to open (default: system default)
+  -d, --debug            enable verbose watcher logs
+      --host string      listen address (default "localhost")
+      --no-open          don't auto-open browser
+  -p, --port int         listen port (default 8080)
+  -v, --version          print version and exit
 ```
 
 When `[path]` is a file, the server restricts browsing to that single file.

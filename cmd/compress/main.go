@@ -35,15 +35,21 @@ func main() {
 }
 
 func run(root string) error {
-	// First pass: remove stale .gz files from a previous run so repeated
-	// invocations are idempotent.
+	// First pass: remove stale .gz files only when the original source file
+	// exists (meaning a fresh build produced new originals to compress).
+	// This keeps the directory idempotent without destroying .gz files when
+	// build:fe was skipped by the task runner.
 	if err := filepath.WalkDir( //nolint:gosec // G703: build-time tool, root is a trusted project path
 		root,
 		func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() {
 				return err
 			}
-			if strings.ToLower(filepath.Ext(path)) == ".gz" {
+			if strings.ToLower(filepath.Ext(path)) != ".gz" {
+				return nil
+			}
+			orig := strings.TrimSuffix(path, filepath.Ext(path))
+			if _, e := os.Stat(orig); e == nil {
 				return os.Remove(path)
 			}
 			return nil

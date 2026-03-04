@@ -114,3 +114,7 @@ run = "bun prettier --write --ignore-path ../.prettierignore '../**/*.md' '../**
 [tasks.fmt]
 description = "Format all code"
 depends = ["fmt:be", "fmt:fe", "fmt:prose"]
+
+[tasks.clean]
+description = "Format all code"
+run = "rm -rf bin app/dist"
