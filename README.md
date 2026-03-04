@@ -1,9 +1,10 @@
-# dirsv
+# Dirsv
 
-A local directory browser with live reload. Single Go binary, embedded web UI.
+<img src="app/public/logo.svg" width="64" height="64" alt="" align="left" />
 
-Browse filesystem contents with a clean table view, render markdown with
-syntax-highlighted code blocks, and see changes instantly via WebSocket.
+Local directory browser with live reload. Single Go binary, embedded web UI.
+Browse files with a clean table view, render markdown with syntax-highlighted
+code blocks, and see changes instantly via WebSocket.
 
 |            Directory browsing            |                JSON tree view                 |
 | :--------------------------------------: | :-------------------------------------------: |
