@@ -27,11 +27,15 @@ fi
 description = "Install deps and build frontend"
 dir = "app"
 run = ["bun install", "bun run build"]
+sources = ["src/**/*", "index.html", "vite.config.ts", "tsconfig.json", "package.json"]
+outputs = ["dist/index.html"]
 
 [tasks."build:be"]
 description = "Build Go server binary"
 depends = ["build:fe"]
 run = "go build -o bin/server ./cmd/server"
+sources = ["**/*.go", "go.mod", "go.sum", "app/dist/**/*"]
+outputs = ["bin/server"]
 
 [tasks.build]
 description = "Build frontend and server binary"
@@ -67,6 +71,8 @@ run = """
 tag=$(git describe --tags --exact-match 2>/dev/null || true)
 CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X github.com/letientai299/dirsv/internal/appinfo.tag=${tag}" -o bin/dirsv ./cmd/server
 """
+sources = ["**/*.go", "go.mod", "go.sum", "app/dist/**/*"]
+outputs = ["bin/dirsv"]
 
 # -- test --
 
