@@ -7,6 +7,7 @@ import { useKeys } from "../lib/use-keys"
 
 interface Props {
   path: string
+  showKeybinds?: boolean
 }
 
 // Octicon sun (16px)
@@ -164,7 +165,7 @@ function KeybindHelp() {
   )
 }
 
-export function Toolbar({ path }: Props) {
+export function Toolbar({ path, showKeybinds = true }: Props) {
   const [isDark, setIsDark] = useState(() => getEffectiveTheme() === "dark")
 
   const toggle = useCallback(() => {
@@ -178,7 +179,7 @@ export function Toolbar({ path }: Props) {
         <Breadcrumbs path={path} />
       </div>
       <div class="toolbar-actions">
-        <KeybindHelp />
+        {showKeybinds && <KeybindHelp />}
         <button
           type="button"
           class="theme-toggle"

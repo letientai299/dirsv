@@ -268,7 +268,7 @@ export function FileView({ path }: Props) {
 
   return (
     <div class="file-layout">
-      <Toolbar path={path} />
+      <Toolbar path={path} showKeybinds={false} />
       <hr class="file-separator" />
       <div class="file-body">
         <aside class="file-sidebar" style={{ width: `${sidebarWidth}px` }}>
