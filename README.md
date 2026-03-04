@@ -12,6 +12,35 @@ code blocks, and see changes instantly via WebSocket.
 |       **Markdown with KaTeX math**       |             **PlantUML diagrams**             |
 |   ![Markdown with math](demo/math.png)   | ![PlantUML diagrams](demo/plant-uml-dark.png) |
 
+## Why
+
+I **write various kind of markdown docs in nvim**:
+
+- Throwaway note
+- Technical design that might contains heavy diagrams.
+- [Learning notes][sicp-1.45] that are math heavy.
+- Personal knowledge graphs.
+
+[sicp-1.45]: https://github.com/letientai299/read-sicp/blob/master/ch01/1.45.md
+
+I also would like **preview more kinds of diagrams**, not just mermaid,
+**offline browsing a repo**, **previewing web static assets**.
+
+Some usecase obviously have better solution. For example `caddy`/`nginx` is
+great for previewing static web. However, they don't support live reload on
+changes (I might be wrong here).
+
+None of the existing solutions covers all my need. So, I build `dirsv` and
+[dirsv.nvim][dnvim]. Compare to other plugins, `dirsv.nvim` **doesn't** cover
+some common features provided by prior arts:
+
+- Sync scrolling
+- Review from buffer, not from disk, so changes are rendered as we type.
+- Auto switch browser tab to new page on buffer changing
+
+However, I don't really need those features. I just want more supported
+syntaxes, much more than what GFM can supports.
+
 ## Features
 
 - **Directory browsing** — table view with [Devicon][devicon] file-type icons,
@@ -136,3 +165,4 @@ MIT
 [bun]: https://bun.sh/
 [gclint]: https://golangci-lint.run/
 [releases]: https://github.com/letientai299/dirsv/releases
+[dnvim]: https://github.com/letientai299/dirsv.nvim
