@@ -10,17 +10,21 @@ export function AppFooter() {
 
   return (
     <footer class="app-footer">
-      <span>
-        served by{" "}
-        <a
-          href="https://github.com/letientai299/dirsv"
-          target="_blank"
-          rel="noopener"
-        >
-          dirsv
-        </a>
-        {pid !== null && <> | PID {pid}</>}
-      </span>
+      <a
+        href="https://github.com/letientai299/dirsv"
+        target="_blank"
+        rel="noopener"
+      >
+        <img
+          src="/logo.svg"
+          alt=""
+          width="24"
+          height="24"
+          class="footer-logo"
+        />
+        dirsv
+      </a>
+      {pid !== null && <span>| PID {pid}</span>}
     </footer>
   )
 }

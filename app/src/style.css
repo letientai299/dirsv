@@ -410,20 +410,30 @@ body {
 }
 
 .app-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
   color: var(--text-dim);
   font-size: 13px;
-  text-align: center;
   padding: 8px 16px;
   border-top: 1px solid var(--border);
 }
 
 .app-footer a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   color: var(--accent, #58a6ff);
   text-decoration: none;
 }
 
 .app-footer a:hover {
   text-decoration: underline;
+}
+
+.footer-logo {
+  flex-shrink: 0;
 }
 
 .file-footer .app-footer {
