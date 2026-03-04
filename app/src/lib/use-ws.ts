@@ -36,11 +36,25 @@ function sendWatchList() {
   ws.send(JSON.stringify({ watch: prefixes }))
 }
 
+function dispatch(batch: WsEvent[]) {
+  for (const ev of batch) {
+    for (const [fn, prefix] of listeners) {
+      if (
+        prefix === "" ||
+        ev.path.startsWith(prefix) ||
+        prefix.startsWith(ev.path)
+      ) {
+        fn(ev)
+      }
+    }
+  }
+}
+
 function connect() {
   if (ws) return
 
   const socket = new WebSocket(wsUrl())
-  let debounceTimer: ReturnType<typeof setTimeout> | undefined
+  let rafId = 0
   let pending: WsEvent[] = []
 
   socket.onopen = () => {
@@ -54,22 +68,14 @@ function connect() {
     } catch {
       return
     }
-    clearTimeout(debounceTimer)
-    debounceTimer = setTimeout(() => {
-      const batch = pending
-      pending = []
-      for (const ev of batch) {
-        for (const [fn, prefix] of listeners) {
-          if (
-            prefix === "" ||
-            ev.path.startsWith(prefix) ||
-            prefix.startsWith(ev.path)
-          ) {
-            fn(ev)
-          }
-        }
-      }
-    }, 100)
+    if (!rafId) {
+      rafId = requestAnimationFrame(() => {
+        rafId = 0
+        const batch = pending
+        pending = []
+        dispatch(batch)
+      })
+    }
   }
 
   socket.onclose = () => {

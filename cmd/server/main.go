@@ -159,7 +159,7 @@ func main() {
 		}
 	}
 
-	fmt.Printf("serving %s on %s\n", target, ln.Addr())
+	fmt.Printf("serving %s on http://%s\n", target, ln.Addr())
 	if *dev {
 		fmt.Println("dev mode: proxying frontend to http://localhost:5173")
 	}

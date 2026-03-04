@@ -14,6 +14,7 @@ export default defineConfig({
     proxy: {
       "/api": {
         target: `http://localhost:${apiPort}`,
+        ws: true,
         // Suppress ECONNREFUSED errors during startup while the Go server
         // is still compiling. The browser retries automatically.
         configure: (proxy) => {
