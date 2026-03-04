@@ -26,17 +26,12 @@ fi
 [tasks."build:fe"]
 description = "Install deps and build frontend"
 dir = "app"
-run = ["bun install --frozen-lockfile 2>/dev/null || bun install", "bun run build"]
+run = ["bun install", "bun run build"]
 
 [tasks."build:be"]
 description = "Build Go server binary"
 depends = ["build:fe"]
-run = """
-commit=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-dirty=$(git diff --quiet 2>/dev/null || echo "true")
-ldflags="-X github.com/letientai299/dirsv/internal/appinfo.commit=${commit} -X github.com/letientai299/dirsv/internal/appinfo.dirty=${dirty}"
-go build -ldflags="$ldflags" -o bin/server ./cmd/server
-"""
+run = "go build -o bin/server ./cmd/server"
 
 [tasks.build]
 description = "Build frontend and server binary"
@@ -44,40 +39,21 @@ alias = "b"
 depends = ["build:be"]
 
 [tasks.run]
-description = "Build and run server"
-run = "mise build && ./bin/server"
-
-[tasks."dev:install"]
-description = "Install frontend dependencies"
-dir = "app"
-run = "bun install --frozen-lockfile 2>/dev/null || bun install"
+description = "Run server (builds on the fly)"
+run = "go run ./cmd/server"
 
 [tasks."dev:vite"]
 description = "Run Vite dev server"
-depends = ["dev:install"]
 dir = "app"
 run = "bun run dev"
 
 [tasks."dev:server"]
 description = "Run Go server in dev mode with auto-reload"
-depends = ["dev:install"]
-usage = 'arg "[target]" help="Directory or file to serve"'
-run = """
-commit=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-dirty=$(git diff --quiet 2>/dev/null || echo "true")
-ldflags="-X github.com/letientai299/dirsv/internal/appinfo.commit=${commit} -X github.com/letientai299/dirsv/internal/appinfo.dirty=${dirty}"
-watchexec -r -e go -- go run -ldflags="$ldflags" ./cmd/server --no-open --dev {{usage.target | default(value='')}}
-"""
+run = "watchexec -r -e go -- go run ./cmd/server --no-open --dev"
 
 [tasks.dev]
 description = "Run Go server and Vite dev server in parallel"
-usage = 'arg "[target]" help="Directory or file to serve"'
-run = '''
-trap 'kill 0' EXIT
-mise dev:vite &
-mise dev:server -- {{usage.target | default(value='')}} &
-wait
-'''
+run = "mise dev:vite ::: dev:server"
 
 [tasks."build:compress"]
 description = "Pre-compress frontend assets with gzip (replaces originals with .gz)"
@@ -117,7 +93,7 @@ depends = ["lint:be", "lint:fe"]
 
 [tasks."fmt:be"]
 description = "Format Go code"
-run = "golangci-lint fmt ./... && golangci-lint run --fix ./..."
+run = ["golangci-lint fmt ./...", "golangci-lint run --fix ./..."]
 
 [tasks."fmt:fe"]
 description = "Format frontend code"
