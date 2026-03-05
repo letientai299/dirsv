@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "preact/hooks"
+import { useCallback, useEffect, useMemo, useState } from "preact/hooks"
 import { ChevronLeft, ChevronRight } from "../lib/icons"
 import { imageExts, videoExts } from "../lib/media-types"
 import { navigate } from "../lib/navigate"
 import { parentOf } from "../lib/path"
 import { useKeys } from "../lib/use-keys"
 import { useSiblings } from "../lib/use-siblings"
+import { useWS } from "../lib/use-ws"
 
 interface Props {
   path: string
@@ -52,7 +53,14 @@ export function MediaView({ path, kind }: Props) {
     [prevPath, nextPath],
   )
 
-  const rawUrl = `/api/raw${path}`
+  // Bump revision on file changes so the browser re-fetches the asset.
+  const [rev, setRev] = useState(0)
+  useWS(
+    path.replace(/^\//, ""),
+    useCallback(() => setRev((r) => r + 1), []),
+  )
+
+  const rawUrl = `/api/raw${path}${rev ? `?v=${rev}` : ""}`
   const fileName = path.split("/").pop() ?? path
   const position =
     currentIdx >= 0 ? `${currentIdx + 1} / ${siblings.length}` : ""
