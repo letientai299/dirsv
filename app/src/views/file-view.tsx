@@ -40,6 +40,9 @@ const MarkdownView = lazy(() =>
 const CodeView = lazy(() =>
   import("./code-view").then((m) => ({ default: m.CodeView })),
 )
+const CastView = lazy(() =>
+  import("./cast-view").then((m) => ({ default: m.CastView })),
+)
 const StructuredView = lazy(() =>
   import("./structured-view").then((m) => ({ default: m.StructuredView })),
 )
@@ -87,6 +90,12 @@ function renderFileContent(
       </div>
     )
   }
+  if (/\.cast$/i.test(path))
+    return (
+      <Suspense fallback={fallback}>
+        <CastView content={result.content} />
+      </Suspense>
+    )
   if (/\.mdx?$/i.test(path)) {
     return (
       <Suspense fallback={fallback}>

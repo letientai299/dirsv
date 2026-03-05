@@ -10,11 +10,12 @@
   },
   "dependencies": {
     "@dbml/core": "^6.4.0",
-    "dompurify": "^3.2.4",
     "@hpcc-js/wasm-graphviz": "^1.21.0",
     "@shikijs/rehype": "^4.0.0",
     "@softwaretechnik/dbml-renderer": "^1.0.31",
     "@terrastruct/d2": "^0.1.33",
+    "asciinema-player": "^3.15.1",
+    "dompurify": "^3.2.4",
     "github-markdown-css": "^5.9.0",
     "katex": "^0.16.33",
     "mermaid": "^11.12.3",

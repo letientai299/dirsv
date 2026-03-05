@@ -1176,6 +1176,21 @@ pre {
   height: auto;
 }
 
+/* ---------- asciinema cast player ---------- */
+
+.cast-player {
+  display: flex;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.cast-player .ap-wrapper {
+  max-width: 960px;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
 /* ---------- responsive ---------- */
 
 @media (max-width: 1024px) {
