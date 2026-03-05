@@ -66,6 +66,8 @@ syntaxes, much more than what GFM can supports.
   preloading, and fade transitions
 - **Video player** — HTML5 controls with gallery navigation for `.mp4`, `.webm`,
   `.ogg`, `.mov`
+- **Terminal recordings** — [asciinema][asciinema] `.cast` file playback with
+  [asciinema-player][asciinema-player]
 - **HTML preview** — iframe sandbox with automatic URL rewriting for static
   sites
 - **Binary files** — detected by MIME type, shown with an "Open in app" link
@@ -166,4 +168,6 @@ MIT
 [bun]: https://bun.sh/
 [gclint]: https://golangci-lint.run/
 [releases]: https://github.com/letientai299/dirsv/releases
+[asciinema]: https://asciinema.org/
+[asciinema-player]: https://github.com/asciinema/asciinema-player
 [dnvim]: https://github.com/letientai299/dirsv.nvim

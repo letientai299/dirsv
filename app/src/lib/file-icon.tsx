@@ -23,6 +23,7 @@ const EXT_URL_MAP: Record<string, string> = {
   d2: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23007AD6'%3E%3Ctext x='1' y='13' font-size='13' font-weight='700' font-family='system-ui,sans-serif'%3ED2%3C/text%3E%3C/svg%3E",
   dbml: `${SI}/diagramsdotnet/F08705`,
   typ: `${SI}/typst/239DAD`,
+  cast: `${SI}/asciinema/D40000`,
   env: `${SI}/dotenv/ECD53F`,
   // Documents
   pdf: `${VSCODE_ICONS_CDN}/file_type_pdf2.svg`,
