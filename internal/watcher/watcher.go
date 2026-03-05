@@ -127,11 +127,6 @@ func (w *Watcher) Close() error {
 	return w.fsw.Close()
 }
 
-// shouldSkipDir reports whether a directory should be excluded from watching.
-func shouldSkipDir(name string) bool {
-	return strings.HasPrefix(name, ".") || name == "node_modules"
-}
-
 // isEditorTempFile reports whether name looks like an editor backup, swap,
 // or temporary file that should be ignored (vim ~, .swp, .swx, 4913;
 // emacs #autosave#, .#lock; kate .kate-swp; etc.).
