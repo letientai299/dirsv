@@ -1,3 +1,4 @@
+import type { JSX } from "preact"
 import { Fragment } from "preact"
 import { useCallback, useEffect, useRef, useState } from "preact/hooks"
 import { FolderIcon } from "../lib/file-icon"
@@ -10,6 +11,7 @@ import { useKeys } from "../lib/use-keys"
 interface Props {
   path: string
   shortcuts?: ShortcutDef[]
+  actions?: JSX.Element
 }
 
 // Octicon sun (16px)
@@ -153,7 +155,7 @@ function KeybindHelp({ shortcuts }: { shortcuts: ShortcutDef[] }) {
   )
 }
 
-export function Toolbar({ path, shortcuts }: Props) {
+export function Toolbar({ path, shortcuts, actions }: Props) {
   const [isDark, setIsDark] = useState(() => getEffectiveTheme() === "dark")
 
   const toggle = useCallback(() => {
@@ -177,6 +179,7 @@ export function Toolbar({ path, shortcuts }: Props) {
         <Breadcrumbs path={path} />
       </div>
       <div class="toolbar-actions">
+        {actions}
         <KeybindHelp shortcuts={shortcuts ?? []} />
         <button
           type="button"

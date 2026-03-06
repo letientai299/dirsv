@@ -7,11 +7,11 @@ import { Toolbar } from "../components/toolbar"
 import { fetchRaw, type RawResult } from "../lib/api"
 import { FileIcon, ParentIcon } from "../lib/file-icon"
 import { formatSize } from "../lib/format"
-import { ChevronLeft, ChevronRight } from "../lib/icons"
+import { ChevronLeft, ChevronRight, SidebarIcon } from "../lib/icons"
 import { imageRe, videoRe } from "../lib/media-types"
 import { navigate } from "../lib/navigate"
 import { parentOfFile } from "../lib/path"
-import { goToParent } from "../lib/shortcuts"
+import { goToParent, toggleSidebar } from "../lib/shortcuts"
 import { useAbortEffect } from "../lib/use-abort-effect"
 import type { BoundShortcut } from "../lib/use-shortcuts"
 import { useShortcuts } from "../lib/use-shortcuts"
@@ -176,12 +176,22 @@ function readSavedWidth(): number {
   return SIDEBAR_DEFAULT
 }
 
-const fileShortcutBindings = (parentDir: string): BoundShortcut[] => [
+const fileShortcutBindings = (
+  parentDir: string,
+  onToggleSidebar: () => void,
+): BoundShortcut[] => [
   {
     def: goToParent,
     action(e) {
       e.preventDefault()
       navigate(parentDir)
+    },
+  },
+  {
+    def: toggleSidebar,
+    action(e) {
+      e.preventDefault()
+      onToggleSidebar()
     },
   },
 ]
@@ -190,6 +200,10 @@ export function FileView({ path }: Props) {
   const isHtml = /\.html?$/i.test(path)
   const isImage = imageRe.test(path)
   const isVideo = videoRe.test(path)
+
+  // Sidebar visibility — auto-collapse on narrow viewports
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 768)
+  const handleToggleSidebar = useCallback(() => setSidebarOpen((v) => !v), [])
 
   // Resizable sidebar
   const [sidebarWidth, setSidebarWidth] = useState(readSavedWidth)
@@ -233,8 +247,8 @@ export function FileView({ path }: Props) {
   const siblings = useSiblings(parentDir)
 
   const boundShortcuts = useMemo(
-    () => fileShortcutBindings(parentDir),
-    [parentDir],
+    () => fileShortcutBindings(parentDir, handleToggleSidebar),
+    [parentDir, handleToggleSidebar],
   )
   const shortcutDefs = useShortcuts(boundShortcuts, [boundShortcuts])
 
@@ -278,62 +292,83 @@ export function FileView({ path }: Props) {
     ? renderFileContent(loaded.path, loaded.result, null)
     : renderFileContent(path, freshResult, error)
 
+  const sidebarToggleBtn = (
+    <button
+      type="button"
+      class="theme-toggle"
+      onClick={handleToggleSidebar}
+      aria-label="Toggle sidebar"
+      aria-pressed={sidebarOpen}
+      title="Toggle sidebar"
+    >
+      <SidebarIcon />
+    </button>
+  )
+
   return (
     <div class="file-layout">
-      <Toolbar path={path} shortcuts={shortcutDefs} />
+      <Toolbar
+        path={path}
+        shortcuts={shortcutDefs}
+        actions={sidebarToggleBtn}
+      />
       <hr class="file-separator" />
       <div class="file-body">
-        <aside class="file-sidebar" style={{ width: `${sidebarWidth}px` }}>
-          <a
-            rel="up"
-            href={parentDir}
-            onClick={(e) => {
-              e.preventDefault()
-              navigate(parentDir)
-            }}
-          >
-            <span class="entry-icon">
-              <ParentIcon />
-            </span>
-            ..
-          </a>
-          {siblings.map((entry) => {
-            const href = siblingHref(entry.name)
-            const active = entry.name === currentName && !entry.isDir
-            return (
-              <a
-                key={entry.name}
-                href={href}
-                class={active ? "sidebar-active" : ""}
-                onClick={(e) => {
-                  e.preventDefault()
-                  navigate(href)
-                }}
-              >
-                <span
-                  class={`entry-icon${entry.isDir ? " entry-icon--folder" : ""}`}
+        {sidebarOpen && (
+          <aside class="file-sidebar" style={{ width: `${sidebarWidth}px` }}>
+            <a
+              rel="up"
+              href={parentDir}
+              onClick={(e) => {
+                e.preventDefault()
+                navigate(parentDir)
+              }}
+            >
+              <span class="entry-icon">
+                <ParentIcon />
+              </span>
+              ..
+            </a>
+            {siblings.map((entry) => {
+              const href = siblingHref(entry.name)
+              const active = entry.name === currentName && !entry.isDir
+              return (
+                <a
+                  key={entry.name}
+                  href={href}
+                  class={active ? "sidebar-active" : ""}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    navigate(href)
+                  }}
                 >
-                  <FileIcon
-                    name={entry.name}
-                    isDir={entry.isDir}
-                    isExec={entry.isExec ?? false}
-                  />
-                </span>
-                {entry.name}
-                {entry.isDir ? "/" : ""}
-              </a>
-            )
-          })}
-        </aside>
-        <hr
-          class="file-sidebar-handle"
-          onMouseDown={onHandleMouseDown}
-          tabIndex={0}
-          aria-valuenow={sidebarWidth}
-          aria-valuemin={SIDEBAR_MIN}
-          aria-valuemax={SIDEBAR_MAX}
-          aria-orientation="vertical"
-        />
+                  <span
+                    class={`entry-icon${entry.isDir ? " entry-icon--folder" : ""}`}
+                  >
+                    <FileIcon
+                      name={entry.name}
+                      isDir={entry.isDir}
+                      isExec={entry.isExec ?? false}
+                    />
+                  </span>
+                  {entry.name}
+                  {entry.isDir ? "/" : ""}
+                </a>
+              )
+            })}
+          </aside>
+        )}
+        {sidebarOpen && (
+          <hr
+            class="file-sidebar-handle"
+            onMouseDown={onHandleMouseDown}
+            tabIndex={0}
+            aria-valuenow={sidebarWidth}
+            aria-valuemin={SIDEBAR_MIN}
+            aria-valuemax={SIDEBAR_MAX}
+            aria-orientation="vertical"
+          />
+        )}
         <div class={`file-content${stale ? " file-content--stale" : ""}`}>
           {content}
         </div>

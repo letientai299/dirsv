@@ -47,6 +47,12 @@ export const toggleHelp: ShortcutDef = {
   match: (e) => e.key === "?" && e.shiftKey,
 }
 
+export const toggleSidebar: ShortcutDef = {
+  keys: "Ctrl+B",
+  description: "Toggle sidebar",
+  match: (e) => e.key === "b" && (e.ctrlKey || e.metaKey),
+}
+
 /**
  * Factory for the `gg` double-tap shortcut. Returns a stateful matcher that
  * tracks the timer between g presses. Call once per component instance

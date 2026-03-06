@@ -5,6 +5,7 @@
   --border: #d0d7de;
   --text: #1f2328;
   --text-dim: #656d76;
+  --row-active: #ddf4ff;
   --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
 }
 
@@ -16,6 +17,7 @@
     --border: #21262d;
     --text: #c9d1d9;
     --text-dim: #8b949e;
+    --row-active: #1a2332;
   }
 }
 
@@ -26,6 +28,7 @@
   --border: #21262d;
   --text: #c9d1d9;
   --text-dim: #8b949e;
+  --row-active: #1a2332;
 }
 
 [data-theme="light"] {
@@ -34,6 +37,7 @@
   --border: #d0d7de;
   --text: #1f2328;
   --text-dim: #656d76;
+  --row-active: #ddf4ff;
 }
 
 *,
@@ -154,7 +158,7 @@ body {
 }
 
 .kb-keys {
-  text-align: right;
+  text-align: left;
 }
 
 .kb-table kbd {
@@ -214,9 +218,12 @@ body {
   border-bottom: none;
 }
 
-.dir-table tbody tr:hover,
-.dir-table tbody tr.row-active {
+.dir-table tbody tr:hover {
   background: var(--surface);
+}
+
+.dir-table tbody tr.row-active {
+  background: var(--row-active);
 }
 
 .dir-table td.col-size,
@@ -1204,11 +1211,6 @@ pre {
 }
 
 @media (max-width: 768px) {
-  .file-sidebar,
-  .file-sidebar-handle {
-    display: none;
-  }
-
   .file-footer .app-footer {
     display: none;
   }
