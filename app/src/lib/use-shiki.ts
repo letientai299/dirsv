@@ -15,9 +15,10 @@ export function useShiki(content: string, lang: string): string | null {
   const [html, setHtml] = useState<string | null>(null)
 
   useEffect(() => {
-    setHtml(null)
-
-    if (content.length > HARD_LIMIT) return
+    if (content.length > HARD_LIMIT) {
+      setHtml(null)
+      return
+    }
 
     let cancelled = false
     // Defer to a macrotask so the plaintext fallback paints first. Shiki's

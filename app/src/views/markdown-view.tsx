@@ -1,5 +1,5 @@
 import morphdom from "morphdom"
-import { useCallback, useEffect, useRef, useState } from "preact/hooks"
+import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import { TableOfContents } from "../components/toc"
 import { injectCopyButtons } from "../lib/code-copy"
 import { renderD2Blocks } from "../lib/d2-render"
@@ -138,6 +138,11 @@ export function MarkdownView({ content, path }: Props) {
     return () => window.removeEventListener("theme-change", reRenderDiagrams)
   }, [reRenderDiagrams])
 
+  const tocHeadings = useMemo(
+    () => result?.headings.filter((h) => h.depth > 1) ?? [],
+    [result],
+  )
+
   if (error) return <div class="error">Render error: {error}</div>
   if (result === null) return <div class="loading">Rendering...</div>
 
@@ -149,10 +154,7 @@ export function MarkdownView({ content, path }: Props) {
         onClick={onLinkClick}
         onKeyDown={onLinkKeyDown}
       />
-      <TableOfContents
-        headings={result.headings.filter((h) => h.depth > 1)}
-        contentRef={contentRef}
-      />
+      <TableOfContents headings={tocHeadings} contentRef={contentRef} />
     </div>
   )
 }

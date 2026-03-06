@@ -332,9 +332,13 @@ export function FileView({ path }: Props) {
   const needsRaw = !(isHtml || isImage || isVideo)
   const stale = needsRaw && loaded !== null && loaded.path !== path
 
-  const content = stale
-    ? renderFileContent(loaded.path, loaded.result, null)
-    : renderFileContent(path, freshResult, error)
+  const content = useMemo(
+    () =>
+      stale
+        ? renderFileContent(loaded?.path ?? path, loaded?.result ?? null, null)
+        : renderFileContent(path, freshResult, error),
+    [stale, loaded, path, freshResult, error],
+  )
 
   const sidebarToggleBtn = (
     <button
