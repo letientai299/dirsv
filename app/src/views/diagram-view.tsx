@@ -18,7 +18,7 @@ export function DiagramView({
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    setSvg(null)
+    // Keep old SVG visible while the new one renders — no flash to loading spinner.
     setError(null)
     let cancelled = false
     render(content)

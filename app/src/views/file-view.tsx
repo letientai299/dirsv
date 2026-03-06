@@ -1,7 +1,6 @@
 import type { JSX } from "preact"
 import { lazy, Suspense } from "preact/compat"
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
-import { parse as parseYaml } from "yaml"
 import { AppFooter } from "../components/app-footer"
 import { Toolbar } from "../components/toolbar"
 import { fetchRaw, type RawResult } from "../lib/api"
@@ -47,6 +46,15 @@ const CastView = lazy(() =>
 )
 const StructuredView = lazy(() =>
   import("./structured-view").then((m) => ({ default: m.StructuredView })),
+)
+const YamlStructuredView = lazy(() =>
+  Promise.all([import("./structured-view"), import("yaml")]).then(
+    ([{ StructuredView: SV }, { parse }]) => ({
+      default: (props: { content: string }) => (
+        <SV content={props.content} parse={parse} lang="yaml" />
+      ),
+    }),
+  ),
 )
 
 interface Props {
@@ -143,11 +151,7 @@ function renderFileContent(
   if (/\.ya?ml$/i.test(path)) {
     return (
       <Suspense fallback={fallback}>
-        <StructuredView
-          content={result.content}
-          parse={parseYaml}
-          lang="yaml"
-        />
+        <YamlStructuredView content={result.content} />
       </Suspense>
     )
   }
@@ -322,9 +326,11 @@ export function FileView({ path }: Props) {
   const siblingHref = (name: string) =>
     (parentDir === "/" ? "/" : `${parentDir}/`) + name
 
-  // Fresh result for current path, or stale result from previous path
+  // Fresh result for current path, or stale result from previous path.
+  // Media types (images, videos, HTML) don't use fetchRaw — never show stale content for them.
   const freshResult = loaded?.path === path ? loaded.result : null
-  const stale = loaded !== null && loaded.path !== path
+  const needsRaw = !(isHtml || isImage || isVideo)
+  const stale = needsRaw && loaded !== null && loaded.path !== path
 
   const content = stale
     ? renderFileContent(loaded.path, loaded.result, null)

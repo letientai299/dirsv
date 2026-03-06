@@ -34,6 +34,11 @@ function formatDate(iso: string): string {
 
 export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
   const [entries, setEntries] = useState(initialEntries)
+
+  // Sync local entries when the parent provides a new listing (e.g. dir→dir navigation).
+  useEffect(() => {
+    setEntries(initialEntries)
+  }, [initialEntries])
   const [activeIndex, setActiveIndex] = useState(-1)
   const tbodyRef = useRef<HTMLTableSectionElement>(null)
 

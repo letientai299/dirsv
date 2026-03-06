@@ -30,6 +30,7 @@ const textTypes =
 
 export interface ServerInfo {
   pid: number
+  root: string
 }
 
 let cachedInfo: ServerInfo | null = null

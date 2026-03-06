@@ -587,15 +587,37 @@ pre {
 
 /* ---------- status ---------- */
 
-.loading,
-.error {
-  padding: 32px 16px;
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 16px;
   color: var(--text-dim);
-  font-size: 14px;
+  font-size: 13px;
+}
+
+.loading::before {
+  content: "";
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border);
+  border-top-color: var(--text-dim);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .error {
+  padding: 32px 16px;
   color: #f85149;
+  font-size: 14px;
 }
 
 /* ---------- json tree ---------- */
@@ -1078,32 +1100,74 @@ pre {
   border-left-color: var(--text);
 }
 
-/* ---------- mermaid ---------- */
+/* ---------- diagram placeholders (shared) ---------- */
 
-.mermaid-placeholder {
+.mermaid-placeholder,
+.plantuml-placeholder,
+.graphviz-placeholder,
+.d2-placeholder,
+.dbml-placeholder,
+.typst-placeholder {
   display: flex;
+  align-items: center;
   justify-content: center;
   padding: 16px 0;
 }
 
-.mermaid-error {
-  color: #f85149;
-  font-size: 13px;
-  padding: 16px;
+/* Loading spinner for unrendered placeholders */
+.mermaid-placeholder:not(.mermaid-rendered):not(.mermaid-error),
+.plantuml-placeholder:not(.plantuml-rendered):not(.plantuml-error),
+.graphviz-placeholder:not(.graphviz-rendered):not(.graphviz-error),
+.d2-placeholder:not(.d2-rendered):not(.d2-error),
+.dbml-placeholder:not(.dbml-rendered):not(.dbml-error),
+.typst-placeholder:not(.typst-rendered):not(.typst-error) {
+  min-height: 120px;
+  background: var(--surface);
+  border-radius: 6px;
 }
 
-/* Ensure mermaid SVGs respect container width */
-.mermaid-rendered svg {
+.mermaid-placeholder:not(.mermaid-rendered):not(.mermaid-error)::before,
+.plantuml-placeholder:not(.plantuml-rendered):not(.plantuml-error)::before,
+.graphviz-placeholder:not(.graphviz-rendered):not(.graphviz-error)::before,
+.d2-placeholder:not(.d2-rendered):not(.d2-error)::before,
+.dbml-placeholder:not(.dbml-rendered):not(.dbml-error)::before,
+.typst-placeholder:not(.typst-rendered):not(.typst-error)::before {
+  content: "";
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--text-dim);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Fade in rendered diagrams */
+.mermaid-rendered,
+.plantuml-rendered,
+.graphviz-rendered,
+.d2-rendered,
+.dbml-rendered,
+.typst-rendered {
+  animation: diagram-fade-in 0.2s ease-out;
+}
+
+@keyframes diagram-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Rendered SVGs respect container width */
+.mermaid-rendered svg,
+.graphviz-rendered svg,
+.d2-rendered svg,
+.dbml-rendered svg,
+.typst-rendered svg {
   max-width: 100%;
   height: auto;
-}
-
-/* ---------- plantuml ---------- */
-
-.plantuml-placeholder {
-  display: flex;
-  justify-content: center;
-  padding: 16px 0;
 }
 
 .plantuml-rendered img {
@@ -1111,125 +1175,31 @@ pre {
   height: auto;
 }
 
-/* ---------- graphviz ---------- */
-
-.graphviz-placeholder {
-  display: flex;
-  justify-content: center;
-  padding: 16px 0;
-}
-
-.graphviz-error {
-  color: #f85149;
-  font-size: 13px;
-  padding: 16px;
-}
-
-.graphviz-rendered svg {
-  max-width: 100%;
-  height: auto;
-}
-
-/* standalone .gv/.dot file view */
-.graphviz-standalone {
-  display: flex;
-  justify-content: center;
-  padding: 24px 16px;
-}
-
-.graphviz-standalone svg {
-  max-width: 100%;
-  height: auto;
-}
-
-/* ---------- d2 ---------- */
-
-.d2-placeholder {
-  display: flex;
-  justify-content: center;
-  padding: 16px 0;
-}
-
-.d2-error {
-  color: #f85149;
-  font-size: 13px;
-  padding: 16px;
-}
-
-.d2-rendered svg {
-  max-width: 100%;
-  height: auto;
-}
-
-/* standalone .d2 file view */
-.d2-standalone {
-  display: flex;
-  justify-content: center;
-  padding: 24px 16px;
-}
-
-.d2-standalone svg {
-  max-width: 100%;
-  height: auto;
-}
-
-/* ---------- dbml ---------- */
-
-.dbml-placeholder {
-  display: flex;
-  justify-content: center;
-  padding: 16px 0;
-}
-
-.dbml-error {
-  color: #f85149;
-  font-size: 13px;
-  padding: 16px;
-}
-
-.dbml-rendered svg {
-  max-width: 100%;
-  height: auto;
-}
-
-/* standalone .dbml file view */
-.dbml-standalone {
-  display: flex;
-  justify-content: center;
-  padding: 24px 16px;
-}
-
-.dbml-standalone svg {
-  max-width: 100%;
-  height: auto;
-}
-
-/* ---------- typst ---------- */
-
-.typst-placeholder {
-  display: flex;
-  justify-content: center;
-  padding: 16px 0;
-}
-
+/* Diagram errors */
+.mermaid-error,
+.graphviz-error,
+.d2-error,
+.dbml-error,
 .typst-error {
   color: #f85149;
   font-size: 13px;
   padding: 16px;
 }
 
-.typst-rendered svg {
-  max-width: 100%;
-  height: auto;
-}
+/* ---------- standalone diagram views ---------- */
 
-/* standalone .typ file view */
+.graphviz-standalone,
+.d2-standalone,
+.dbml-standalone,
 .typst-standalone {
   display: flex;
   justify-content: center;
   padding: 24px 16px;
 }
 
+.graphviz-standalone svg,
+.d2-standalone svg,
+.dbml-standalone svg,
 .typst-standalone svg {
   max-width: 100%;
   height: auto;

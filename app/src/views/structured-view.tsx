@@ -28,6 +28,11 @@ export function StructuredView({ content, parse, lang }: Props) {
   const rawHtml = useShiki(content, lang)
 
   useEffect(() => {
+    // Reset UI state when content changes (e.g., navigating between .json files).
+    setFilter("")
+    setLargeWarned(false)
+    setMode("tree")
+
     try {
       const val = parse(content) as JsonValue
       setParsed(val)

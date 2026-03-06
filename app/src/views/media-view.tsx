@@ -66,9 +66,13 @@ export function MediaView({ path, kind }: Props) {
     currentIdx >= 0 ? `${currentIdx + 1} / ${siblings.length}` : ""
 
   // Fade-in: track whether the current image has loaded.
-  // Using key={rawUrl} on the <img> forces a fresh element per image,
-  // so loaded always starts false and onLoad fires after mount.
   const [loaded, setLoaded] = useState(false)
+
+  // Reset fade state when the image changes so each new image fades in.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset on rawUrl change
+  useEffect(() => {
+    setLoaded(false)
+  }, [rawUrl])
 
   // Preload adjacent images for instant transitions.
   useEffect(() => {

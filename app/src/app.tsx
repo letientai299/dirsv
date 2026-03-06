@@ -1,12 +1,10 @@
 import { lazy, Suspense } from "preact/compat"
 import { useCallback, useEffect, useState } from "preact/hooks"
-import { type BrowseResponse, browse } from "./lib/api"
+import { type BrowseResponse, browse, fetchInfo } from "./lib/api"
+import { FileView } from "./views/file-view"
 
 const DirView = lazy(() =>
   import("./views/dir-view").then((m) => ({ default: m.DirView })),
-)
-const FileView = lazy(() =>
-  import("./views/file-view").then((m) => ({ default: m.FileView })),
 )
 
 export function App() {
@@ -20,13 +18,21 @@ export function App() {
     return () => window.removeEventListener("popstate", onPopState)
   }, [])
 
+  const [rootName, setRootName] = useState("")
   useEffect(() => {
-    document.title = path === "/" ? "/" : path
-  }, [path])
+    void fetchInfo().then((info) => setRootName(info.root))
+  }, [])
+
+  useEffect(() => {
+    if (!rootName) return
+    document.title = path === "/" ? rootName : `${path} — ${rootName}`
+  }, [path, rootName])
 
   useEffect(() => {
     const controller = new AbortController()
-    setData(null)
+    // Don't setData(null) — keep the previous response so FileView stays
+    // mounted (toolbar, sidebar, footer persist) while the next browse resolves.
+    // FileView already manages its own loading state via the stale/fresh pattern.
     setError(null)
     browse(path, controller.signal)
       .then(setData)
@@ -60,9 +66,5 @@ export function App() {
 
   // "index" response carries the resolved file path (e.g., "docs/index.html").
   const filePath = data.type === "index" ? `/${data.path}` : path
-  return (
-    <Suspense fallback={fallback}>
-      <FileView path={filePath} />
-    </Suspense>
-  )
+  return <FileView path={filePath} />
 }

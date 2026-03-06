@@ -26,11 +26,14 @@ export function MarkdownView({ content, path }: Props) {
   const [error, setError] = useState<string | null>(null)
   const contentRef = useRef<HTMLElement>(null)
   const prevContentRef = useRef("")
+  const prevPathRef = useRef("")
 
   useEffect(() => {
-    // Skip re-render if raw content is unchanged (WS may re-fetch same file).
-    if (content === prevContentRef.current) return
+    // Skip re-render if both path and content are unchanged (WS may re-fetch same file).
+    if (content === prevContentRef.current && path === prevPathRef.current)
+      return
     prevContentRef.current = content
+    prevPathRef.current = path
 
     // Keep old result visible — no setResult(null) flash.
     setError(null)
@@ -62,7 +65,7 @@ export function MarkdownView({ content, path }: Props) {
     return () => {
       cancelled = true
     }
-  }, [content])
+  }, [content, path])
 
   // Update page title with the first h1 heading when available.
   useEffect(() => {
