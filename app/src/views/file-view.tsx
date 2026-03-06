@@ -3,7 +3,13 @@ import { lazy, Suspense } from "preact/compat"
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import { AppFooter } from "../components/app-footer"
 import { Toolbar } from "../components/toolbar"
-import { fetchRaw, type RawResult } from "../lib/api"
+import type { RawResult } from "../lib/api"
+import {
+  clearCache,
+  getCached,
+  invalidate,
+  prefetch,
+} from "../lib/content-cache"
 import { FileIcon, ParentIcon } from "../lib/file-icon"
 import { formatSize } from "../lib/format"
 import { ChevronLeft, ChevronRight, SidebarIcon } from "../lib/icons"
@@ -56,6 +62,13 @@ const YamlStructuredView = lazy(() =>
     }),
   ),
 )
+
+function isPrefetchable(name: string, isDir: boolean): boolean {
+  if (isDir) return false
+  if (/\.html?$/i.test(name)) return false
+  if (imageRe.test(name) || videoRe.test(name)) return false
+  return true
+}
 
 interface Props {
   path: string
@@ -294,24 +307,43 @@ export function FileView({ path }: Props) {
   )
   const shortcutDefs = useShortcuts(boundShortcuts, [boundShortcuts])
 
-  // Fetch raw file content
+  // Fetch raw file content — delegates to prefetch() for cache/dedup/abort.
   const load = useCallback(
     (signal?: AbortSignal) => {
       if (isHtml || isImage || isVideo) return
       setError(null)
-      fetchRaw(path, signal)
-        .then((r) => setLoaded({ path, result: r }))
-        .catch((err: Error) => {
-          if (err.name !== "AbortError") setError(err.message)
-        })
+      const cached = getCached(path)
+      if (cached) {
+        setLoaded({ path, result: cached })
+        return
+      }
+      const p = prefetch(path, signal)
+      if (!p) return
+      p.then((r) => {
+        if (!signal?.aborted) setLoaded({ path, result: r })
+      }).catch((err: Error) => {
+        if (err.name !== "AbortError") setError(err.message)
+      })
     },
     [path, isHtml, isImage, isVideo],
   )
 
   useAbortEffect((signal) => load(signal), [load])
 
-  // Re-fetch on file changes
-  useWS(path.replace(/^\//, ""), () => load())
+  // Re-fetch on file changes — invalidate cache so we get fresh content
+  useWS(path.replace(/^\//, ""), () => {
+    invalidate(path)
+    load()
+  })
+
+  // Clear cache when switching directories — siblings change entirely
+  const prevParentRef = useRef(parentDir)
+  useEffect(() => {
+    if (prevParentRef.current !== parentDir) {
+      clearCache()
+      prevParentRef.current = parentDir
+    }
+  }, [parentDir])
 
   // Prev/next among all siblings (dirs included) so navigation matches
   // the sidebar order instead of mysteriously jumping over directories.
@@ -323,8 +355,23 @@ export function FileView({ path }: Props) {
       ? siblings[currentIdx + 1]
       : null
 
-  const siblingHref = (name: string) =>
-    (parentDir === "/" ? "/" : `${parentDir}/`) + name
+  const siblingHref = useCallback(
+    (name: string) => (parentDir === "/" ? "/" : `${parentDir}/`) + name,
+    [parentDir],
+  )
+
+  // Prefetch adjacent siblings once the current file finishes loading
+  const loadedPath = loaded?.path
+  useEffect(() => {
+    if (loadedPath !== path) return
+    const controller = new AbortController()
+    for (const entry of [prevEntry, nextEntry]) {
+      if (entry && isPrefetchable(entry.name, entry.isDir)) {
+        void prefetch(siblingHref(entry.name), controller.signal)
+      }
+    }
+    return () => controller.abort()
+  }, [loadedPath, path, prevEntry, nextEntry, siblingHref])
 
   // Fresh result for current path, or stale result from previous path.
   // Media types (images, videos, HTML) don't use fetchRaw — never show stale content for them.
@@ -389,6 +436,11 @@ export function FileView({ path }: Props) {
                     e.preventDefault()
                     navigate(href)
                   }}
+                  onPointerEnter={
+                    isPrefetchable(entry.name, entry.isDir)
+                      ? () => prefetch(href)
+                      : undefined
+                  }
                 >
                   <span
                     class={`entry-icon${entry.isDir ? " entry-icon--folder" : ""}`}
@@ -431,6 +483,11 @@ export function FileView({ path }: Props) {
                 e.preventDefault()
                 navigate(siblingHref(prevEntry.name))
               }}
+              onPointerEnter={
+                isPrefetchable(prevEntry.name, prevEntry.isDir)
+                  ? () => prefetch(siblingHref(prevEntry.name))
+                  : undefined
+              }
             >
               <ChevronLeft />
               {prevEntry.name}
@@ -447,6 +504,11 @@ export function FileView({ path }: Props) {
                 e.preventDefault()
                 navigate(siblingHref(nextEntry.name))
               }}
+              onPointerEnter={
+                isPrefetchable(nextEntry.name, nextEntry.isDir)
+                  ? () => prefetch(siblingHref(nextEntry.name))
+                  : undefined
+              }
             >
               {nextEntry.name}
               <ChevronRight />

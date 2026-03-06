@@ -65,14 +65,12 @@ export function MediaView({ path, kind }: Props) {
   const position =
     currentIdx >= 0 ? `${currentIdx + 1} / ${siblings.length}` : ""
 
-  // Fade-in: track whether the current image has loaded.
-  const [loaded, setLoaded] = useState(false)
-
-  // Reset fade state when the image changes so each new image fades in.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset on rawUrl change
-  useEffect(() => {
-    setLoaded(false)
-  }, [rawUrl])
+  // Fade-in: track which URL has finished loading. Comparing against rawUrl
+  // resets the fade synchronously during render — no useEffect race where
+  // a deferred setLoaded(false) can clobber an onLoad that already fired
+  // for browser-cached images.
+  const [loadedUrl, setLoadedUrl] = useState("")
+  const loaded = loadedUrl === rawUrl
 
   // Preload adjacent images for instant transitions.
   useEffect(() => {
@@ -93,7 +91,7 @@ export function MediaView({ path, kind }: Props) {
             src={rawUrl}
             alt={fileName}
             class={`media-content media-fade ${loaded ? "media-fade--in" : ""}`}
-            onLoad={() => setLoaded(true)}
+            onLoad={() => setLoadedUrl(rawUrl)}
           />
         ) : (
           <video src={rawUrl} controls class="media-content">

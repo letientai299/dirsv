@@ -11,6 +11,7 @@ import { renderMarkdown, renderMarkdownHighlighted } from "../lib/markdown"
 import { handleRelativeLinkClick, rewriteMediaSrc } from "../lib/markdown-urls"
 import { renderMermaidBlocks } from "../lib/mermaid-render"
 import { renderPlantumlBlocks } from "../lib/plantuml-render"
+import { preloadDiagramBundles } from "../lib/preload-diagrams"
 import { renderTypstBlocks } from "../lib/typst-render"
 import "github-markdown-css/github-markdown.css"
 import "katex/dist/katex.min.css"
@@ -34,6 +35,8 @@ export function MarkdownView({ content, path }: Props) {
       return
     prevContentRef.current = content
     prevPathRef.current = path
+
+    preloadDiagramBundles(content)
 
     // Keep old result visible — no setResult(null) flash.
     setError(null)
