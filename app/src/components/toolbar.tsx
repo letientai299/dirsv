@@ -2,12 +2,14 @@ import { Fragment } from "preact"
 import { useCallback, useEffect, useRef, useState } from "preact/hooks"
 import { FolderIcon } from "../lib/file-icon"
 import { navigate } from "../lib/navigate"
+import type { ShortcutDef } from "../lib/shortcuts"
+import { toggleHelp, toggleTheme as toggleThemeDef } from "../lib/shortcuts"
 import { getEffectiveTheme, toggleTheme } from "../lib/theme"
 import { useKeys } from "../lib/use-keys"
 
 interface Props {
   path: string
-  showKeybinds?: boolean
+  shortcuts?: ShortcutDef[]
 }
 
 // Octicon sun (16px)
@@ -87,12 +89,23 @@ function Breadcrumbs({ path }: { path: string }) {
   )
 }
 
-function KeybindHelp() {
+const globalShortcuts: ShortcutDef[] = [toggleThemeDef, toggleHelp]
+
+function renderKeys(keys: string) {
+  return keys.split(" ").map((k, i) => (
+    <Fragment key={k}>
+      {i > 0 && " "}
+      <kbd>{k}</kbd>
+    </Fragment>
+  ))
+}
+
+function KeybindHelp({ shortcuts }: { shortcuts: ShortcutDef[] }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useKeys((e) => {
-    if (e.key === "?" && e.shiftKey) {
+    if (toggleHelp.match(e)) {
       e.preventDefault()
       setOpen((v) => !v)
     } else if (e.key === "Escape") {
@@ -108,6 +121,8 @@ function KeybindHelp() {
     return () => document.removeEventListener("mousedown", onClick)
   }, [])
 
+  const all = [...shortcuts, ...globalShortcuts]
+
   return (
     <div class="kb-help" ref={ref}>
       <button
@@ -115,6 +130,7 @@ function KeybindHelp() {
         class="theme-toggle"
         onClick={() => setOpen((v) => !v)}
         aria-label="Keyboard shortcuts"
+        title="Keyboard shortcuts"
       >
         ?
       </button>
@@ -122,42 +138,14 @@ function KeybindHelp() {
         <div class="kb-popover">
           <div class="kb-title">Keyboard shortcuts</div>
           <table class="kb-table">
-            <tr>
-              <td class="kb-keys">
-                <kbd>j</kbd> <kbd>↓</kbd>
-              </td>
-              <td>Move down</td>
-            </tr>
-            <tr>
-              <td class="kb-keys">
-                <kbd>k</kbd> <kbd>↑</kbd>
-              </td>
-              <td>Move up</td>
-            </tr>
-            <tr>
-              <td class="kb-keys">
-                <kbd>l</kbd> <kbd>Enter</kbd>
-              </td>
-              <td>Open</td>
-            </tr>
-            <tr>
-              <td class="kb-keys">
-                <kbd>h</kbd> <kbd>Backspace</kbd> <kbd>Alt+↑</kbd>
-              </td>
-              <td>Go to parent</td>
-            </tr>
-            <tr>
-              <td class="kb-keys">
-                <kbd>gg</kbd> <kbd>Home</kbd>
-              </td>
-              <td>Jump to top</td>
-            </tr>
-            <tr>
-              <td class="kb-keys">
-                <kbd>G</kbd> <kbd>End</kbd>
-              </td>
-              <td>Jump to bottom</td>
-            </tr>
+            <tbody>
+              {all.map((s) => (
+                <tr key={s.keys}>
+                  <td>{s.description}</td>
+                  <td class="kb-keys">{renderKeys(s.keys)}</td>
+                </tr>
+              ))}
+            </tbody>
           </table>
         </div>
       )}
@@ -165,7 +153,7 @@ function KeybindHelp() {
   )
 }
 
-export function Toolbar({ path, showKeybinds = true }: Props) {
+export function Toolbar({ path, shortcuts }: Props) {
   const [isDark, setIsDark] = useState(() => getEffectiveTheme() === "dark")
 
   const toggle = useCallback(() => {
@@ -173,18 +161,29 @@ export function Toolbar({ path, showKeybinds = true }: Props) {
     setIsDark(next === "dark")
   }, [])
 
+  useKeys(
+    (e) => {
+      if (toggleThemeDef.match(e)) {
+        e.preventDefault()
+        toggle()
+      }
+    },
+    [toggle],
+  )
+
   return (
     <div class="toolbar">
       <div class="toolbar-path">
         <Breadcrumbs path={path} />
       </div>
       <div class="toolbar-actions">
-        {showKeybinds && <KeybindHelp />}
+        <KeybindHelp shortcuts={shortcuts ?? []} />
         <button
           type="button"
           class="theme-toggle"
           onClick={toggle}
           aria-label="Toggle theme"
+          title="Toggle theme"
         >
           {isDark ? <SunIcon /> : <MoonIcon />}
         </button>

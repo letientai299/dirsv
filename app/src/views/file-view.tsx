@@ -11,8 +11,10 @@ import { ChevronLeft, ChevronRight } from "../lib/icons"
 import { imageRe, videoRe } from "../lib/media-types"
 import { navigate } from "../lib/navigate"
 import { parentOfFile } from "../lib/path"
+import { goToParent } from "../lib/shortcuts"
 import { useAbortEffect } from "../lib/use-abort-effect"
-import { useKeys } from "../lib/use-keys"
+import type { BoundShortcut } from "../lib/use-shortcuts"
+import { useShortcuts } from "../lib/use-shortcuts"
 import { useSiblings } from "../lib/use-siblings"
 import { useWS } from "../lib/use-ws"
 
@@ -174,6 +176,16 @@ function readSavedWidth(): number {
   return SIDEBAR_DEFAULT
 }
 
+const fileShortcutBindings = (parentDir: string): BoundShortcut[] => [
+  {
+    def: goToParent,
+    action(e) {
+      e.preventDefault()
+      navigate(parentDir)
+    },
+  },
+]
+
 export function FileView({ path }: Props) {
   const isHtml = /\.html?$/i.test(path)
   const isImage = imageRe.test(path)
@@ -220,20 +232,11 @@ export function FileView({ path }: Props) {
   const parentDir = useMemo(() => parentOfFile(path), [path])
   const siblings = useSiblings(parentDir)
 
-  // Navigate to parent on h / Backspace / Alt+Up
-  useKeys(
-    (e) => {
-      if (
-        e.key === "h" ||
-        e.key === "Backspace" ||
-        (e.key === "ArrowUp" && e.altKey)
-      ) {
-        e.preventDefault()
-        navigate(parentDir)
-      }
-    },
+  const boundShortcuts = useMemo(
+    () => fileShortcutBindings(parentDir),
     [parentDir],
   )
+  const shortcutDefs = useShortcuts(boundShortcuts, [boundShortcuts])
 
   // Fetch raw file content
   const load = useCallback(
@@ -277,7 +280,7 @@ export function FileView({ path }: Props) {
 
   return (
     <div class="file-layout">
-      <Toolbar path={path} showKeybinds={false} />
+      <Toolbar path={path} shortcuts={shortcutDefs} />
       <hr class="file-separator" />
       <div class="file-body">
         <aside class="file-sidebar" style={{ width: `${sidebarWidth}px` }}>

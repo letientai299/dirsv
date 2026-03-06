@@ -5,7 +5,16 @@ import { browse, type DirEntry } from "../lib/api"
 import { FileIcon, ParentIcon } from "../lib/file-icon"
 import { formatSize } from "../lib/format"
 import { parentOf } from "../lib/path"
-import { useKeys } from "../lib/use-keys"
+import {
+  createJumpToTop,
+  goToParent,
+  jumpToBottom,
+  moveDown,
+  moveUp,
+  openEntry,
+} from "../lib/shortcuts"
+import type { BoundShortcut } from "../lib/use-shortcuts"
+import { useShortcuts } from "../lib/use-shortcuts"
 import { useWS } from "../lib/use-ws"
 
 interface Props {
@@ -23,91 +32,10 @@ function formatDate(iso: string): string {
   return dateFmt.format(new Date(iso))
 }
 
-function navigateToParent(
-  e: KeyboardEvent,
-  rows: { href: string; key: string }[],
-  onNavigate: (to: string) => void,
-) {
-  const parent = rows[0]
-  if (parent?.key !== "..") return
-  e.preventDefault()
-  onNavigate(parent.href)
-}
-
-function handleGG(
-  e: KeyboardEvent,
-  setActiveIndex: (fn: (i: number) => number) => void,
-  pendingG: { current: number },
-): void {
-  const now = Date.now()
-  if (now - pendingG.current < 500) {
-    e.preventDefault()
-    setActiveIndex(() => 0)
-    pendingG.current = 0
-  } else {
-    pendingG.current = now
-  }
-}
-
-function handleDirNavKey(
-  e: KeyboardEvent,
-  rows: { href: string; key: string }[],
-  activeIndex: number,
-  setActiveIndex: (fn: (i: number) => number) => void,
-  onNavigate: (to: string) => void,
-  pendingG: { current: number },
-) {
-  if (e.key !== "g") pendingG.current = 0
-
-  if (e.key === "ArrowUp" && e.altKey) {
-    navigateToParent(e, rows, onNavigate)
-    return
-  }
-
-  switch (e.key) {
-    case "ArrowDown":
-    case "j":
-      e.preventDefault()
-      setActiveIndex((i) => Math.min(i + 1, rows.length - 1))
-      break
-    case "ArrowUp":
-    case "k":
-      e.preventDefault()
-      setActiveIndex((i) => Math.max(i - 1, 0))
-      break
-    case "Enter":
-    case "l": {
-      const row = rows[activeIndex]
-      if (activeIndex >= 0 && row) {
-        e.preventDefault()
-        onNavigate(row.href)
-      }
-      break
-    }
-    case "h":
-    case "Backspace":
-      navigateToParent(e, rows, onNavigate)
-      break
-    case "Home":
-      e.preventDefault()
-      setActiveIndex(() => 0)
-      break
-    case "End":
-    case "G":
-      e.preventDefault()
-      setActiveIndex(() => rows.length - 1)
-      break
-    case "g":
-      handleGG(e, setActiveIndex, pendingG)
-      break
-  }
-}
-
 export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
   const [entries, setEntries] = useState(initialEntries)
   const [activeIndex, setActiveIndex] = useState(-1)
   const tbodyRef = useRef<HTMLTableSectionElement>(null)
-  const pendingGRef = useRef(0)
 
   const refresh = useCallback(() => {
     browse(path)
@@ -149,22 +77,66 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
     row?.scrollIntoView({ block: "nearest" })
   }, [activeIndex])
 
-  useKeys(
-    (e) =>
-      handleDirNavKey(
-        e,
-        rows,
-        activeIndex,
-        setActiveIndex,
-        onNavigate,
-        pendingGRef,
-      ),
-    [rows, activeIndex, onNavigate],
+  const jumpToTop = useMemo(() => createJumpToTop(), [])
+
+  const shortcuts = useMemo<BoundShortcut[]>(
+    () => [
+      {
+        def: goToParent,
+        action(e) {
+          const parent = rows[0]
+          if (parent?.key !== "..") return
+          e.preventDefault()
+          onNavigate(parent.href)
+        },
+      },
+      {
+        def: jumpToTop,
+        action(e) {
+          e.preventDefault()
+          setActiveIndex(() => 0)
+        },
+      },
+      {
+        def: moveDown,
+        action(e) {
+          e.preventDefault()
+          setActiveIndex((i) => Math.min(i + 1, rows.length - 1))
+        },
+      },
+      {
+        def: moveUp,
+        action(e) {
+          e.preventDefault()
+          setActiveIndex((i) => Math.max(i - 1, 0))
+        },
+      },
+      {
+        def: openEntry,
+        action(e) {
+          const row = rows[activeIndex]
+          if (activeIndex >= 0 && row) {
+            e.preventDefault()
+            onNavigate(row.href)
+          }
+        },
+      },
+      {
+        def: jumpToBottom,
+        action(e) {
+          e.preventDefault()
+          setActiveIndex(() => rows.length - 1)
+        },
+      },
+    ],
+    [rows, activeIndex, onNavigate, jumpToTop],
   )
+
+  const defs = useShortcuts(shortcuts, [shortcuts])
 
   return (
     <div class="dir-layout">
-      <Toolbar path={path} />
+      <Toolbar path={path} shortcuts={defs} />
       <hr class="file-separator" />
       <div class="dir-scroll">
         <table class="dir-table">
