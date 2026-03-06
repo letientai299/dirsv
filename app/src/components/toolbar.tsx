@@ -5,7 +5,11 @@ import { FolderIcon } from "../lib/file-icon"
 import { navigate } from "../lib/navigate"
 import type { ShortcutDef } from "../lib/shortcuts"
 import { toggleHelp, toggleTheme as toggleThemeDef } from "../lib/shortcuts"
-import { getEffectiveTheme, toggleTheme } from "../lib/theme"
+import {
+  getEffectiveTheme,
+  listenThemeChanges,
+  toggleTheme,
+} from "../lib/theme"
 import { useKeys } from "../lib/use-keys"
 
 interface Props {
@@ -162,6 +166,8 @@ export function Toolbar({ path, shortcuts, actions }: Props) {
     const next = toggleTheme()
     setIsDark(next === "dark")
   }, [])
+
+  useEffect(() => listenThemeChanges((t) => setIsDark(t === "dark")), [])
 
   useKeys(
     (e) => {

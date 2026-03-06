@@ -17,3 +17,18 @@ export function toggleTheme(): Theme {
   window.dispatchEvent(new CustomEvent("theme-change"))
   return next
 }
+
+/** Listen for theme changes from other tabs via `storage` events. */
+export function listenThemeChanges(cb: (theme: Theme) => void): () => void {
+  const handler = (e: StorageEvent) => {
+    if (e.key !== STORAGE_KEY) return
+    const theme =
+      e.newValue === "light" || e.newValue === "dark"
+        ? e.newValue
+        : getEffectiveTheme()
+    document.documentElement.setAttribute("data-theme", theme)
+    cb(theme)
+  }
+  window.addEventListener("storage", handler)
+  return () => window.removeEventListener("storage", handler)
+}

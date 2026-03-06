@@ -1,6 +1,6 @@
 import type { JSX } from "preact"
 import { lazy, Suspense } from "preact/compat"
-import { useCallback, useMemo, useRef, useState } from "preact/hooks"
+import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import { parse as parseYaml } from "yaml"
 import { AppFooter } from "../components/app-footer"
 import { Toolbar } from "../components/toolbar"
@@ -159,6 +159,7 @@ function renderFileContent(
 }
 
 const SIDEBAR_WIDTH_KEY = "dirsv-sidebar-width"
+const SIDEBAR_OPEN_KEY = "dirsv-sidebar-open"
 const SIDEBAR_DEFAULT = 220
 const SIDEBAR_MIN = 140
 const SIDEBAR_MAX = 400
@@ -201,9 +202,28 @@ export function FileView({ path }: Props) {
   const isImage = imageRe.test(path)
   const isVideo = videoRe.test(path)
 
-  // Sidebar visibility — auto-collapse on narrow viewports
-  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 768)
-  const handleToggleSidebar = useCallback(() => setSidebarOpen((v) => !v), [])
+  // Sidebar visibility — persist to localStorage, fall back to viewport check
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    try {
+      const stored = localStorage.getItem(SIDEBAR_OPEN_KEY)
+      if (stored === "1") return true
+      if (stored === "0") return false
+    } catch {
+      // localStorage may be unavailable
+    }
+    return window.innerWidth > 768
+  })
+  const handleToggleSidebar = useCallback(() => {
+    setSidebarOpen((v) => {
+      const next = !v
+      try {
+        localStorage.setItem(SIDEBAR_OPEN_KEY, next ? "1" : "0")
+      } catch {
+        // localStorage may be unavailable
+      }
+      return next
+    })
+  }, [])
 
   // Resizable sidebar
   const [sidebarWidth, setSidebarWidth] = useState(readSavedWidth)
@@ -236,6 +256,24 @@ export function FileView({ path }: Props) {
     document.addEventListener("mousemove", onMove)
     document.addEventListener("mouseup", onUp)
   }, [])
+
+  // Cross-tab sync for sidebar visibility and width
+  useEffect(() => {
+    const handler = (e: StorageEvent) => {
+      if (e.key === SIDEBAR_OPEN_KEY) {
+        setSidebarOpen(e.newValue === "1")
+      } else if (e.key === SIDEBAR_WIDTH_KEY) {
+        const n = Number(e.newValue)
+        if (n >= SIDEBAR_MIN && n <= SIDEBAR_MAX) {
+          widthRef.current = n
+          setSidebarWidth(n)
+        }
+      }
+    }
+    window.addEventListener("storage", handler)
+    return () => window.removeEventListener("storage", handler)
+  }, [])
+
   // Pair result with the path it belongs to so stale content can be shown
   // dimmed while the next file loads, avoiding a flash to "Loading...".
   const [loaded, setLoaded] = useState<{
