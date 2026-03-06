@@ -545,3 +545,706 @@ treemap-beta
             "zod": 18
             "axios": 20
 ```
+
+---
+
+## Stress Tests — Advanced Features
+
+The diagrams below combine multiple advanced Mermaid features (directives,
+frontmatter config, theme variables, HTML labels, markdown strings, classDef,
+linkStyle, nested subgraphs, click events, notes, and new `@{}` shapes) to
+stress-test the renderer.
+
+### S1. Flowchart — Kitchen Sink
+
+Deeply nested subgraphs, mixed directions, new `@{}` shapes, `classDef`,
+`linkStyle`, markdown strings, and HTML line breaks.
+
+```mermaid
+---
+title: CI/CD Pipeline — Full Lifecycle
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#4a90d9"
+    primaryTextColor: "#fff"
+    primaryBorderColor: "#2c5282"
+    lineColor: "#718096"
+    secondaryColor: "#48bb78"
+    tertiaryColor: "#ed8936"
+---
+flowchart TB
+    trigger@{ shape: stadium, label: "Push to main" }
+    gate@{ shape: diam, label: "Branch<br/>protection<br/>passed?" }
+    skip@{ shape: bolt, label: "Rejected" }
+
+    subgraph build_phase["🔨 Build Phase"]
+        direction LR
+        lint@{ shape: rect, label: "**Lint** & Format" }
+        compile@{ shape: rect, label: "Compile<br/>TypeScript" }
+        bundle@{ shape: rect, label: "Bundle<br/>(Rolldown)" }
+        lint --> compile --> bundle
+    end
+
+    subgraph test_phase["🧪 Test Phase"]
+        direction TB
+        subgraph unit["Unit Tests"]
+            direction LR
+            ut_fe@{ shape: rounded, label: "Frontend<br/>Vitest" }
+            ut_be@{ shape: rounded, label: "Backend<br/>go test" }
+        end
+        subgraph integration["Integration"]
+            direction LR
+            api_test@{ shape: rounded, label: "API<br/>contracts" }
+            e2e@{ shape: rounded, label: "E2E<br/>Playwright" }
+        end
+        unit --> integration
+    end
+
+    subgraph deploy_phase["🚀 Deploy"]
+        direction LR
+        staging@{ shape: cyl, label: "Staging<br/>DB" }
+        canary@{ shape: hex, label: "Canary<br/>10%" }
+        prod@{ shape: dbl-circ, label: "Production" }
+        staging --> canary --> prod
+    end
+
+    report@{ shape: doc, label: "Deploy<br/>Report" }
+    notify@{ shape: notch-rect, label: "Slack<br/>Notification" }
+
+    trigger --> gate
+    gate -->|Yes| build_phase
+    gate -->|No| skip
+    build_phase --> test_phase
+    test_phase --> deploy_phase
+    deploy_phase --> report --> notify
+
+    linkStyle 0,1,8,9,10,11 stroke:#4a90d9,stroke-width:3px
+    linkStyle 2 stroke:#e53e3e,stroke-width:2px,stroke-dasharray:5
+
+    classDef success fill:#48bb78,stroke:#276749,color:#ffffff
+    classDef danger fill:#fc8181,stroke:#c53030,color:#ffffff
+    classDef info fill:#63b3ed,stroke:#2b6cb0,color:#ffffff
+
+    class prod,canary success
+    class skip danger
+    class report,notify info
+```
+
+### S2. Sequence Diagram — Microservice Auth with Parallel, Critical, and Breaks
+
+Actors, participants, activation bars, nested `alt`/`par`/`critical`/`break`,
+notes, and `autonumber`.
+
+```mermaid
+---
+config:
+  sequence:
+    mirrorActors: false
+    messageAlign: center
+    actorMargin: 80
+---
+sequenceDiagram
+    autonumber
+
+    actor User
+    participant GW as API Gateway
+    participant Auth as Auth Service
+    participant Cache as Redis Cache
+    participant IDP as OAuth2 Provider
+    participant DB as PostgreSQL
+    participant Audit as Audit Log
+
+    User ->>+ GW: POST /login {email, password}
+    GW ->>+ Auth: authenticate(credentials)
+
+    critical Token cache lookup
+        Auth ->>+ Cache: GET session:{email}
+        Cache -->>- Auth: cache miss
+    option Cache hit
+        Cache -->> Auth: cached JWT
+        Auth -->> GW: 200 OK (cached)
+    end
+
+    Auth ->>+ DB: SELECT user WHERE email = $1
+    DB -->>- Auth: user row
+
+    alt User not found
+        Auth -->> GW: 404 Not Found
+        GW -->> User: Invalid credentials
+    else Password mismatch
+        Auth ->> Audit: log(FAILED_LOGIN, email)
+        Auth -->> GW: 401 Unauthorized
+        GW -->> User: Invalid credentials
+    else Valid credentials
+        par Issue tokens & log
+            Auth ->> Auth: sign accessToken (15m)
+            Auth ->> Auth: sign refreshToken (7d)
+        and
+            Auth ->>+ Audit: log(LOGIN_SUCCESS, userId)
+            Audit -->>- Auth: ack
+        end
+
+        Auth ->>+ Cache: SET session:{email} JWT EX 900
+        Cache -->>- Auth: OK
+
+        Auth -->>- GW: {accessToken, refreshToken}
+
+        break Rate limit exceeded
+            GW -->> User: 429 Too Many Requests
+        end
+
+        GW -->>- User: 200 OK + Set-Cookie
+    end
+
+    Note over User,Audit: All auth events are<br/>persisted to the audit log<br/>for compliance (SOC 2)
+    Note right of Cache: TTL = 15 min<br/>matches access token expiry
+```
+
+### S3. Class Diagram — Generic Repository with Patterns
+
+Generics, interfaces, abstract classes, composition, aggregation, dependency,
+namespaces, notes, and style overrides.
+
+```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#ebf8ff"
+    primaryBorderColor: "#2b6cb0"
+---
+classDiagram
+    namespace DomainLayer {
+        class Entity~ID~ {
+            <<abstract>>
+            #id: ID
+            #createdAt: DateTime
+            #updatedAt: DateTime
+            +getId() ID
+            +equals(other: Entity~ID~) bool
+        }
+        class AggregateRoot~ID~ {
+            <<abstract>>
+            -domainEvents: DomainEvent[]
+            +addEvent(event: DomainEvent) void
+            +clearEvents() DomainEvent[]
+        }
+        class User {
+            +email: EmailAddress
+            +role: Role
+            -passwordHash: string
+            -mfaSecret: string?
+            +verifyPassword(plain: string) bool
+            +enableMFA() TOTPSecret
+            +hasPermission(perm: Permission) bool
+        }
+        class Role {
+            <<enumeration>>
+            ADMIN
+            EDITOR
+            VIEWER
+        }
+        class Permission {
+            <<enumeration>>
+            READ
+            WRITE
+            DELETE
+            MANAGE_USERS
+        }
+    }
+
+    namespace InfrastructureLayer {
+        class Repository~T, ID~ {
+            <<interface>>
+            +findById(id: ID) Promise~T?~
+            +findAll(spec: Specification~T~) Promise~T[]~
+            +save(entity: T) Promise~T~
+            +delete(id: ID) Promise~void~
+            +exists(id: ID) Promise~bool~
+        }
+        class UnitOfWork {
+            <<interface>>
+            +begin() Promise~void~
+            +commit() Promise~void~
+            +rollback() Promise~void~
+        }
+        class PgUserRepository {
+            -pool: PgPool
+            -mapper: UserMapper
+            +findById(id: UUID) Promise~User?~
+            +findByEmail(email: string) Promise~User?~
+            +save(user: User) Promise~User~
+            +delete(id: UUID) Promise~void~
+            +exists(id: UUID) Promise~bool~
+        }
+        class UserMapper {
+            +toDomain(row: UserRow) User
+            +toPersistence(user: User) UserRow
+        }
+    }
+
+    Entity~ID~ <|-- AggregateRoot~ID~ : extends
+    AggregateRoot~ID~ <|-- User : extends
+    Repository~T, ID~ <|.. PgUserRepository : implements
+    PgUserRepository --> UserMapper : uses
+    PgUserRepository ..> UnitOfWork : requires
+    User --> Role : has
+    User --> "0..*" Permission : granted
+
+    note for AggregateRoot "Collects domain events\nfor eventual consistency\nvia outbox pattern"
+    note for PgUserRepository "Connection pooling via\npg-pool (max 20 conns)"
+```
+
+### S4. State Diagram — Complex Order Lifecycle
+
+Nested composite states, concurrent regions, choice/fork/join pseudo-states,
+entry/exit actions, and notes.
+
+```mermaid
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#f7fafc"
+    primaryBorderColor: "#4a5568"
+---
+stateDiagram-v2
+    [*] --> Draft: customer starts order
+
+    state Draft {
+        [*] --> EditingCart
+        EditingCart --> EditingCart: add/remove item
+        EditingCart --> ValidatingCart: checkout
+        ValidatingCart --> EditingCart: validation failed
+        ValidatingCart --> [*]: valid
+    }
+
+    Draft --> AwaitingPayment: submit order
+
+    state AwaitingPayment {
+        [*] --> PaymentPending
+        PaymentPending --> ProcessingPayment: payment initiated
+        ProcessingPayment --> PaymentPending: retry (attempt < 3)
+
+        state payment_choice <<choice>>
+        ProcessingPayment --> payment_choice
+        payment_choice --> PaymentConfirmed: success
+        payment_choice --> PaymentFailed: declined
+        PaymentFailed --> [*]
+        PaymentConfirmed --> [*]
+    }
+
+    AwaitingPayment --> Cancelled: payment failed / timeout
+
+    state Fulfillment {
+        state warehouse_fork <<fork>>
+        state warehouse_join <<join>>
+
+        [*] --> warehouse_fork
+        warehouse_fork --> Picking
+        warehouse_fork --> QualityCheck
+
+        Picking --> Packing: items picked
+        QualityCheck --> Packing: QC passed
+
+        Packing --> warehouse_join
+        warehouse_join --> ReadyToShip
+        ReadyToShip --> [*]
+    }
+
+    AwaitingPayment --> Fulfillment: payment confirmed
+
+    state Shipping {
+        [*] --> InTransit
+        InTransit --> OutForDelivery: arrived at local hub
+        OutForDelivery --> DeliveryAttempt: driver dispatched
+
+        state delivery_choice <<choice>>
+        DeliveryAttempt --> delivery_choice
+        delivery_choice --> Delivered: recipient accepted
+        delivery_choice --> FailedDelivery: no one home
+        FailedDelivery --> OutForDelivery: reschedule
+        Delivered --> [*]
+    }
+
+    Fulfillment --> Shipping: dispatched
+    Shipping --> Completed: delivered
+
+    state Completed {
+        [*] --> ReturnWindow
+        ReturnWindow --> Closed: 30 days elapsed
+        ReturnWindow --> ReturnRequested: customer requests return
+        ReturnRequested --> Refunded: return received
+        Refunded --> Closed
+        Closed --> [*]
+    }
+
+    Completed --> [*]
+    Cancelled --> [*]
+
+    note right of Fulfillment
+        Picking and QC run in
+        parallel (fork/join)
+    end note
+
+    note left of Shipping
+        Max 3 delivery attempts
+        before returning to sender
+    end note
+```
+
+### S5. Gantt — Large Cross-Team Release Plan
+
+8 sections, 40+ tasks, heavy use of milestones, `crit`, `done`, `active`,
+multi-task dependencies (`after a b`), `until` constraints, weekend exclusions,
+and custom axis formatting.
+
+```mermaid
+gantt
+    title Platform v3.0 — Full Release Cycle
+    dateFormat YYYY-MM-DD
+    axisFormat %b %d
+
+    excludes weekends
+
+    section Product
+    User research             :done, pr1, 2025-01-06, 10d
+    Competitive analysis      :done, pr2, 2025-01-06, 8d
+    PRD draft                 :done, pr3, after pr1 pr2, 5d
+    Stakeholder review        :done, pr4, after pr3, 3d
+    PRD sign-off              :milestone, m_prd, after pr4, 0d
+
+    section Design
+    Information architecture  :done, ds1, after m_prd, 5d
+    Wireframes                :done, ds2, after ds1, 7d
+    Visual design             :done, ds3, after ds2, 8d
+    Prototype and user test   :done, ds4, after ds3, 6d
+    Design handoff            :milestone, m_design, after ds4, 0d
+
+    section Architecture
+    RFC draft                 :done, ar1, after m_prd, 7d
+    RFC review                :done, ar2, after ar1, 5d
+    ADR decisions             :done, ar3, after ar2, 3d
+    Schema migration plan     :done, ar4, after ar3, 4d
+    Architecture sign-off     :milestone, m_arch, after ar4, 0d
+
+    section Backend
+    Auth service              :done, be1, after m_arch, 12d
+    Event bus                 :done, be2, after m_arch, 10d
+    Order aggregate           :active, be3, after be1, 8d
+    Payment integration       :crit, be4, after be3, 10d
+    Idempotency middleware    :be5, after be2, 6d
+    Webhook dispatcher        :be6, after be5, 5d
+    Rate limiter              :crit, be7, after be2, 4d
+    API versioning layer      :be8, after be4 be6, 3d
+    Backend complete          :milestone, m_be, after be8 be7, 0d
+
+    section Frontend
+    Design system tokens      :done, fe1, after m_design, 7d
+    Component library         :active, fe2, after fe1, 10d
+    Dashboard rebuild         :fe3, after fe2, 14d
+    Checkout flow             :crit, fe4, after fe3, 8d
+    Settings and admin pages  :fe5, after fe3, 6d
+    A11y audit and fixes      :fe6, after fe4 fe5, 5d
+    Frontend complete         :milestone, m_fe, after fe6, 0d
+
+    section Infrastructure
+    Terraform modules         :done, in1, after m_arch, 8d
+    CI pipeline rewrite       :done, in2, after m_arch, 6d
+    Canary deploy pipeline    :in3, after in2, 5d
+    Observability stack       :in4, after in1, 7d
+    CDN and edge config       :in5, after in3, 3d
+    Infra complete            :milestone, m_infra, after in5 in4, 0d
+
+    section QA
+    Unit test coverage push   :crit, qa1, after m_be m_fe, 5d
+    Integration test suite    :crit, qa2, after qa1, 7d
+    Performance benchmarks    :qa3, after qa2, 4d
+    Load test at 10x traffic  :crit, qa4, after qa3, 3d
+    Security pen test         :crit, qa5, after qa4, 5d
+    QA sign-off               :milestone, m_qa, after qa5, 0d
+
+    section Release
+    Staging deploy            :rel1, after m_qa m_infra, 2d
+    Staging soak period       :rel2, after rel1, 5d
+    Release candidate         :milestone, m_rc, after rel2, 0d
+    Canary 5 percent          :crit, rel3, after m_rc, 2d
+    Canary 25 percent         :crit, rel4, after rel3, 2d
+    Full production rollout   :crit, rel5, after rel4, 1d
+    GA announcement           :milestone, m_ga, after rel5, 0d
+    Post-launch monitoring    :rel6, after m_ga, 5d
+```
+
+### S6. Flowchart — Event-Driven Architecture with Custom Shapes
+
+Uses `@{}` shapes (`doc`, `cyl`, `hex`, `cloud`, `notch-rect`, `flag`,
+`bow-rect`), themed via frontmatter, with dense inter-service connections.
+
+```mermaid
+---
+title: Event-Driven Order System
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#1a202c"
+    primaryTextColor: "#e2e8f0"
+    primaryBorderColor: "#4a5568"
+    lineColor: "#a0aec0"
+    secondaryColor: "#2d3748"
+    tertiaryColor: "#4a5568"
+    background: "#0d1117"
+---
+flowchart LR
+    %% --- Sources ---
+    web@{ shape: rounded, label: "Web App" }
+    mobile@{ shape: rounded, label: "Mobile App" }
+    webhook@{ shape: notch-rect, label: "Webhook<br/>Ingest" }
+
+    %% --- Gateway ---
+    gw@{ shape: hex, label: "API<br/>Gateway" }
+
+    %% --- Event bus ---
+    bus@{ shape: bow-rect, label: "Event Bus<br/>(NATS JetStream)" }
+
+    %% --- Services ---
+    subgraph services["Bounded Contexts"]
+        direction TB
+        order@{ shape: rect, label: "**Order**<br/>Service" }
+        payment@{ shape: rect, label: "**Payment**<br/>Service" }
+        inventory@{ shape: rect, label: "**Inventory**<br/>Service" }
+        shipping@{ shape: rect, label: "**Shipping**<br/>Service" }
+        notify@{ shape: rect, label: "**Notification**<br/>Service" }
+    end
+
+    %% --- Data stores ---
+    order_db@{ shape: cyl, label: "Orders<br/>DB" }
+    payment_db@{ shape: cyl, label: "Payments<br/>DB" }
+    inv_db@{ shape: cyl, label: "Inventory<br/>DB" }
+
+    %% --- Outputs ---
+    email@{ shape: flag, label: "Email<br/>Provider" }
+    sms@{ shape: flag, label: "SMS<br/>Provider" }
+    report@{ shape: doc, label: "Analytics<br/>Lake" }
+
+    %% --- Connections ---
+    web & mobile --> gw
+    webhook --> gw
+    gw --> bus
+
+    bus --> order
+    bus --> payment
+    bus --> inventory
+    bus --> shipping
+    bus --> notify
+
+    order --> order_db
+    payment --> payment_db
+    inventory --> inv_db
+
+    order -.->|OrderPlaced| bus
+    payment -.->|PaymentProcessed| bus
+    inventory -.->|StockReserved| bus
+    shipping -.->|ShipmentDispatched| bus
+
+    notify --> email & sms
+    bus --> report
+
+    classDef store fill:#2d3748,stroke:#4299e1,color:#bee3f8
+    classDef svc fill:#1a202c,stroke:#48bb78,color:#c6f6d5
+    classDef ext fill:#1a202c,stroke:#ed8936,color:#fefcbf
+
+    class order_db,payment_db,inv_db store
+    class order,payment,inventory,shipping,notify svc
+    class email,sms,report ext
+```
+
+### S7. Sequence Diagram — Distributed Saga with Compensations
+
+Long multi-participant flow with `rect` highlight blocks, `loop`, `opt`,
+`par`, and compensation (rollback) paths.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client
+    participant Orchestrator as Saga<br/>Orchestrator
+    participant OrderSvc as Order<br/>Service
+    participant PaymentSvc as Payment<br/>Service
+    participant InventorySvc as Inventory<br/>Service
+    participant ShippingSvc as Shipping<br/>Service
+
+    Client ->>+ Orchestrator: createOrder(cart, paymentInfo)
+
+    rect rgb(235, 248, 255)
+        Note over Orchestrator,ShippingSvc: === Forward Flow ===
+
+        Orchestrator ->>+ OrderSvc: reserveOrder(cart)
+        OrderSvc -->>- Orchestrator: orderId
+
+        Orchestrator ->>+ InventorySvc: reserveStock(orderId, items)
+        InventorySvc -->>- Orchestrator: reservationId
+
+        Orchestrator ->>+ PaymentSvc: chargePayment(orderId, amount)
+
+        alt Payment succeeds
+            PaymentSvc -->>- Orchestrator: paymentId
+
+            Orchestrator ->>+ ShippingSvc: scheduleShipment(orderId)
+            ShippingSvc -->>- Orchestrator: shipmentId
+
+            Orchestrator -->> Client: 201 Created {orderId}
+        else Payment fails
+            PaymentSvc -->> Orchestrator: 402 Declined
+        end
+    end
+
+    opt Payment was declined — compensate
+        rect rgb(254, 235, 235)
+            Note over Orchestrator,InventorySvc: === Compensation Flow ===
+
+            Orchestrator ->>+ InventorySvc: releaseStock(reservationId)
+            InventorySvc -->>- Orchestrator: released
+
+            Orchestrator ->>+ OrderSvc: cancelOrder(orderId)
+            OrderSvc -->>- Orchestrator: cancelled
+
+            loop Retry notification (max 3)
+                Orchestrator ->> Client: notify(ORDER_FAILED, reason)
+            end
+
+            Orchestrator -->>- Client: 402 Payment Declined
+        end
+    end
+```
+
+### S8. ER Diagram — Multi-Tenant SaaS with Audit Trail
+
+Dense relationships, composite keys, all cardinality types, and long attribute
+lists.
+
+```mermaid
+erDiagram
+    TENANT ||--o{ ORGANIZATION : "has"
+    ORGANIZATION ||--o{ TEAM : "contains"
+    ORGANIZATION ||--o{ PROJECT : "owns"
+    TEAM ||--o{ TEAM_MEMBER : "has"
+    USER ||--o{ TEAM_MEMBER : "belongs to"
+    USER ||--o{ SESSION : "authenticates via"
+    USER ||--o{ AUDIT_EVENT : "generates"
+    USER ||--o{ API_KEY : "owns"
+    PROJECT ||--o{ ENVIRONMENT : "deploys to"
+    PROJECT ||--o{ RESOURCE : "provisions"
+    ENVIRONMENT ||--o{ DEPLOYMENT : "runs"
+    DEPLOYMENT ||--o{ AUDIT_EVENT : "recorded in"
+    RESOURCE }o--|| RESOURCE_TYPE : "categorized as"
+    API_KEY }o--o| ORGANIZATION : "scoped to"
+
+    TENANT {
+        uuid id PK
+        varchar slug UK "lowercase, [a-z0-9-]"
+        varchar plan "free | team | enterprise"
+        jsonb feature_flags "runtime toggles"
+        timestamptz created_at
+        timestamptz suspended_at "null = active"
+    }
+    USER {
+        uuid id PK
+        uuid tenant_id FK
+        varchar email UK
+        varchar password_hash "argon2id"
+        varchar mfa_secret "nullable, TOTP"
+        varchar role "admin | member | viewer"
+        inet last_login_ip
+        timestamptz last_login_at
+        timestamptz created_at
+    }
+    ORGANIZATION {
+        uuid id PK
+        uuid tenant_id FK
+        varchar name
+        varchar billing_email
+        jsonb settings
+    }
+    TEAM {
+        uuid id PK
+        uuid org_id FK
+        varchar name UK
+        text description
+    }
+    TEAM_MEMBER {
+        uuid team_id PK, FK
+        uuid user_id PK, FK
+        varchar role "lead | member"
+        timestamptz joined_at
+    }
+    PROJECT {
+        uuid id PK
+        uuid org_id FK
+        varchar name
+        varchar status "active | archived"
+        jsonb config
+        timestamptz created_at
+    }
+    ENVIRONMENT {
+        uuid id PK
+        uuid project_id FK
+        varchar name "dev | staging | prod"
+        varchar region "us-east-1, eu-west-1, ..."
+        boolean auto_deploy
+    }
+    DEPLOYMENT {
+        uuid id PK
+        uuid env_id FK
+        uuid triggered_by FK "user_id"
+        varchar git_sha
+        varchar status "pending | running | success | failed | rolled_back"
+        integer duration_ms
+        timestamptz started_at
+        timestamptz finished_at
+    }
+    RESOURCE {
+        uuid id PK
+        uuid project_id FK
+        uuid type_id FK
+        varchar name
+        jsonb spec "provider-specific config"
+        varchar status "provisioning | ready | error | destroying"
+    }
+    RESOURCE_TYPE {
+        uuid id PK
+        varchar name UK "database | cache | queue | storage | compute"
+        varchar provider "aws | gcp | azure"
+        jsonb schema_template
+    }
+    SESSION {
+        uuid id PK
+        uuid user_id FK
+        varchar token_hash UK
+        inet ip_address
+        text user_agent
+        timestamptz expires_at
+        timestamptz created_at
+    }
+    API_KEY {
+        uuid id PK
+        uuid user_id FK
+        uuid org_id FK "nullable, org-scoped"
+        varchar key_prefix UK "first 8 chars"
+        varchar key_hash
+        varchar scopes "comma-separated"
+        timestamptz expires_at
+        timestamptz last_used_at
+    }
+    AUDIT_EVENT {
+        bigint id PK
+        uuid tenant_id FK
+        uuid actor_id FK "user or api_key"
+        uuid resource_id "polymorphic"
+        varchar resource_type "deployment | project | user | ..."
+        varchar action "create | update | delete | login | deploy"
+        jsonb diff "before/after snapshot"
+        inet ip_address
+        timestamptz created_at
+    }
+```
