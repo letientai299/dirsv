@@ -19,7 +19,7 @@ export const moveUp: ShortcutDef = {
 export const openEntry: ShortcutDef = {
   keys: "l Enter",
   description: "Open",
-  match: (e) => e.key === "Enter" || e.key === "l",
+  match: (e) => e.key === "Enter" || (e.key === "l" && !e.altKey),
 }
 
 export const goToParent: ShortcutDef = {
@@ -45,6 +45,12 @@ export const toggleHelp: ShortcutDef = {
   keys: "Shift+/",
   description: "Toggle shortcuts help",
   match: (e) => e.key === "?" && e.shiftKey,
+}
+
+export const focusPath: ShortcutDef = {
+  keys: "Alt+L",
+  description: "Focus path bar",
+  match: (e) => e.code === "KeyL" && e.altKey,
 }
 
 export const toggleSidebar: ShortcutDef = {

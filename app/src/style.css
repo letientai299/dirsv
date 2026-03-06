@@ -69,16 +69,30 @@ body {
 .toolbar-path {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
   font-size: 15px;
   font-weight: 600;
   font-family: var(--mono);
+  cursor: text;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.toolbar-path--editing {
+  border-color: var(--border);
+}
+
+.toolbar-path--editing:focus-within {
+  border-color: #54aeff;
+}
+
+.breadcrumb-last {
+  cursor: text;
 }
 
 .breadcrumb-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
   color: var(--text-dim);
   text-decoration: none;
 }
@@ -90,7 +104,17 @@ body {
 
 .breadcrumb-sep {
   color: var(--text-dim);
-  margin: 0 1px;
+}
+
+.toolbar-path-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  padding: 0;
+  outline: none;
 }
 
 .toolbar-actions {
@@ -265,6 +289,10 @@ body {
 /* folder icon color */
 .entry-icon--folder {
   color: #54aeff;
+}
+
+.toolbar-path > .entry-icon {
+  margin-right: 4px;
 }
 
 /* ---------- file view layout ---------- */

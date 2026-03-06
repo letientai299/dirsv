@@ -4,7 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "preact/hooks"
 import { FolderIcon } from "../lib/file-icon"
 import { navigate } from "../lib/navigate"
 import type { ShortcutDef } from "../lib/shortcuts"
-import { toggleHelp, toggleTheme as toggleThemeDef } from "../lib/shortcuts"
+import {
+  focusPath,
+  toggleHelp,
+  toggleTheme as toggleThemeDef,
+} from "../lib/shortcuts"
 import {
   getEffectiveTheme,
   listenThemeChanges,
@@ -48,8 +52,23 @@ function MoonIcon() {
   )
 }
 
-function Breadcrumbs({ path }: { path: string }) {
-  if (path === "/") return <span>/</span>
+function Breadcrumbs({
+  path,
+  onEditLast,
+}: {
+  path: string
+  onEditLast: () => void
+}) {
+  const editProps = {
+    role: "button" as const,
+    tabIndex: 0,
+    onClick: onEditLast,
+    onKeyDown: (e: KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") onEditLast()
+    },
+  }
+
+  if (path === "/") return <span {...editProps}>/</span>
 
   const segments = path.replace(/^\//, "").split("/")
 
@@ -63,19 +82,18 @@ function Breadcrumbs({ path }: { path: string }) {
           navigate("/")
         }}
       >
-        <span class="entry-icon entry-icon--folder">
-          <FolderIcon />
-        </span>
         /
       </a>
       {segments.map((seg, i) => {
         const href = `/${segments.slice(0, i + 1).join("/")}`
         const isLast = i === segments.length - 1
         return (
-          <Fragment key={seg}>
+          <Fragment key={href}>
             {i > 0 && <span class="breadcrumb-sep">/</span>}
             {isLast ? (
-              <span>{seg}</span>
+              <span class="breadcrumb-last" {...editProps}>
+                {seg}
+              </span>
             ) : (
               <a
                 class="breadcrumb-link"
@@ -95,7 +113,86 @@ function Breadcrumbs({ path }: { path: string }) {
   )
 }
 
-const globalShortcuts: ShortcutDef[] = [toggleThemeDef, toggleHelp]
+function PathBar({
+  path,
+  activateRef,
+}: {
+  path: string
+  activateRef: { current: (() => void) | null }
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(path)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const committedRef = useRef(false)
+
+  const activate = useCallback(() => {
+    committedRef.current = false
+    setDraft(path)
+    setEditing(true)
+  }, [path])
+
+  useEffect(() => {
+    activateRef.current = activate
+    return () => {
+      activateRef.current = null
+    }
+  }, [activate, activateRef])
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus()
+      inputRef.current.select()
+    }
+  }, [editing])
+
+  const commit = useCallback(
+    (value: string) => {
+      if (committedRef.current) return
+      committedRef.current = true
+      setEditing(false)
+      const trimmed = value.trim()
+      if (trimmed && trimmed !== path) navigate(trimmed)
+    },
+    [path],
+  )
+
+  const cancel = useCallback(() => {
+    committedRef.current = true
+    setEditing(false)
+  }, [])
+
+  return (
+    // biome-ignore lint/a11y/useKeyWithClickEvents lint/a11y/noStaticElementInteractions: Alt+L shortcut provides keyboard activation
+    <div
+      class={`toolbar-path${editing ? " toolbar-path--editing" : ""}`}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) activate()
+      }}
+    >
+      <span class="entry-icon entry-icon--folder">
+        <FolderIcon />
+      </span>
+      {editing ? (
+        <input
+          ref={inputRef}
+          class="toolbar-path-input"
+          type="text"
+          value={draft}
+          onInput={(e) => setDraft((e.target as HTMLInputElement).value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit((e.target as HTMLInputElement).value)
+            else if (e.key === "Escape") cancel()
+          }}
+          onBlur={(e) => commit(e.currentTarget.value)}
+        />
+      ) : (
+        <Breadcrumbs path={path} onEditLast={activate} />
+      )}
+    </div>
+  )
+}
+
+const globalShortcuts: ShortcutDef[] = [focusPath, toggleThemeDef, toggleHelp]
 
 function renderKeys(keys: string) {
   return keys.split(" ").map((k, i) => (
@@ -161,6 +258,7 @@ function KeybindHelp({ shortcuts }: { shortcuts: ShortcutDef[] }) {
 
 export function Toolbar({ path, shortcuts, actions }: Props) {
   const [isDark, setIsDark] = useState(() => getEffectiveTheme() === "dark")
+  const activateRef = useRef<(() => void) | null>(null)
 
   const toggle = useCallback(() => {
     const next = toggleTheme()
@@ -174,6 +272,9 @@ export function Toolbar({ path, shortcuts, actions }: Props) {
       if (toggleThemeDef.match(e)) {
         e.preventDefault()
         toggle()
+      } else if (focusPath.match(e)) {
+        e.preventDefault()
+        activateRef.current?.()
       }
     },
     [toggle],
@@ -181,9 +282,7 @@ export function Toolbar({ path, shortcuts, actions }: Props) {
 
   return (
     <div class="toolbar">
-      <div class="toolbar-path">
-        <Breadcrumbs path={path} />
-      </div>
+      <PathBar path={path} activateRef={activateRef} />
       <div class="toolbar-actions">
         {actions}
         <KeybindHelp shortcuts={shortcuts ?? []} />
