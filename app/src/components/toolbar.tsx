@@ -1,8 +1,9 @@
 import type { JSX } from "preact"
 import { Fragment } from "preact"
 import { useCallback, useEffect, useRef, useState } from "preact/hooks"
+import { browse } from "../lib/api"
 import { FolderIcon } from "../lib/file-icon"
-import { navigate } from "../lib/navigate"
+import { navigate, normalizePath } from "../lib/navigate"
 import type { ShortcutDef } from "../lib/shortcuts"
 import {
   focusPath,
@@ -122,11 +123,10 @@ function PathBar({
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(path)
+  const [error, setError] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  const committedRef = useRef(false)
 
   const activate = useCallback(() => {
-    committedRef.current = false
     setDraft(path)
     setEditing(true)
   }, [path])
@@ -145,26 +145,36 @@ function PathBar({
     }
   }, [editing])
 
-  const commit = useCallback(
-    (value: string) => {
-      if (committedRef.current) return
-      committedRef.current = true
-      setEditing(false)
-      const trimmed = value.trim()
-      if (trimmed && trimmed !== path) navigate(trimmed)
-    },
-    [path],
-  )
-
   const cancel = useCallback(() => {
-    committedRef.current = true
+    setError(false)
     setEditing(false)
   }, [])
+
+  const commit = useCallback(
+    async (value: string) => {
+      const trimmed = value.trim()
+      if (!trimmed) return cancel()
+      const normalized = normalizePath(trimmed, path)
+      if (normalized === path) return cancel()
+      try {
+        await browse(normalized)
+        setEditing(false)
+        navigate(normalized)
+      } catch {
+        setError(false)
+        requestAnimationFrame(() => {
+          setError(true)
+          inputRef.current?.select()
+        })
+      }
+    },
+    [path, cancel],
+  )
 
   return (
     // biome-ignore lint/a11y/useKeyWithClickEvents lint/a11y/noStaticElementInteractions: Alt+L shortcut provides keyboard activation
     <div
-      class={`toolbar-path${editing ? " toolbar-path--editing" : ""}`}
+      class={`toolbar-path${editing ? " toolbar-path--editing" : ""}${error ? " toolbar-path--error" : ""}`}
       onClick={(e) => {
         if (e.target === e.currentTarget) activate()
       }}
@@ -178,12 +188,20 @@ function PathBar({
           class="toolbar-path-input"
           type="text"
           value={draft}
-          onInput={(e) => setDraft((e.target as HTMLInputElement).value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commit((e.target as HTMLInputElement).value)
-            else if (e.key === "Escape") cancel()
+          onInput={(e) => {
+            setError(false)
+            setDraft((e.target as HTMLInputElement).value)
           }}
-          onBlur={(e) => commit(e.currentTarget.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter")
+              void commit((e.target as HTMLInputElement).value)
+            else if (e.key === "Escape") cancel()
+            else if (focusPath.match(e)) {
+              e.preventDefault()
+              inputRef.current?.select()
+            }
+          }}
+          onBlur={() => cancel()}
         />
       ) : (
         <Breadcrumbs path={path} onEditLast={activate} />

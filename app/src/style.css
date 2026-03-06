@@ -88,6 +88,30 @@ body {
   border-color: #54aeff;
 }
 
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-4px);
+  }
+  40%,
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+.toolbar-path--error {
+  border-color: #f85149;
+  animation: shake 0.3s ease-in-out;
+}
+
+.toolbar-path--error:focus-within {
+  border-color: #f85149;
+}
+
 .breadcrumb-last {
   cursor: text;
 }
