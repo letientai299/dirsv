@@ -1,5 +1,6 @@
 import { isRenderedAndUnchanged } from "./content-hash"
 import { renderGraphviz } from "./graphviz-render"
+import { partitionByViewport } from "./render-priority"
 import { sanitizeSvg } from "./sanitize-svg"
 
 /**
@@ -19,26 +20,17 @@ export async function renderDbml(source: string): Promise<string> {
   return renderGraphviz(dot)
 }
 
-/**
- * Renders all `.dbml-placeholder` elements inside `container` by
- * converting DBML → DOT → SVG via @softwaretechnik/dbml-renderer
- * and @hpcc-js/wasm-graphviz.
- */
-export async function renderDbmlBlocks(container: HTMLElement): Promise<void> {
-  const placeholders =
-    container.querySelectorAll<HTMLElement>(".dbml-placeholder")
-  if (placeholders.length === 0) return
+type DbmlJob = { el: HTMLElement; source: string }
 
-  const { run } = await import("@softwaretechnik/dbml-renderer")
+type RenderResult =
+  | { el: HTMLElement; ok: true; svg: string }
+  | { el: HTMLElement; ok: false }
 
-  const jobs = Array.from(placeholders).flatMap((el) => {
-    const source = el.dataset["dbml"]
-    if (!source) return []
-    if (isRenderedAndUnchanged(el, source, "dbml")) return []
-    return [{ el, source }]
-  })
-
-  const results = await Promise.all(
+function renderJobBatch(
+  run: (source: string, format: "dot") => string,
+  jobs: DbmlJob[],
+): Promise<RenderResult[]> {
+  return Promise.all(
     jobs.map(({ el, source }) =>
       Promise.resolve()
         .then(() => {
@@ -49,7 +41,9 @@ export async function renderDbmlBlocks(container: HTMLElement): Promise<void> {
         .catch(() => ({ el, ok: false as const })),
     ),
   )
+}
 
+function applyResults(results: RenderResult[]): void {
   for (const r of results) {
     if (r.ok) {
       r.el.innerHTML = sanitizeSvg(r.svg)
@@ -59,4 +53,43 @@ export async function renderDbmlBlocks(container: HTMLElement): Promise<void> {
       r.el.classList.add("dbml-error")
     }
   }
+}
+
+/**
+ * Renders all `.dbml-placeholder` elements inside `container` by
+ * converting DBML → DOT → SVG via @softwaretechnik/dbml-renderer
+ * and @hpcc-js/wasm-graphviz.
+ *
+ * Viewport-visible jobs run as a batch first via Promise.all;
+ * offscreen jobs follow in a second batch.
+ */
+export async function renderDbmlBlocks(container: HTMLElement): Promise<void> {
+  const placeholders =
+    container.querySelectorAll<HTMLElement>(".dbml-placeholder")
+  if (placeholders.length === 0) return
+
+  const { run } = await import("@softwaretechnik/dbml-renderer")
+
+  const allJobs: DbmlJob[] = Array.from(placeholders).flatMap((el) => {
+    const source = el.dataset["dbml"]
+    if (!source) return []
+    if (isRenderedAndUnchanged(el, source, "dbml")) return []
+    return [{ el, source }]
+  })
+
+  const elToJob = new Map(allJobs.map((j) => [j.el, j]))
+
+  const [vpEls, offEls] = partitionByViewport(allJobs.map((j) => j.el))
+
+  const vpJobs = vpEls.flatMap((el) => {
+    const j = elToJob.get(el)
+    return j ? [j] : []
+  })
+  const offJobs = offEls.flatMap((el) => {
+    const j = elToJob.get(el)
+    return j ? [j] : []
+  })
+
+  applyResults(await renderJobBatch(run, vpJobs))
+  applyResults(await renderJobBatch(run, offJobs))
 }

@@ -1,4 +1,5 @@
 import { isRenderedAndUnchanged } from "./content-hash"
+import { partitionByViewport, yieldToMain } from "./render-priority"
 import { sanitizeSvg } from "./sanitize-svg"
 
 const CDN = "https://esm.sh"
@@ -44,6 +45,9 @@ export async function renderTypst(source: string): Promise<string> {
 /**
  * Renders all `.typst-placeholder` elements inside `container`.
  * WASM loaded from CDN on first use — no bundling needed.
+ *
+ * Viewport-visible placeholders render first; offscreen ones follow
+ * with main-thread yields between each.
  */
 export async function renderTypstBlocks(container: HTMLElement): Promise<void> {
   const placeholders =
@@ -52,18 +56,30 @@ export async function renderTypstBlocks(container: HTMLElement): Promise<void> {
 
   const t = await getTypst()
 
-  for (const el of placeholders) {
-    const source = el.dataset["typst"]
-    if (!source) continue
-    if (isRenderedAndUnchanged(el, source, "typst")) continue
+  const [viewport, offscreen] = partitionByViewport(placeholders)
 
-    try {
-      const svg = await t.svg({ mainContent: source })
-      el.innerHTML = sanitizeSvg(svg)
-      el.classList.add("typst-rendered")
-    } catch {
-      el.textContent = "Typst render error"
-      el.classList.add("typst-error")
-    }
+  for (const el of viewport) {
+    await renderOne(t, el)
+  }
+
+  for (const el of offscreen) {
+    await yieldToMain()
+    await renderOne(t, el)
+  }
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: $typst loaded from CDN, no types
+async function renderOne(t: any, el: HTMLElement): Promise<void> {
+  const source = el.dataset["typst"]
+  if (!source) return
+  if (isRenderedAndUnchanged(el, source, "typst")) return
+
+  try {
+    const svg = await t.svg({ mainContent: source })
+    el.innerHTML = sanitizeSvg(svg)
+    el.classList.add("typst-rendered")
+  } catch {
+    el.textContent = "Typst render error"
+    el.classList.add("typst-error")
   }
 }

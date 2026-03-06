@@ -1,8 +1,13 @@
 import { isRenderedAndUnchanged } from "./content-hash"
+import { partitionByViewport, yieldToMain } from "./render-priority"
 
 /**
  * Post-process `.katex-placeholder` elements by rendering them with KaTeX.
  * Runs after morphdom patches the DOM, outside the unified pipeline.
+ *
+ * Viewport-visible placeholders render first; offscreen batch follows
+ * after a single yield (KaTeX is fast enough that per-element yields
+ * would add overhead without benefit).
  */
 export async function renderKatexBlocks(container: HTMLElement): Promise<void> {
   const placeholders =
@@ -11,22 +16,38 @@ export async function renderKatexBlocks(container: HTMLElement): Promise<void> {
 
   const katex = await import("katex")
 
-  for (const el of placeholders) {
-    const tex = el.dataset["katex"]
-    if (!tex) continue
-    if (isRenderedAndUnchanged(el, tex, "katex")) continue
+  const [viewport, offscreen] = partitionByViewport(placeholders)
 
-    const display = el.dataset["display"] === "true"
+  for (const el of viewport) {
+    renderOne(katex.default, el)
+  }
 
-    try {
-      el.innerHTML = katex.default.renderToString(tex, {
-        displayMode: display,
-        throwOnError: false,
-      })
-      el.classList.add("katex-rendered")
-    } catch {
-      el.textContent = tex
-      el.classList.add("katex-error")
+  if (offscreen.length > 0) {
+    await yieldToMain()
+    for (const el of offscreen) {
+      renderOne(katex.default, el)
     }
+  }
+}
+
+function renderOne(
+  katex: { renderToString: (tex: string, opts: object) => string },
+  el: HTMLElement,
+): void {
+  const tex = el.dataset["katex"]
+  if (!tex) return
+  if (isRenderedAndUnchanged(el, tex, "katex")) return
+
+  const display = el.dataset["display"] === "true"
+
+  try {
+    el.innerHTML = katex.renderToString(tex, {
+      displayMode: display,
+      throwOnError: false,
+    })
+    el.classList.add("katex-rendered")
+  } catch {
+    el.textContent = tex
+    el.classList.add("katex-error")
   }
 }

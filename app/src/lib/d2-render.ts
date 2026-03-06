@@ -1,4 +1,5 @@
 import { isRenderedAndUnchanged } from "./content-hash"
+import { partitionByViewport, yieldToMain } from "./render-priority"
 import { sanitizeSvg } from "./sanitize-svg"
 
 /** Render a single D2 source string to SVG. Lazy-loads the WASM engine. */
@@ -18,6 +19,9 @@ export async function renderD2(source: string): Promise<string> {
  * Renders all `.d2-placeholder` elements inside `container` by
  * dynamically importing @terrastruct/d2 and calling compile/render.
  * Runs entirely client-side via WASM — no external server needed.
+ *
+ * Viewport-visible placeholders render first; offscreen ones follow
+ * with main-thread yields between each.
  */
 export async function renderD2Blocks(container: HTMLElement): Promise<void> {
   const placeholders =
@@ -28,24 +32,40 @@ export async function renderD2Blocks(container: HTMLElement): Promise<void> {
   const d2 = new D2()
   const isDark = getIsDark()
 
-  for (const el of placeholders) {
-    const source = el.dataset["d2"]
-    if (!source) continue
-    if (isRenderedAndUnchanged(el, source, "d2")) continue
+  const [viewport, offscreen] = partitionByViewport(placeholders)
 
-    try {
-      const result = await d2.compile(source)
-      const svg = await d2.render(result.diagram, {
-        ...result.renderOptions,
-        noXMLTag: true,
-        themeID: isDark ? 200 : 0,
-      })
-      el.innerHTML = sanitizeSvg(svg)
-      el.classList.add("d2-rendered")
-    } catch {
-      el.textContent = "D2 render error"
-      el.classList.add("d2-error")
-    }
+  for (const el of viewport) {
+    await renderOne(d2, el, isDark)
+  }
+
+  for (const el of offscreen) {
+    await yieldToMain()
+    await renderOne(d2, el, isDark)
+  }
+}
+
+async function renderOne(
+  // biome-ignore lint/suspicious/noExplicitAny: D2 instance type not exported
+  d2: any,
+  el: HTMLElement,
+  isDark: boolean,
+): Promise<void> {
+  const source = el.dataset["d2"]
+  if (!source) return
+  if (isRenderedAndUnchanged(el, source, "d2")) return
+
+  try {
+    const result = await d2.compile(source)
+    const svg = await d2.render(result.diagram, {
+      ...result.renderOptions,
+      noXMLTag: true,
+      themeID: isDark ? 200 : 0,
+    })
+    el.innerHTML = sanitizeSvg(svg)
+    el.classList.add("d2-rendered")
+  } catch {
+    el.textContent = "D2 render error"
+    el.classList.add("d2-error")
   }
 }
 

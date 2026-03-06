@@ -1,4 +1,5 @@
 import { isRenderedAndUnchanged } from "./content-hash"
+import { partitionByViewport, yieldToMain } from "./render-priority"
 import { sanitizeSvg } from "./sanitize-svg"
 
 let idCounter = 0
@@ -8,6 +9,9 @@ let idCounter = 0
  * dynamically importing mermaid and calling `mermaid.render()`.
  * Theme-aware: reads `data-theme` from `<html>` or falls back to
  * `prefers-color-scheme`.
+ *
+ * Viewport-visible placeholders render first; offscreen ones follow
+ * with main-thread yields between each to keep the page responsive.
  */
 export async function renderMermaidBlocks(
   container: HTMLElement,
@@ -27,22 +31,37 @@ export async function renderMermaidBlocks(
     suppressErrorRendering: true,
   })
 
+  const [viewport, offscreen] = partitionByViewport(placeholders)
+
   // Mermaid uses shared DOM state internally — concurrent render() calls break
   // certain diagram types (ER, git graph, etc.). Render sequentially.
-  for (const el of placeholders) {
-    const source = getData(el, "mermaid")
-    if (!source) continue
-    if (isRenderedAndUnchanged(el, source, "mermaid")) continue
+  for (const el of viewport) {
+    await renderOne(mermaid, el)
+  }
 
-    const graphId = `mermaid-${++idCounter}`
-    try {
-      const { svg } = await mermaid.render(graphId, source)
-      el.innerHTML = sanitizeSvg(svg)
-      el.classList.add("mermaid-rendered")
-    } catch {
-      el.textContent = "Mermaid render error for diagram"
-      el.classList.add("mermaid-error")
-    }
+  for (const el of offscreen) {
+    await yieldToMain()
+    await renderOne(mermaid, el)
+  }
+}
+
+async function renderOne(
+  // biome-ignore lint/suspicious/noExplicitAny: mermaid's default export type is complex
+  mermaid: any,
+  el: HTMLElement,
+): Promise<void> {
+  const source = getData(el, "mermaid")
+  if (!source) return
+  if (isRenderedAndUnchanged(el, source, "mermaid")) return
+
+  const graphId = `mermaid-${++idCounter}`
+  try {
+    const { svg } = await mermaid.render(graphId, source)
+    el.innerHTML = sanitizeSvg(svg)
+    el.classList.add("mermaid-rendered")
+  } catch {
+    el.textContent = "Mermaid render error for diagram"
+    el.classList.add("mermaid-error")
   }
 }
 

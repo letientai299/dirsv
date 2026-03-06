@@ -1,4 +1,5 @@
 import { isRenderedAndUnchanged } from "./content-hash"
+import { partitionByViewport } from "./render-priority"
 
 const PLANTUML_SERVER = "https://www.plantuml.com/plantuml/svg"
 
@@ -6,6 +7,9 @@ const PLANTUML_SERVER = "https://www.plantuml.com/plantuml/svg"
  * Renders all `.plantuml-placeholder` elements inside `container` by
  * encoding the source and loading an `<img>` from the public PlantUML server.
  * Falls back to a `<pre><code>` block if the image fails to load.
+ *
+ * Viewport-visible elements are processed first. Image loads are already
+ * async and non-blocking, so no explicit yield is needed.
  */
 export function renderPlantumlBlocks(container: HTMLElement): void {
   const placeholders = container.querySelectorAll<HTMLElement>(
@@ -13,36 +17,45 @@ export function renderPlantumlBlocks(container: HTMLElement): void {
   )
   if (placeholders.length === 0) return
 
-  for (const el of placeholders) {
-    const source = el.dataset["plantuml"]
-    if (!source) continue
-    if (isRenderedAndUnchanged(el, source, "plantuml")) continue
+  const [viewport, offscreen] = partitionByViewport(placeholders)
 
-    void encodePlantuml(source).then((encoded) => {
-      const url = `${PLANTUML_SERVER}/${encoded}`
-
-      const img = document.createElement("img")
-      img.alt = "PlantUML diagram"
-
-      img.onload = () => {
-        el.innerHTML = ""
-        el.appendChild(img)
-        el.classList.add("plantuml-rendered")
-      }
-
-      img.onerror = () => {
-        const pre = document.createElement("pre")
-        const code = document.createElement("code")
-        code.textContent = source
-        pre.appendChild(code)
-        el.innerHTML = ""
-        el.appendChild(pre)
-        el.classList.add("plantuml-error")
-      }
-
-      img.src = url
-    })
+  for (const el of viewport) {
+    renderOne(el)
   }
+  for (const el of offscreen) {
+    renderOne(el)
+  }
+}
+
+function renderOne(el: HTMLElement): void {
+  const source = el.dataset["plantuml"]
+  if (!source) return
+  if (isRenderedAndUnchanged(el, source, "plantuml")) return
+
+  void encodePlantuml(source).then((encoded) => {
+    const url = `${PLANTUML_SERVER}/${encoded}`
+
+    const img = document.createElement("img")
+    img.alt = "PlantUML diagram"
+
+    img.onload = () => {
+      el.innerHTML = ""
+      el.appendChild(img)
+      el.classList.add("plantuml-rendered")
+    }
+
+    img.onerror = () => {
+      const pre = document.createElement("pre")
+      const code = document.createElement("code")
+      code.textContent = source
+      pre.appendChild(code)
+      el.innerHTML = ""
+      el.appendChild(pre)
+      el.classList.add("plantuml-error")
+    }
+
+    img.src = url
+  })
 }
 
 /** Encode PlantUML source: UTF-8 → deflateRaw → PlantUML custom base64. */
