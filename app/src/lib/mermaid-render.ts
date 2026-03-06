@@ -56,7 +56,25 @@ async function renderOne(
 
   const graphId = `mermaid-${++idCounter}`
   try {
-    const { svg } = await mermaid.render(graphId, source)
+    // Mermaid's D3 internals emit noisy console.warn calls for style mappings
+    // on elements without matching data fields (e.g. "ele `users-igw` has no
+    // mapping for property `label`"). Suppress during render.
+    // biome-ignore lint/suspicious/noConsole: intentionally patching console.warn to suppress mermaid D3 noise
+    const origWarn = console.warn
+    console.warn = (...args: unknown[]) => {
+      if (
+        typeof args[0] === "string" &&
+        args[0].includes("Do not assign mappings to elements without")
+      )
+        return
+      origWarn.apply(console, args)
+    }
+    let svg: string
+    try {
+      ;({ svg } = await mermaid.render(graphId, source))
+    } finally {
+      console.warn = origWarn
+    }
     el.innerHTML = sanitizeSvg(svg)
     el.classList.add("mermaid-rendered")
   } catch {
