@@ -528,8 +528,26 @@ func (s *Server) handleHTMLPreview(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
+	// Restrict the preview's CSP so that even if a user navigates directly
+	// to /api/htmlpreview/... (bypassing the sandboxed iframe), scripts in
+	// the previewed HTML cannot call back to dirsv's API endpoints (e.g.,
+	// /api/raw/) to exfiltrate file contents. The frontend already renders
+	// previews in a sandbox="allow-scripts" iframe (without allow-same-origin),
+	// which isolates the preview from dirsv's origin. This CSP is a
+	// defense-in-depth layer for direct-navigation scenarios.
+	//
+	// - default-src 'self': blocks cross-origin fetches (no API exfiltration)
+	// - script-src 'unsafe-inline' 'unsafe-eval': allows inline JS in the
+	//   previewed HTML (needed for most static sites) but cannot reach
+	//   cross-origin resources
+	// - style-src 'self' 'unsafe-inline': allows inline styles and
+	//   same-origin stylesheets
+	// - img/media/font-src *: allows external assets for faithful rendering
+	// - connect-src 'self': blocks fetch/XHR to other origins
 	w.Header().Set("Content-Security-Policy",
-		"default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src *")
+		"default-src 'self'; script-src 'unsafe-inline' 'unsafe-eval'; "+
+			"style-src 'self' 'unsafe-inline'; img-src * data: blob:; "+
+			"media-src * data: blob:; font-src * data:; connect-src 'self'")
 	_, _ = w.Write([]byte(html))
 }
 
