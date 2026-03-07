@@ -308,6 +308,13 @@ func (s *Server) handleBrowse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Cap entries to avoid unbounded memory on directories with millions
+	// of files. The limit is generous enough for any practical directory.
+	const maxDirEntries = 10_000
+	if len(dirEntries) > maxDirEntries {
+		dirEntries = dirEntries[:maxDirEntries]
+	}
+
 	// Trailing-slash convention: no trailing slash + dir has index.html → index type.
 	hasTrailingSlash := strings.HasSuffix(r.URL.Path, "/")
 	if !hasTrailingSlash && reqPath != "" {
@@ -430,6 +437,10 @@ func (s *Server) serveFile(
 	// Force browsers to revalidate so WS-triggered re-fetches get
 	// fresh content instead of heuristic-cached stale data.
 	w.Header().Set("Cache-Control", "no-cache")
+	// Prevent browsers from MIME-sniffing a non-HTML file (e.g., a .txt
+	// starting with "<html>") into text/html, which would enable script
+	// execution in dirsv's origin.
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 
 	name := filepath.Base(full)
 
@@ -511,7 +522,17 @@ func (s *Server) handleHTMLPreview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Read HTML content for URL rewriting.
+	// Cap preview reads to avoid OOM on multi-GB HTML files.
+	const maxPreviewSize = 10 << 20 // 10 MB
+	if info.Size() > maxPreviewSize {
+		http.Error(
+			w,
+			"file too large for preview",
+			http.StatusRequestEntityTooLarge,
+		)
+		return
+	}
+
 	content, readErr := os.ReadFile(full)
 	if readErr != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
