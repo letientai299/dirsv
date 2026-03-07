@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "preact/hooks"
 import type { FocusItem } from "../lib/use-focus-overlay"
+import { useModalKeys } from "../lib/use-keys"
 import { useZoom } from "../lib/use-zoom"
+
+const PAN_STEP = 80
 
 interface Props {
   items: FocusItem[]
@@ -12,7 +15,7 @@ export function FocusOverlay({ items, startIndex, onClose }: Props) {
   const [index, setIndex] = useState(startIndex)
   const overlayRef = useRef<HTMLDivElement>(null)
   const zoom = useZoom()
-  const { resetZoom, zoomIn, zoomOut } = zoom
+  const { resetZoom, zoomIn, zoomOut, panBy } = zoom
 
   const total = items.length
   // items is always non-empty when FocusOverlay is rendered.
@@ -47,45 +50,58 @@ export function FocusOverlay({ items, startIndex, onClose }: Props) {
     overlayRef.current?.focus()
   }, [])
 
-  // Keyboard shortcuts.
-  const onKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      switch (e.key) {
-        case "Escape":
-          onClose()
-          break
-        case "ArrowLeft":
+  // Keyboard shortcuts — modal layer suppresses all global shortcuts.
+  useModalKeys((e: KeyboardEvent) => {
+    switch (e.key) {
+      case "Escape":
+        onClose()
+        break
+      case "ArrowLeft":
+        e.preventDefault()
+        goPrev()
+        break
+      case "ArrowRight":
+        e.preventDefault()
+        goNext()
+        break
+      case "+":
+      case "=":
+        e.preventDefault()
+        zoomIn()
+        break
+      case "-":
+        e.preventDefault()
+        zoomOut()
+        break
+      case "0":
+        e.preventDefault()
+        resetZoom()
+        break
+      case "h":
+        e.preventDefault()
+        panBy(PAN_STEP, 0)
+        break
+      case "j":
+        e.preventDefault()
+        panBy(0, -PAN_STEP)
+        break
+      case "k":
+        e.preventDefault()
+        panBy(0, PAN_STEP)
+        break
+      case "l":
+        e.preventDefault()
+        panBy(-PAN_STEP, 0)
+        break
+      case "f":
+      case "F":
+        if (!e.ctrlKey && !e.metaKey) {
           e.preventDefault()
-          goPrev()
-          break
-        case "ArrowRight":
-          e.preventDefault()
-          goNext()
-          break
-        case "+":
-        case "=":
-          e.preventDefault()
-          zoomIn()
-          break
-        case "-":
-          e.preventDefault()
-          zoomOut()
-          break
-        case "0":
-          e.preventDefault()
-          resetZoom()
-          break
-        case "f":
-        case "F":
-          if (!e.ctrlKey && !e.metaKey) {
-            e.preventDefault()
-            void document.documentElement.requestFullscreen?.()
-          }
-          break
-      }
-    },
-    [onClose, goPrev, goNext, zoomIn, zoomOut, resetZoom],
-  )
+          void document.documentElement.requestFullscreen?.()
+        }
+        break
+    }
+  })
 
   // Focus trap — keep Tab within overlay.
   const onKeyDownCapture = useCallback((e: KeyboardEvent) => {
@@ -115,7 +131,6 @@ export function FocusOverlay({ items, startIndex, onClose }: Props) {
       aria-modal="true"
       aria-label="Focus view"
       tabIndex={-1}
-      onKeyDown={onKeyDown}
       onKeyDownCapture={onKeyDownCapture}
     >
       <button
@@ -125,7 +140,7 @@ export function FocusOverlay({ items, startIndex, onClose }: Props) {
         aria-label="Close overlay"
       />
 
-      {/* biome-ignore lint/a11y/useKeyWithClickEvents: keyboard zoom handled by overlay onKeyDown */}
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: keyboard handled by useModalKeys */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: zoom container needs pointer events */}
       <div
         class="focus-content"

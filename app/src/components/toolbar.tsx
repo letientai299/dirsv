@@ -256,7 +256,7 @@ function KeybindHelp({ shortcuts }: { shortcuts: ShortcutDef[] }) {
     } else if (e.key === "Escape") {
       setOpen(false)
     }
-  }, [])
+  })
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -309,18 +309,15 @@ export function Toolbar({ path, shortcuts, actions }: Props) {
 
   useEffect(() => listenThemeChanges((t) => setIsDark(t === "dark")), [])
 
-  useKeys(
-    (e) => {
-      if (toggleThemeDef.match(e)) {
-        e.preventDefault()
-        toggle()
-      } else if (focusPath.match(e)) {
-        e.preventDefault()
-        activateRef.current?.()
-      }
-    },
-    [toggle],
-  )
+  useKeys((e) => {
+    if (toggleThemeDef.match(e)) {
+      e.preventDefault()
+      toggle()
+    } else if (focusPath.match(e)) {
+      e.preventDefault()
+      activateRef.current?.()
+    }
+  })
 
   return (
     <div class="toolbar">

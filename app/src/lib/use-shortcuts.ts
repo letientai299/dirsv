@@ -11,10 +11,7 @@ export interface BoundShortcut {
  * (so stateful matchers like `gg` can track/reset), but fires only the first
  * matching action. Returns the ShortcutDef[] for display in the help popup.
  */
-export function useShortcuts(
-  shortcuts: BoundShortcut[],
-  deps: unknown[],
-): ShortcutDef[] {
+export function useShortcuts(shortcuts: BoundShortcut[]): ShortcutDef[] {
   useKeys((e) => {
     // Call ALL matchers so stateful ones (e.g., gg) can track/reset,
     // but only fire the first matching action.
@@ -25,7 +22,7 @@ export function useShortcuts(
       }
     }
     matched?.(e)
-  }, deps)
+  })
 
   return shortcuts.map((s) => s.def)
 }

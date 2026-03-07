@@ -43,18 +43,15 @@ export function MediaView({ path, kind }: Props) {
       ? siblings[currentIdx + 1]
       : null
 
-  useKeys(
-    (e) => {
-      if (e.key === "ArrowLeft" && prevPath) {
-        e.preventDefault()
-        navigate(prevPath)
-      } else if (e.key === "ArrowRight" && nextPath) {
-        e.preventDefault()
-        navigate(nextPath)
-      }
-    },
-    [prevPath, nextPath],
-  )
+  useKeys((e) => {
+    if (e.key === "ArrowLeft" && prevPath) {
+      e.preventDefault()
+      navigate(prevPath)
+    } else if (e.key === "ArrowRight" && nextPath) {
+      e.preventDefault()
+      navigate(nextPath)
+    }
+  })
 
   // Bump revision on file changes so the browser re-fetches the asset.
   const [rev, setRev] = useState(0)

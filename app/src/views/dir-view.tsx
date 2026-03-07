@@ -71,7 +71,7 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
     [parentPath, onNavigate],
   )
 
-  const defs = useShortcuts(shortcuts, [shortcuts])
+  const defs = useShortcuts(shortcuts)
 
   return (
     <div class="dir-layout">

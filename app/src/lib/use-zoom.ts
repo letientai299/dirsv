@@ -62,6 +62,10 @@ export function useZoom() {
     setState((s) => zoomTo(clampScale(s.scale / ZOOM_STEP), s))
   }, [zoomTo])
 
+  const panBy = useCallback((dx: number, dy: number) => {
+    setState((s) => ({ ...s, x: s.x + dx, y: s.y + dy }))
+  }, [])
+
   const onClick = useCallback(() => {
     if (didDrag.current) {
       didDrag.current = false
@@ -191,6 +195,7 @@ export function useZoom() {
     onPointerUp,
     zoomIn,
     zoomOut,
+    panBy,
     resetZoom,
     onClick,
   }

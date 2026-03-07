@@ -378,7 +378,7 @@ export function FileView({ path }: Props) {
     () => fileShortcutBindings(parentDir, handleToggleSidebar),
     [parentDir, handleToggleSidebar],
   )
-  const shortcutDefs = useShortcuts(boundShortcuts, [boundShortcuts])
+  const shortcutDefs = useShortcuts(boundShortcuts)
 
   // Fetch raw file content — delegates to prefetch() for cache/dedup/abort.
   const load = useCallback(
