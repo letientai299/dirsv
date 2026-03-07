@@ -7,6 +7,10 @@
   --text-dim: light-dark(#656d76, #8b949e);
   --row-active: light-dark(#ddf4ff, #1a2332);
   --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  --accent: #58a6ff;
+  --danger: #f85149;
+  --warning: #d29922;
+  --success: #3fb950;
   --focus-ring: #4493f8;
   --focus-offset: -2px;
 }
@@ -89,12 +93,12 @@ body {
 }
 
 .toolbar-path--error {
-  border-color: #f85149;
+  border-color: var(--danger);
   animation: shake 0.3s ease-in-out;
 }
 
 .toolbar-path--error:focus-within {
-  border-color: #f85149;
+  border-color: var(--danger);
 }
 
 .breadcrumb-last {
@@ -297,7 +301,7 @@ body {
 
 /* folder icon color */
 .entry-icon--folder {
-  color: #54aeff;
+  color: var(--accent);
 }
 
 .toolbar-path > .entry-icon {
@@ -347,7 +351,7 @@ body {
 
 .file-sidebar-handle:hover,
 .file-sidebar-handle:active {
-  background: var(--accent, #58a6ff);
+  background: var(--accent);
 }
 
 .file-sidebar::-webkit-scrollbar {
@@ -468,7 +472,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--accent, #58a6ff);
+  color: var(--accent);
   text-decoration: none;
 }
 
@@ -601,7 +605,7 @@ pre {
 
 .error {
   padding: 32px 16px;
-  color: #f85149;
+  color: var(--danger);
   font-size: 14px;
 }
 
@@ -680,7 +684,7 @@ pre {
 .jt-warning {
   padding: 4px 16px;
   font-size: 12px;
-  color: #d29922;
+  color: var(--warning);
 }
 
 .jt-root {
@@ -1013,7 +1017,7 @@ pre {
 }
 
 .figure-btn--copied {
-  color: var(--fgColor-success, #3fb950);
+  color: var(--fgColor-success, var(--success));
 }
 
 /* View source mode — figure-source hidden by default, shown in source mode */
@@ -1115,7 +1119,7 @@ pre {
 
 /* Diagram errors */
 .diagram-error {
-  color: #f85149;
+  color: var(--danger);
   font-size: 13px;
   padding: 16px;
 }
