@@ -53,6 +53,17 @@ function MoonIcon() {
   )
 }
 
+function RootSegment() {
+  return (
+    <>
+      <span class="entry-icon entry-icon--folder">
+        <FolderIcon />
+      </span>
+      <span class="breadcrumb-sep">/</span>
+    </>
+  )
+}
+
 function Breadcrumbs({
   path,
   onEditLast,
@@ -69,21 +80,27 @@ function Breadcrumbs({
     },
   }
 
-  if (path === "/") return <span {...editProps}>/</span>
+  if (path === "/") {
+    return (
+      <span class="breadcrumb-root" {...editProps}>
+        <RootSegment />
+      </span>
+    )
+  }
 
   const segments = path.replace(/^\//, "").split("/")
 
   return (
     <>
       <a
-        class="breadcrumb-link"
+        class="breadcrumb-root breadcrumb-link"
         href="/"
         onClick={(e) => {
           e.preventDefault()
           navigate("/")
         }}
       >
-        /
+        <RootSegment />
       </a>
       {segments.map((seg, i) => {
         const href = `/${segments.slice(0, i + 1).join("/")}`
@@ -127,7 +144,7 @@ function PathBar({
   const inputRef = useRef<HTMLInputElement>(null)
 
   const activate = useCallback(() => {
-    setDraft(path)
+    setDraft(path === "/" ? "" : path.replace(/^\//, ""))
     setEditing(true)
   }, [path])
 
@@ -153,8 +170,13 @@ function PathBar({
   const commit = useCallback(
     async (value: string) => {
       const trimmed = value.trim()
-      if (!trimmed) return cancel()
-      const normalized = normalizePath(trimmed, path)
+      if (!trimmed) {
+        if (path === "/") return cancel()
+        navigate("/")
+        setEditing(false)
+        return
+      }
+      const normalized = normalizePath(`/${trimmed}`, path)
       if (normalized === path) return cancel()
       try {
         await browse(normalized)
@@ -179,30 +201,32 @@ function PathBar({
         if (e.target === e.currentTarget) activate()
       }}
     >
-      <span class="entry-icon entry-icon--folder">
-        <FolderIcon />
-      </span>
       {editing ? (
-        <input
-          ref={inputRef}
-          class="toolbar-path-input"
-          type="text"
-          value={draft}
-          onInput={(e) => {
-            setError(false)
-            setDraft((e.target as HTMLInputElement).value)
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter")
-              void commit((e.target as HTMLInputElement).value)
-            else if (e.key === "Escape") cancel()
-            else if (focusPath.match(e)) {
-              e.preventDefault()
-              inputRef.current?.select()
-            }
-          }}
-          onBlur={() => cancel()}
-        />
+        <>
+          <span class="breadcrumb-root">
+            <RootSegment />
+          </span>
+          <input
+            ref={inputRef}
+            class="toolbar-path-input"
+            type="text"
+            value={draft}
+            onInput={(e) => {
+              setError(false)
+              setDraft((e.target as HTMLInputElement).value)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter")
+                void commit((e.target as HTMLInputElement).value)
+              else if (e.key === "Escape") cancel()
+              else if (focusPath.match(e)) {
+                e.preventDefault()
+                inputRef.current?.select()
+              }
+            }}
+            onBlur={() => cancel()}
+          />
+        </>
       ) : (
         <Breadcrumbs path={path} onEditLast={activate} />
       )}

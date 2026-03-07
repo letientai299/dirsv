@@ -105,6 +105,12 @@ body {
   cursor: text;
 }
 
+.breadcrumb-root {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .breadcrumb-link {
   color: var(--text-dim);
   text-decoration: none;
@@ -117,6 +123,10 @@ body {
 
 .breadcrumb-sep {
   color: var(--text-dim);
+}
+
+a.breadcrumb-root:hover .breadcrumb-sep {
+  color: var(--text);
 }
 
 .toolbar-path-input {
@@ -302,10 +312,6 @@ body {
 /* folder icon color */
 .entry-icon--folder {
   color: var(--accent);
-}
-
-.toolbar-path > .entry-icon {
-  margin-right: 4px;
 }
 
 /* ---------- file view layout ---------- */
