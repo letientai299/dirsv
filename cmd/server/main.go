@@ -257,6 +257,12 @@ func allowedHostsFor(host string) []string {
 		// that browsers resolving "localhost" to either IPv4 or IPv6
 		// work without friction.
 		return []string{"localhost", "127.0.0.1", "::1"}
+	case "0.0.0.0", "::":
+		// Wildcard binds accept connections from any interface. The
+		// host guard can't enumerate all possible Host values (LAN IPs,
+		// hostnames, etc.), so disable it. The non-localhost warning
+		// already tells users they're exposing files to the network.
+		return nil
 	default:
 		return []string{host}
 	}

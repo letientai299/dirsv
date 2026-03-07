@@ -326,6 +326,35 @@ func TestTrailingSlashDirListing(t *testing.T) {
 	}
 }
 
+func TestHostGuard(t *testing.T) {
+	dir := setupTestDir(t)
+	srv, err := New(dir, nil, nil, WithAllowedHosts("localhost"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		host string
+		want int
+	}{
+		{"localhost", http.StatusOK},
+		{"localhost:8080", http.StatusOK},
+		{"LOCALHOST:8080", http.StatusOK}, // case-insensitive
+		{"Localhost", http.StatusOK},
+		{"evil.com", http.StatusForbidden},
+		{"evil.com:8080", http.StatusForbidden},
+	}
+	for _, tt := range tests {
+		req := httptest.NewRequest(http.MethodGet, "/api/browse/", nil)
+		req.Host = tt.host
+		rec := httptest.NewRecorder()
+		srv.ServeHTTP(rec, req)
+		if rec.Code != tt.want {
+			t.Errorf("Host=%q: want %d, got %d", tt.host, tt.want, rec.Code)
+		}
+	}
+}
+
 func TestSPAFallback(t *testing.T) {
 	// Create a minimal embedded FS with index.html.
 	dir := t.TempDir()

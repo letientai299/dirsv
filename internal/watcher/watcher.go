@@ -79,8 +79,9 @@ type Watcher struct {
 	mu      sync.RWMutex
 	clients map[*wsClient]struct{}
 
-	watchMu sync.Mutex
-	watched map[string]struct{} // abs paths of dirs added to fsw
+	watchMu  sync.Mutex
+	watched  map[string]struct{} // abs paths of dirs added to fsw
+	watchSem chan struct{}       // bounds concurrent ensureWatched goroutines
 }
 
 // Option configures a Watcher.
@@ -118,11 +119,12 @@ func New(root string, opts ...Option) (*Watcher, error) {
 	}
 
 	w := &Watcher{
-		root:    abs,
-		fsw:     fsw,
-		done:    make(chan struct{}),
-		clients: make(map[*wsClient]struct{}),
-		watched: make(map[string]struct{}),
+		root:     abs,
+		fsw:      fsw,
+		done:     make(chan struct{}),
+		clients:  make(map[*wsClient]struct{}),
+		watched:  make(map[string]struct{}),
+		watchSem: make(chan struct{}, 4),
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -523,9 +525,13 @@ func (w *Watcher) watchForClient(prefix string) {
 		resolved = filepath.Dir(resolved)
 	}
 	// Run asynchronously so the client's read loop isn't blocked by
-	// the WalkDir inside ensureWatched. Events during the walk are
-	// buffered in the client's channel (cap 16).
-	go w.ensureWatched(resolved)
+	// the WalkDir inside ensureWatched. The semaphore caps concurrent
+	// walks to prevent goroutine accumulation from rapid watch messages.
+	go func() {
+		w.watchSem <- struct{}{}
+		defer func() { <-w.watchSem }()
+		w.ensureWatched(resolved)
+	}()
 }
 
 // cleanWatchPath normalizes the watch query parameter to match the format
@@ -551,6 +557,11 @@ func (w *Watcher) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.CloseNow() //nolint:errcheck // best-effort cleanup
+
+	// Watch messages are small JSON ({"watch":["path",...]}). Set an
+	// explicit read limit instead of relying on the library default
+	// (32 KiB) which could change across upgrades.
+	conn.SetReadLimit(4096)
 
 	c, subErr := w.subscribe()
 	if subErr != nil {
