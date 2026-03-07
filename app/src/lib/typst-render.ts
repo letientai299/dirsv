@@ -68,6 +68,37 @@ export async function renderTypstBlocks(container: HTMLElement): Promise<void> {
   }
 }
 
+/**
+ * Remove `<style>` elements from inline SVGs so global rules like
+ * `svg { fill: none }` don't leak. Re-insert them scoped to this container.
+ */
+function scopeSvgStyles(container: HTMLElement): void {
+  for (const style of container.querySelectorAll<HTMLStyleElement>(
+    "svg style",
+  )) {
+    const css = style.textContent ?? ""
+    style.remove()
+
+    // Parse rules without DOM insertion to avoid a brief global style flash.
+    const sheet = new CSSStyleSheet()
+    sheet.replaceSync(css)
+
+    const scope = ".typst-rendered"
+    const scoped: string[] = []
+    for (const rule of sheet.cssRules) {
+      if (rule instanceof CSSStyleRule) {
+        scoped.push(`${scope} ${rule.selectorText} { ${rule.style.cssText} }`)
+      } else {
+        scoped.push(rule.cssText)
+      }
+    }
+
+    const el = document.createElement("style")
+    el.textContent = scoped.join("\n")
+    container.appendChild(el)
+  }
+}
+
 // biome-ignore lint/suspicious/noExplicitAny: $typst loaded from CDN, no types
 async function renderOne(t: any, el: HTMLElement): Promise<void> {
   const source = el.dataset["typst"]
@@ -77,6 +108,7 @@ async function renderOne(t: any, el: HTMLElement): Promise<void> {
   try {
     const svg = await t.svg({ mainContent: source })
     el.innerHTML = sanitizeSvg(svg)
+    scopeSvgStyles(el)
     el.classList.add("typst-rendered", "diagram-rendered")
   } catch {
     el.textContent = "Typst render error"
