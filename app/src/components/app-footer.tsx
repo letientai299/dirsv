@@ -5,7 +5,7 @@ export function AppFooter() {
   const [pid, setPid] = useState<number | null>(null)
 
   useEffect(() => {
-    void fetchInfo().then((info) => setPid(info.pid))
+    void fetchInfo().then((info) => setPid(info.pid ?? null))
   }, [])
 
   return (

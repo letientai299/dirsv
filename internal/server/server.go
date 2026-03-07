@@ -158,12 +158,26 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mux.ServeHTTP(w, r)
 }
 
-func (s *Server) handleInfo(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{
-		"pid":  os.Getpid(),
+func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
+	resp := map[string]any{
 		"root": filepath.Base(s.root),
-	})
+	}
+	// Only expose the server PID to loopback clients. The PID is used by
+	// the frontend to display a "kill server" affordance, but on shared
+	// networks it leaks process info that aids local privilege escalation
+	// (e.g., /proc/<pid>/ enumeration). The host guard (ServeHTTP) already
+	// blocks non-allowlisted Host headers, but this check further restricts
+	// PID to requests originating from the loopback interface itself.
+	if host, _, _ := net.SplitHostPort(r.RemoteAddr); isLoopback(host) {
+		resp["pid"] = os.Getpid()
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
+func isLoopback(host string) bool {
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 var errForbidden = errors.New("forbidden")

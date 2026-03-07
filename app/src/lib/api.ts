@@ -29,7 +29,7 @@ const textTypes =
   /^(text\/|application\/(json|xml|javascript|typescript|x-sh|x-httpd-php|toml|yaml|x-yaml))/
 
 export interface ServerInfo {
-  pid: number
+  pid?: number
   root: string
 }
 
