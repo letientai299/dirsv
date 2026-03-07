@@ -18,11 +18,13 @@ import { unified } from "unified"
 import { rehypeD2 } from "./rehype-d2"
 import { rehypeDbml } from "./rehype-dbml"
 import type { Heading } from "./rehype-extract-headings"
+import { rehypeFigure } from "./rehype-figure"
 import { rehypeGraphviz } from "./rehype-graphviz"
 import { rehypeKatexPlaceholder } from "./rehype-katex-placeholder"
 import { rehypeMermaid } from "./rehype-mermaid"
 import { rehypePlantuml } from "./rehype-plantuml"
 import { rehypeTypstDiagram } from "./rehype-typst-diagram"
+import { SHIKI_THEME_LIST, SHIKI_THEMES } from "./shiki-config"
 
 export type { Heading }
 
@@ -108,6 +110,7 @@ function getBaseProcessor(): AnyProcessor {
       .use(rehypeD2)
       .use(rehypeDbml)
       .use(rehypeTypstDiagram)
+      .use(rehypeFigure)
       .use(rehypeSlug)
       .use(rehypeStringify)
   }
@@ -132,7 +135,7 @@ function getShikiProcessor(): Promise<AnyProcessor> {
 
       // Warm up the highlighter so the first render is fast.
       void getSingletonHighlighter({
-        themes: ["github-light", "github-dark"],
+        themes: [...SHIKI_THEME_LIST],
         langs: [],
       })
 
@@ -159,13 +162,14 @@ function getShikiProcessor(): Promise<AnyProcessor> {
         .use(rehypeTypstDiagram)
         .use(rehypeShikiCachedPre)
         .use(rehypeShiki, {
-          themes: { light: "github-light", dark: "github-dark" },
+          themes: { light: SHIKI_THEMES.light, dark: SHIKI_THEMES.dark },
           defaultColor: false,
           langs: [],
           lazy: true,
           fallbackLanguage: "text",
         })
         .use(rehypeShikiCachedPost)
+        .use(rehypeFigure)
         .use(rehypeSlug)
         .use(rehypeStringify)
     })()

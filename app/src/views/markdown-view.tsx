@@ -1,9 +1,9 @@
 import morphdom from "morphdom"
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import { TableOfContents } from "../components/toc"
-import { injectCopyButtons } from "../lib/code-copy"
 import { renderD2Blocks } from "../lib/d2-render"
 import { renderDbmlBlocks } from "../lib/dbml-render"
+import { injectFigureToolbars } from "../lib/figure-toolbar"
 import { renderGraphvizBlocks } from "../lib/graphviz-render"
 import { renderKatexBlocks } from "../lib/katex-render"
 import type { MarkdownResult } from "../lib/markdown"
@@ -102,7 +102,7 @@ export function MarkdownView({ content, path }: Props) {
     void renderD2Blocks(el)
     void renderDbmlBlocks(el)
     void renderTypstBlocks(el)
-    injectCopyButtons(el)
+    injectFigureToolbars(el)
   }, [result, path])
 
   // Re-render mermaid diagrams when the user toggles the colour scheme.

@@ -1,5 +1,7 @@
 import type { Element, ElementContent, Root } from "hast"
 import { visit } from "unist-util-visit"
+import { getClassList } from "./hast-utils"
+import { wrapInFigure } from "./rehype-figure"
 
 interface DiagramOpts {
   languages: string[]
@@ -29,7 +31,7 @@ export function createRehypeDiagram(opts: DiagramOpts) {
         children: [],
       }
 
-      parent.children[index] = placeholder
+      parent.children[index] = wrapInFigure(placeholder, opts.languages[0])
     })
   }
 }
@@ -45,11 +47,6 @@ function extractSource(node: Element, languages: string[]): string | null {
     return null
 
   return collectText(code.children).trim()
-}
-
-function getClassList(node: Element): string[] {
-  const val = node.properties?.["className"]
-  return Array.isArray(val) ? (val as string[]) : []
 }
 
 function collectText(children: ElementContent[]): string {

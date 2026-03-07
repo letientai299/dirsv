@@ -962,12 +962,49 @@ pre {
   font-size: 13px;
 }
 
-/* ---------- code copy button ---------- */
+/* ---------- figure container & toolbar ---------- */
 
-.code-copy {
+.figure-container {
+  position: relative;
+}
+
+.figure-container:focus-visible {
+  outline: 2px solid var(--fgColor-accent, #4493f8);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.figure-container pre:focus-visible {
+  outline: none;
+}
+
+.markdown-body img:focus-visible {
+  outline: 2px solid var(--fgColor-accent, #4493f8);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.figure-toolbar {
   position: absolute;
   top: 8px;
   right: 8px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.15s,
+    visibility 0.15s;
+  z-index: 1;
+}
+
+.figure-container:hover .figure-toolbar,
+.figure-container:focus-within .figure-toolbar {
+  opacity: 1;
+  visibility: visible;
+}
+
+.figure-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -978,26 +1015,24 @@ pre {
   background: var(--bgColor-default, var(--bg));
   color: var(--fgColor-muted, var(--text-dim));
   cursor: pointer;
-  opacity: 0;
-  transition:
-    opacity 0.15s,
-    color 0.15s;
+  transition: color 0.15s;
 }
 
-.markdown-body pre:hover .code-copy {
-  opacity: 1;
-}
-
-.code-copy:hover {
+.figure-btn:hover {
   color: var(--fgColor-default, var(--text));
 }
 
-.code-copy--copied {
+.figure-btn--copied {
   color: var(--fgColor-success, #3fb950);
 }
 
-.code-copy--copied:hover {
-  color: var(--fgColor-success, #3fb950);
+/* View source mode — figure-source hidden by default, shown in source mode */
+.figure-container .figure-source {
+  display: none;
+}
+
+.figure-container--source .figure-source {
+  display: block;
 }
 
 /* ---------- TOC sidebar ---------- */
@@ -1094,6 +1129,11 @@ pre {
   color: #f85149;
   font-size: 13px;
   padding: 16px;
+}
+
+/* Hide diagram when viewing source */
+.figure-container--source .diagram-placeholder {
+  display: none;
 }
 
 /* ---------- standalone diagram views ---------- */
