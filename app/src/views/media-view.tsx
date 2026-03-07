@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "preact/hooks"
+import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import { FocusOverlay } from "../components/focus-overlay"
 import { ChevronLeft, ChevronRight } from "../lib/icons"
 import { imageExts, videoExts } from "../lib/media-types"
@@ -71,17 +71,32 @@ export function MediaView({ path, kind }: Props) {
     () =>
       siblings.map((p) => ({
         type: kind as "image" | "video",
-        src: `/api/raw${p}`,
+        src: `/api/raw${p}${rev ? `?v=${rev}` : ""}`,
         alt: p.split("/").pop() ?? p,
       })),
-    [siblings, kind],
+    [siblings, kind, rev],
   )
+
+  const lastOverlayIdx = useRef(currentIdx)
 
   const openFocus = useCallback(() => {
     if (focusItems.length > 0) {
+      lastOverlayIdx.current = Math.max(0, currentIdx)
       focus.open(focusItems, Math.max(0, currentIdx))
     }
   }, [focusItems, currentIdx, focus])
+
+  const onOverlayIndexChange = useCallback((idx: number) => {
+    lastOverlayIdx.current = idx
+  }, [])
+
+  const onOverlayClose = useCallback(() => {
+    focus.close()
+    const target = siblings[lastOverlayIdx.current]
+    if (target && target !== path) {
+      navigate(target)
+    }
+  }, [focus, siblings, path])
 
   // Fade-in: track which URL has finished loading. Comparing against rawUrl
   // resets the fade synchronously during render — no useEffect race where
@@ -96,13 +111,21 @@ export function MediaView({ path, kind }: Props) {
     const toPreload = [prevPath, nextPath].filter(Boolean) as string[]
     for (const p of toPreload) {
       const img = new Image()
-      img.src = `/api/raw${p}`
+      img.src = `/api/raw${p}${rev ? `?v=${rev}` : ""}`
     }
-  }, [prevPath, nextPath, kind])
+  }, [prevPath, nextPath, kind, rev])
 
   return (
     <div class="media-viewer">
-      <div class="media-container">
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: media container acts as focus trigger */}
+      <div
+        class="media-container"
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: needs focus for Enter key to open overlay
+        tabIndex={0}
+        onKeyDown={(e: KeyboardEvent) => {
+          if (e.key === "Enter") openFocus()
+        }}
+      >
         {kind === "image" ? (
           <img
             key={rawUrl}
@@ -146,7 +169,13 @@ export function MediaView({ path, kind }: Props) {
           </button>
         </div>
       )}
-      {focus.overlayProps && <FocusOverlay {...focus.overlayProps} />}
+      {focus.overlayProps && (
+        <FocusOverlay
+          {...focus.overlayProps}
+          onClose={onOverlayClose}
+          onIndexChange={onOverlayIndexChange}
+        />
+      )}
     </div>
   )
 }

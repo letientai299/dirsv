@@ -14,6 +14,21 @@ function clampScale(s: number): number {
   return Math.min(MAX_SCALE, Math.max(MIN_SCALE, s))
 }
 
+/** Compute new zoom state centered on a point (px, py) in container coords. */
+function zoomAt(
+  px: number,
+  py: number,
+  newScale: number,
+  s: ZoomState,
+): ZoomState {
+  const ratio = newScale / s.scale
+  return {
+    scale: newScale,
+    x: px - ratio * (px - s.x),
+    y: py - ratio * (py - s.y),
+  }
+}
+
 /**
  * Zoom/pan state for content inside the focus overlay.
  *
@@ -44,14 +59,7 @@ export function useZoom() {
     const el = containerRef.current
     if (!el) return { ...s, scale: newScale }
     const { width, height } = el.getBoundingClientRect()
-    const cx = width / 2
-    const cy = height / 2
-    const ratio = newScale / s.scale
-    return {
-      scale: newScale,
-      x: cx - ratio * (cx - s.x),
-      y: cy - ratio * (cy - s.y),
-    }
+    return zoomAt(width / 2, height / 2, newScale, s)
   }, [])
 
   const zoomIn = useCallback(() => {
@@ -66,13 +74,23 @@ export function useZoom() {
     setState((s) => ({ ...s, x: s.x + dx, y: s.y + dy }))
   }, [])
 
-  const onClick = useCallback(() => {
+  const onClick = useCallback((e: MouseEvent) => {
     if (didDrag.current) {
       didDrag.current = false
       return
     }
-    setState((s) => (s.scale === 1 ? zoomTo(2, s) : { scale: 1, x: 0, y: 0 }))
-  }, [zoomTo])
+    const el = containerRef.current
+    if (!el) return
+    if (stateRef.current.scale === 1) {
+      // Zoom in centered on click position.
+      const rect = el.getBoundingClientRect()
+      const px = e.clientX - rect.left
+      const py = e.clientY - rect.top
+      setState((s) => zoomAt(px, py, 2, s))
+    } else {
+      setState({ scale: 1, x: 0, y: 0 })
+    }
+  }, [])
 
   // Wheel zoom centered on pointer position.
   const onWheel = useCallback((e: WheelEvent) => {
@@ -86,11 +104,7 @@ export function useZoom() {
 
     setState((s) => {
       const factor = e.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP
-      const newScale = clampScale(s.scale * factor)
-      const ratio = newScale / s.scale
-      const nx = px - ratio * (px - s.x)
-      const ny = py - ratio * (py - s.y)
-      return { scale: newScale, x: nx, y: ny }
+      return zoomAt(px, py, clampScale(s.scale * factor), s)
     })
   }, [])
 

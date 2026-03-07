@@ -9,9 +9,15 @@ interface Props {
   items: FocusItem[]
   startIndex: number
   onClose: () => void
+  onIndexChange?: (index: number) => void
 }
 
-export function FocusOverlay({ items, startIndex, onClose }: Props) {
+export function FocusOverlay({
+  items,
+  startIndex,
+  onClose,
+  onIndexChange,
+}: Props) {
   const [index, setIndex] = useState(startIndex)
   const overlayRef = useRef<HTMLDivElement>(null)
   const zoom = useZoom()
@@ -22,6 +28,10 @@ export function FocusOverlay({ items, startIndex, onClose }: Props) {
   const item = items[index] as FocusItem
   const hasPrev = index > 0
   const hasNext = index < total - 1
+
+  useEffect(() => {
+    onIndexChange?.(index)
+  }, [index, onIndexChange])
 
   const goPrev = useCallback(() => {
     setIndex((i) => Math.max(0, i - 1))
@@ -123,6 +133,17 @@ export function FocusOverlay({ items, startIndex, onClose }: Props) {
     }
   }, [])
 
+  // Preload adjacent images for smoother navigation.
+  useEffect(() => {
+    for (const i of [index - 1, index + 1]) {
+      const neighbor = items[i]
+      if (neighbor?.type === "image") {
+        const img = new Image()
+        img.src = neighbor.src
+      }
+    }
+  }, [index, items])
+
   return (
     <div
       ref={overlayRef}
@@ -196,7 +217,14 @@ export function FocusOverlay({ items, startIndex, onClose }: Props) {
 function FocusContent({ item }: { item: FocusItem }) {
   switch (item.type) {
     case "image":
-      return <img src={item.src} alt={item.alt} class="focus-media" />
+      return (
+        <img
+          src={item.src}
+          alt={item.alt}
+          class="focus-media"
+          draggable={false}
+        />
+      )
     case "video":
       return (
         <video src={item.src} controls class="focus-media">
