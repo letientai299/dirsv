@@ -2,6 +2,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log"
@@ -11,14 +13,17 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	dirsv "github.com/letientai299/dirsv"
 	"github.com/letientai299/dirsv/internal/appinfo"
+	"github.com/letientai299/dirsv/internal/middleware"
 	"github.com/letientai299/dirsv/internal/server"
 	"github.com/letientai299/dirsv/internal/watcher"
 	flag "github.com/spf13/pflag"
@@ -37,6 +42,11 @@ func main() {
 	dev := flag.Bool("dev", false, "proxy frontend to Vite dev server")
 	noOpen := flag.Bool("no-open", false, "don't auto-open browser")
 	debug := flag.BoolP("debug", "d", false, "enable verbose watcher logs")
+	trustedProxy := flag.Bool(
+		"trusted-proxy",
+		false,
+		"trust proxy headers (CF-Connecting-IP, X-Real-IP, X-Forwarded-For) for rate limiting",
+	)
 	_ = flag.CommandLine.MarkHidden("dev")
 
 	flag.Usage = func() {
@@ -146,6 +156,14 @@ func main() {
 		handler = devProxy(srv)
 	}
 
+	// Middleware stack (outermost runs first):
+	// 1. Access log — logs every request
+	// 2. Rate limit — rejects excess per-IP traffic
+	// 3. Gzip — compresses responses for remote clients
+	handler = middleware.Gzip(handler)
+	handler = middleware.RateLimit(50, 100, *trustedProxy)(handler)
+	handler = middleware.AccessLog(handler)
+
 	var ln net.Listener
 	if portExplicit {
 		addr := net.JoinHostPort(*host, strconv.Itoa(listenPort))
@@ -180,15 +198,36 @@ func main() {
 		openBrowser(u, *browser)
 	}
 
-	// Serve blocks until error; clean up watcher and server afterward.
 	httpSrv := &http.Server{
 		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
+
+	// Graceful shutdown: SIGINT/SIGTERM triggers Shutdown with a deadline
+	// so in-flight requests (large file transfers) complete cleanly.
+	ctx, stop := signal.NotifyContext(
+		context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+	)
+
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(
+			context.Background(),
+			10*time.Second,
+		)
+		defer cancel()
+		_ = httpSrv.Shutdown(shutdownCtx)
+	}()
+
 	err = httpSrv.Serve(ln)
+	stop()
 	srv.Close()
 	_ = w.Close()
-	if err != nil {
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
 }

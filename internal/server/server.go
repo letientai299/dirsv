@@ -39,11 +39,11 @@ type BrowseResponse struct {
 	ModTime time.Time `json:"modTime,omitempty"`
 }
 
-// pathCacheEntry caches the result of resolvePath to avoid redundant
-// EvalSymlinks + Stat syscalls on hot paths.
+// pathCacheEntry caches the resolved filesystem path from EvalSymlinks.
+// FileInfo is not cached — Stat is cheap and caching it causes stale
+// ModTime in ServeContent (wrong 304 responses with CDN caching).
 type pathCacheEntry struct {
 	resolved string
-	info     os.FileInfo
 	cachedAt time.Time
 }
 
@@ -227,11 +227,18 @@ func (s *Server) resolvePath(
 ) (resolved string, info os.FileInfo, err error) {
 	cleaned := filepath.FromSlash(path.Clean("/" + reqPath))
 
-	// Check cache first.
+	// Check cache for the resolved path (EvalSymlinks result).
+	// FileInfo is always fresh — Stat is cheap, caching it causes
+	// stale ModTime in ServeContent.
 	if v, ok := s.pathCache.Load(cleaned); ok {
 		entry, ok := v.(*pathCacheEntry)
 		if ok && time.Since(entry.cachedAt) < pathCacheTTL {
-			return entry.resolved, entry.info, nil
+			fi, statErr := os.Stat(entry.resolved)
+			if statErr != nil {
+				s.pathCache.Delete(cleaned)
+				return "", nil, statErr
+			}
+			return entry.resolved, fi, nil
 		}
 		s.pathCache.Delete(cleaned)
 	}
@@ -254,7 +261,6 @@ func (s *Server) resolvePath(
 		return "", nil, errForbidden
 	}
 
-	// Containment check above ensures resolved is within s.root.
 	fi, statErr := os.Stat(resolved)
 	if statErr != nil {
 		return "", nil, statErr
@@ -262,7 +268,6 @@ func (s *Server) resolvePath(
 
 	s.pathCache.Store(cleaned, &pathCacheEntry{
 		resolved: resolved,
-		info:     fi,
 		cachedAt: time.Now(),
 	})
 
@@ -629,8 +634,7 @@ func (s *Server) handleHTMLPreview(w http.ResponseWriter, r *http.Request) {
 	// Inject <base> after <head> so relative URLs resolve through
 	// this endpoint, keeping site-internal navigation working.
 	baseTag := []byte(`<base href="` + baseHref + `">`)
-	lower := bytes.ToLower(content)
-	if idx := bytes.Index(lower, []byte("<head")); idx != -1 {
+	if idx := indexBytesCI(content, []byte("<head")); idx != -1 {
 		if closeIdx := bytes.IndexByte(content[idx:], '>'); closeIdx != -1 {
 			insertAt := idx + closeIdx + 1
 			var buf bytes.Buffer
@@ -757,4 +761,30 @@ func servePrecompressed(
 
 	_, _ = io.Copy(w, gr) //nolint:gosec // G110: own embedded assets
 	return true
+}
+
+// indexBytesCI returns the index of the first case-insensitive occurrence
+// of needle in haystack, or -1. needle must be lowercase ASCII.
+// Zero allocation — avoids bytes.ToLower on the full haystack.
+func indexBytesCI(haystack, needle []byte) int {
+	if len(needle) == 0 || len(needle) > len(haystack) {
+		return -1
+	}
+	for i := range len(haystack) - len(needle) + 1 {
+		match := true
+		for j := range needle {
+			h := haystack[i+j]
+			if h >= 'A' && h <= 'Z' {
+				h += 'a' - 'A'
+			}
+			if h != needle[j] {
+				match = false
+				break
+			}
+		}
+		if match {
+			return i
+		}
+	}
+	return -1
 }
