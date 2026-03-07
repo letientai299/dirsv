@@ -10,6 +10,7 @@ package watcher
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"net"
 	"net/http"
@@ -409,13 +410,22 @@ func (w *Watcher) broadcast(pending map[string]Event) {
 	}
 }
 
+var errTooManyClients = errors.New("too many clients")
+
 // subscribe registers a new client with no initial prefixes.
-func (w *Watcher) subscribe() *wsClient {
-	c := &wsClient{ch: make(chan []byte, 16)}
+// Returns errTooManyClients if the client count has reached maxClients.
+// The capacity check and insertion are atomic under the same write lock
+// to prevent TOCTOU races where concurrent upgrades bypass the limit.
+func (w *Watcher) subscribe() (*wsClient, error) {
 	w.mu.Lock()
+	if len(w.clients) >= maxClients {
+		w.mu.Unlock()
+		return nil, errTooManyClients
+	}
+	c := &wsClient{ch: make(chan []byte, 16)}
 	w.clients[c] = struct{}{}
 	w.mu.Unlock()
-	return c
+	return c, nil
 }
 
 func (w *Watcher) unsubscribe(c *wsClient) {
@@ -521,21 +531,17 @@ func cleanWatchPath(raw string) string {
 // ServeHTTP handles WebSocket connections at /api/events.
 // Clients send {"watch":["path1","path2"]} to update their watch set.
 func (w *Watcher) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	w.mu.RLock()
-	full := len(w.clients) >= maxClients
-	w.mu.RUnlock()
-	if full {
-		http.Error(rw, "too many clients", http.StatusServiceUnavailable)
-		return
-	}
-
 	conn, err := websocket.Accept(rw, r, nil)
 	if err != nil {
 		return
 	}
 	defer conn.CloseNow() //nolint:errcheck // best-effort cleanup
 
-	c := w.subscribe()
+	c, subErr := w.subscribe()
+	if subErr != nil {
+		_ = conn.Close(websocket.StatusTryAgainLater, subErr.Error())
+		return
+	}
 	defer w.unsubscribe(c)
 
 	clientID := clientAddr(r.RemoteAddr)
