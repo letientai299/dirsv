@@ -7,6 +7,8 @@
   --text-dim: light-dark(#656d76, #8b949e);
   --row-active: light-dark(#ddf4ff, #1a2332);
   --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+  --focus-ring: #4493f8;
+  --focus-offset: -2px;
 }
 
 [data-theme="dark"] {
@@ -23,6 +25,12 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+/* Unified focus ring for all interactive elements. */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: var(--focus-offset);
 }
 
 body {
@@ -62,7 +70,7 @@ body {
 }
 
 .toolbar-path--editing:focus-within {
-  border-color: #54aeff;
+  border-color: var(--focus-ring);
 }
 
 @keyframes shake {
@@ -617,11 +625,6 @@ pre {
   color: var(--text);
   font-family: var(--mono);
   font-size: 13px;
-  outline: none;
-}
-
-.jt-filter:focus {
-  border-color: #54aeff;
 }
 
 .jt-filter::placeholder {
@@ -685,7 +688,6 @@ pre {
   font-family: var(--mono);
   font-size: 13px;
   line-height: 1.6;
-  outline: none;
 }
 
 .jt-row {
@@ -696,9 +698,8 @@ pre {
 }
 
 .jt-row--focused {
-  outline: 2px solid var(--color-accent, #54aeff);
+  outline: 2px solid var(--focus-ring);
   outline-offset: -2px;
-  border-radius: 3px;
 }
 
 .jt-toggle {
@@ -968,20 +969,9 @@ pre {
   position: relative;
 }
 
-.figure-container:focus-visible {
-  outline: 2px solid var(--fgColor-accent, #4493f8);
-  outline-offset: 2px;
-  border-radius: 6px;
-}
-
+/* Inner <pre> delegates focus to .figure-container wrapper. */
 .figure-container pre:focus-visible {
   outline: none;
-}
-
-.markdown-body img:focus-visible {
-  outline: 2px solid var(--fgColor-accent, #4493f8);
-  outline-offset: 2px;
-  border-radius: 4px;
 }
 
 .figure-toolbar {
@@ -1063,7 +1053,6 @@ pre {
   color: var(--text-dim);
   text-decoration: none;
   border-left: 2px solid transparent;
-  border-radius: 0;
   transition: color 0.15s;
 }
 
