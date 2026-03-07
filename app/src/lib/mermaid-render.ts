@@ -1,6 +1,7 @@
 import { isRenderedAndUnchanged } from "./content-hash"
 import { partitionByViewport, yieldToMain } from "./render-priority"
 import { sanitizeSvg } from "./sanitize-svg"
+import { getIsDark } from "./theme"
 
 let idCounter = 0
 
@@ -76,20 +77,13 @@ async function renderOne(
       console.warn = origWarn
     }
     el.innerHTML = sanitizeSvg(svg)
-    el.classList.add("mermaid-rendered")
+    el.classList.add("mermaid-rendered", "diagram-rendered")
   } catch {
     el.textContent = "Mermaid render error for diagram"
-    el.classList.add("mermaid-error")
+    el.classList.add("mermaid-error", "diagram-error")
   }
 }
 
 function getData(el: HTMLElement, key: string): string | undefined {
   return el.dataset[key]
-}
-
-function getIsDark(): boolean {
-  const explicit = getData(document.documentElement, "theme")
-  if (explicit === "dark") return true
-  if (explicit === "light") return false
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
 }

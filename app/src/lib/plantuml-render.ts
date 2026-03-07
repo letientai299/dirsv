@@ -41,7 +41,7 @@ function renderOne(el: HTMLElement): void {
     img.onload = () => {
       el.innerHTML = ""
       el.appendChild(img)
-      el.classList.add("plantuml-rendered")
+      el.classList.add("plantuml-rendered", "diagram-rendered")
     }
 
     img.onerror = () => {
@@ -51,7 +51,7 @@ function renderOne(el: HTMLElement): void {
       pre.appendChild(code)
       el.innerHTML = ""
       el.appendChild(pre)
-      el.classList.add("plantuml-error")
+      el.classList.add("plantuml-error", "diagram-error")
     }
 
     img.src = url

@@ -125,11 +125,11 @@ export function MarkdownView({ content, path }: Props) {
     for (const rendered of el.querySelectorAll<HTMLElement>(
       ".mermaid-rendered",
     )) {
-      rendered.classList.remove("mermaid-rendered")
+      rendered.classList.remove("mermaid-rendered", "diagram-rendered")
       delete rendered.dataset["mermaidHash"]
     }
     for (const rendered of el.querySelectorAll<HTMLElement>(".d2-rendered")) {
-      rendered.classList.remove("d2-rendered")
+      rendered.classList.remove("d2-rendered", "diagram-rendered")
       delete rendered.dataset["d2Hash"]
     }
     void renderMermaidBlocks(el)

@@ -18,6 +18,14 @@ export function toggleTheme(): Theme {
   return next
 }
 
+/** Returns true when the active theme is dark (explicit override or OS preference). */
+export function getIsDark(): boolean {
+  const explicit = document.documentElement.dataset["theme"]
+  if (explicit === "dark") return true
+  if (explicit === "light") return false
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+}
+
 /** Listen for theme changes from other tabs via `storage` events. */
 export function listenThemeChanges(cb: (theme: Theme) => void): () => void {
   const handler = (e: StorageEvent) => {

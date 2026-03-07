@@ -45,10 +45,10 @@ function applyResults(results: RenderResult[], cls: string): void {
   for (const r of results) {
     if (r.ok) {
       r.el.innerHTML = sanitizeSvg(r.svg)
-      r.el.classList.add(`${cls}-rendered`)
+      r.el.classList.add(`${cls}-rendered`, "diagram-rendered")
     } else {
       r.el.textContent = `${cls.charAt(0).toUpperCase() + cls.slice(1)} render error`
-      r.el.classList.add(`${cls}-error`)
+      r.el.classList.add(`${cls}-error`, "diagram-error")
     }
   }
 }

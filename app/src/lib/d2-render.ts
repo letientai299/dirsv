@@ -1,6 +1,7 @@
 import { isRenderedAndUnchanged } from "./content-hash"
 import { partitionByViewport, yieldToMain } from "./render-priority"
 import { sanitizeSvg } from "./sanitize-svg"
+import { getIsDark } from "./theme"
 
 /** Render a single D2 source string to SVG. Lazy-loads the WASM engine. */
 export async function renderD2(source: string): Promise<string> {
@@ -62,16 +63,9 @@ async function renderOne(
       themeID: isDark ? 200 : 0,
     })
     el.innerHTML = sanitizeSvg(svg)
-    el.classList.add("d2-rendered")
+    el.classList.add("d2-rendered", "diagram-rendered")
   } catch {
     el.textContent = "D2 render error"
-    el.classList.add("d2-error")
+    el.classList.add("d2-error", "diagram-error")
   }
-}
-
-function getIsDark(): boolean {
-  const explicit = document.documentElement.dataset["theme"]
-  if (explicit === "dark") return true
-  if (explicit === "light") return false
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
 }

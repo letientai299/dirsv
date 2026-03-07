@@ -77,9 +77,9 @@ async function renderOne(t: any, el: HTMLElement): Promise<void> {
   try {
     const svg = await t.svg({ mainContent: source })
     el.innerHTML = sanitizeSvg(svg)
-    el.classList.add("typst-rendered")
+    el.classList.add("typst-rendered", "diagram-rendered")
   } catch {
     el.textContent = "Typst render error"
-    el.classList.add("typst-error")
+    el.classList.add("typst-error", "diagram-error")
   }
 }

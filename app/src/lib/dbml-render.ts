@@ -47,10 +47,10 @@ function applyResults(results: RenderResult[]): void {
   for (const r of results) {
     if (r.ok) {
       r.el.innerHTML = sanitizeSvg(r.svg)
-      r.el.classList.add("dbml-rendered")
+      r.el.classList.add("dbml-rendered", "diagram-rendered")
     } else {
       r.el.textContent = "DBML render error"
-      r.el.classList.add("dbml-error")
+      r.el.classList.add("dbml-error", "diagram-error")
     }
   }
 }

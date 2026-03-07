@@ -24,13 +24,47 @@ import { useSiblings } from "../lib/use-siblings"
 import { useWS } from "../lib/use-ws"
 
 const D2View = lazy(() =>
-  import("./d2-view").then((m) => ({ default: m.D2View })),
+  Promise.all([import("./diagram-view"), import("../lib/d2-render")]).then(
+    ([{ DiagramView }, { renderD2 }]) => ({
+      default: (props: { content: string }) => (
+        <DiagramView
+          content={props.content}
+          render={renderD2}
+          label="D2"
+          class="diagram-standalone"
+        />
+      ),
+    }),
+  ),
 )
 const DbmlView = lazy(() =>
-  import("./dbml-view").then((m) => ({ default: m.DbmlView })),
+  Promise.all([import("./diagram-view"), import("../lib/dbml-render")]).then(
+    ([{ DiagramView }, { renderDbml }]) => ({
+      default: (props: { content: string }) => (
+        <DiagramView
+          content={props.content}
+          render={renderDbml}
+          label="DBML"
+          class="diagram-standalone"
+        />
+      ),
+    }),
+  ),
 )
 const GraphvizView = lazy(() =>
-  import("./graphviz-view").then((m) => ({ default: m.GraphvizView })),
+  Promise.all([
+    import("./diagram-view"),
+    import("../lib/graphviz-render"),
+  ]).then(([{ DiagramView }, { renderGraphviz }]) => ({
+    default: (props: { content: string }) => (
+      <DiagramView
+        content={props.content}
+        render={renderGraphviz}
+        label="Graphviz"
+        class="diagram-standalone"
+      />
+    ),
+  })),
 )
 const HtmlView = lazy(() =>
   import("./html-view").then((m) => ({ default: m.HtmlView })),
@@ -39,7 +73,18 @@ const MediaView = lazy(() =>
   import("./media-view").then((m) => ({ default: m.MediaView })),
 )
 const TypstView = lazy(() =>
-  import("./typst-view").then((m) => ({ default: m.TypstView })),
+  Promise.all([import("./diagram-view"), import("../lib/typst-render")]).then(
+    ([{ DiagramView }, { renderTypst }]) => ({
+      default: (props: { content: string }) => (
+        <DiagramView
+          content={props.content}
+          render={renderTypst}
+          label="Typst"
+          class="diagram-standalone"
+        />
+      ),
+    }),
+  ),
 )
 const MarkdownView = lazy(() =>
   import("./markdown-view").then((m) => ({ default: m.MarkdownView })),

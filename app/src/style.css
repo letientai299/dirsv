@@ -1,43 +1,20 @@
-/* -- light (default) -- */
 :root {
-  --bg: #ffffff;
-  --surface: #f6f8fa;
-  --border: #d0d7de;
-  --text: #1f2328;
-  --text-dim: #656d76;
-  --row-active: #ddf4ff;
+  color-scheme: light dark;
+  --bg: light-dark(#ffffff, #0d1117);
+  --surface: light-dark(#f6f8fa, #161b22);
+  --border: light-dark(#d0d7de, #21262d);
+  --text: light-dark(#1f2328, #c9d1d9);
+  --text-dim: light-dark(#656d76, #8b949e);
+  --row-active: light-dark(#ddf4ff, #1a2332);
   --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
 }
 
-/* -- system dark preference -- */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #0d1117;
-    --surface: #161b22;
-    --border: #21262d;
-    --text: #c9d1d9;
-    --text-dim: #8b949e;
-    --row-active: #1a2332;
-  }
-}
-
-/* -- explicit overrides -- */
 [data-theme="dark"] {
-  --bg: #0d1117;
-  --surface: #161b22;
-  --border: #21262d;
-  --text: #c9d1d9;
-  --text-dim: #8b949e;
-  --row-active: #1a2332;
+  color-scheme: dark;
 }
 
 [data-theme="light"] {
-  --bg: #ffffff;
-  --surface: #f6f8fa;
-  --border: #d0d7de;
-  --text: #1f2328;
-  --text-dim: #656d76;
-  --row-active: #ddf4ff;
+  color-scheme: light;
 }
 
 *,
@@ -752,12 +729,6 @@ pre {
   font-weight: 500;
 }
 
-.jt-key mark {
-  background: #fff8c5;
-  color: inherit;
-  border-radius: 2px;
-}
-
 .jt-colon {
   color: var(--text-dim);
 }
@@ -773,20 +744,26 @@ pre {
 }
 
 .jt-string {
-  color: #0a3069;
+  color: light-dark(#0a3069, #a5d6ff);
 }
 
 .jt-number {
-  color: #0550ae;
+  color: light-dark(#0550ae, #79c0ff);
 }
 
 .jt-boolean {
-  color: #953800;
+  color: light-dark(#953800, #ffa657);
 }
 
 .jt-null {
   color: var(--text-dim);
   font-style: italic;
+}
+
+.jt-key mark {
+  background: light-dark(#fff8c5, #bb800926);
+  color: light-dark(inherit, #e3b341);
+  border-radius: 2px;
 }
 
 .jt-copy {
@@ -812,41 +789,6 @@ pre {
 
 .jt-row:hover > .jt-copy {
   opacity: 1;
-}
-
-/* -- json tree dark mode -- */
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .jt-string {
-    color: #a5d6ff;
-  }
-  :root:not([data-theme="light"]) .jt-number {
-    color: #79c0ff;
-  }
-  :root:not([data-theme="light"]) .jt-boolean {
-    color: #ffa657;
-  }
-  :root:not([data-theme="light"]) .jt-key mark {
-    background: #bb800926;
-    color: #e3b341;
-  }
-}
-
-[data-theme="dark"] .jt-string {
-  color: #a5d6ff;
-}
-
-[data-theme="dark"] .jt-number {
-  color: #79c0ff;
-}
-
-[data-theme="dark"] .jt-boolean {
-  color: #ffa657;
-}
-
-[data-theme="dark"] .jt-key mark {
-  background: #bb800926;
-  color: #e3b341;
 }
 
 /* ---------- html iframe ---------- */
@@ -1102,12 +1044,7 @@ pre {
 
 /* ---------- diagram placeholders (shared) ---------- */
 
-.mermaid-placeholder,
-.plantuml-placeholder,
-.graphviz-placeholder,
-.d2-placeholder,
-.dbml-placeholder,
-.typst-placeholder {
+.diagram-placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1115,23 +1052,13 @@ pre {
 }
 
 /* Loading spinner for unrendered placeholders */
-.mermaid-placeholder:not(.mermaid-rendered):not(.mermaid-error),
-.plantuml-placeholder:not(.plantuml-rendered):not(.plantuml-error),
-.graphviz-placeholder:not(.graphviz-rendered):not(.graphviz-error),
-.d2-placeholder:not(.d2-rendered):not(.d2-error),
-.dbml-placeholder:not(.dbml-rendered):not(.dbml-error),
-.typst-placeholder:not(.typst-rendered):not(.typst-error) {
+.diagram-placeholder:not(.diagram-rendered):not(.diagram-error) {
   min-height: 120px;
   background: var(--surface);
   border-radius: 6px;
 }
 
-.mermaid-placeholder:not(.mermaid-rendered):not(.mermaid-error)::before,
-.plantuml-placeholder:not(.plantuml-rendered):not(.plantuml-error)::before,
-.graphviz-placeholder:not(.graphviz-rendered):not(.graphviz-error)::before,
-.d2-placeholder:not(.d2-rendered):not(.d2-error)::before,
-.dbml-placeholder:not(.dbml-rendered):not(.dbml-error)::before,
-.typst-placeholder:not(.typst-rendered):not(.typst-error)::before {
+.diagram-placeholder:not(.diagram-rendered):not(.diagram-error)::before {
   content: "";
   width: 20px;
   height: 20px;
@@ -1142,12 +1069,7 @@ pre {
 }
 
 /* Fade in rendered diagrams */
-.mermaid-rendered,
-.plantuml-rendered,
-.graphviz-rendered,
-.d2-rendered,
-.dbml-rendered,
-.typst-rendered {
+.diagram-rendered {
   animation: diagram-fade-in 0.2s ease-out;
 }
 
@@ -1160,27 +1082,15 @@ pre {
   }
 }
 
-/* Rendered SVGs respect container width */
-.mermaid-rendered svg,
-.graphviz-rendered svg,
-.d2-rendered svg,
-.dbml-rendered svg,
-.typst-rendered svg {
-  max-width: 100%;
-  height: auto;
-}
-
-.plantuml-rendered img {
+/* Rendered SVGs / images respect container width */
+.diagram-rendered svg,
+.diagram-rendered img {
   max-width: 100%;
   height: auto;
 }
 
 /* Diagram errors */
-.mermaid-error,
-.graphviz-error,
-.d2-error,
-.dbml-error,
-.typst-error {
+.diagram-error {
   color: #f85149;
   font-size: 13px;
   padding: 16px;
@@ -1188,19 +1098,13 @@ pre {
 
 /* ---------- standalone diagram views ---------- */
 
-.graphviz-standalone,
-.d2-standalone,
-.dbml-standalone,
-.typst-standalone {
+.diagram-standalone {
   display: flex;
   justify-content: center;
   padding: 24px 16px;
 }
 
-.graphviz-standalone svg,
-.d2-standalone svg,
-.dbml-standalone svg,
-.typst-standalone svg {
+.diagram-standalone svg {
   max-width: 100%;
   height: auto;
 }
