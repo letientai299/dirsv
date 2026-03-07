@@ -419,6 +419,10 @@ a.breadcrumb-root:hover .breadcrumb-sep {
   transition: opacity 0.12s ease-out;
 }
 
+.file-content:focus {
+  outline: none;
+}
+
 .file-content--stale {
   opacity: 0.4;
   pointer-events: none;

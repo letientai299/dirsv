@@ -16,7 +16,12 @@ import { ChevronLeft, ChevronRight, SidebarIcon } from "../lib/icons"
 import { imageRe, videoRe } from "../lib/media-types"
 import { navigate } from "../lib/navigate"
 import { parentOfFile } from "../lib/path"
-import { goToParent, listNavShortcuts, toggleSidebar } from "../lib/shortcuts"
+import {
+  focusSidebarContent,
+  goToParent,
+  listNavShortcuts,
+  toggleSidebar,
+} from "../lib/shortcuts"
 import { useAbortEffect } from "../lib/use-abort-effect"
 import { useListKeys } from "../lib/use-list-keys"
 import type { BoundShortcut } from "../lib/use-shortcuts"
@@ -290,6 +295,8 @@ export function FileView({ path }: Props) {
 
   // Sidebar list keyboard navigation
   const sidebarRef = useRef<HTMLElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const pendingFocus = useRef(false)
   useListKeys(sidebarRef, "a")
 
   // Resizable sidebar
@@ -374,9 +381,44 @@ export function FileView({ path }: Props) {
   const parentDir = useMemo(() => parentOfFile(path), [path])
   const siblings = useSiblings(parentDir)
 
+  const focusSidebarLink = useCallback(() => {
+    sidebarRef.current?.querySelector<HTMLElement>(".sidebar-active")?.focus()
+  }, [])
+
+  // Focus sidebar active link after it opens via ctrl-e
+  useEffect(() => {
+    if (sidebarOpen && pendingFocus.current) {
+      pendingFocus.current = false
+      focusSidebarLink()
+    }
+  }, [sidebarOpen, focusSidebarLink])
+
+  const focusSidebarOrContent = useCallback(() => {
+    const inSidebar = sidebarRef.current?.contains(document.activeElement)
+    if (inSidebar) {
+      contentRef.current?.focus()
+      return
+    }
+    if (!sidebarOpen) {
+      pendingFocus.current = true
+      handleToggleSidebar()
+      return
+    }
+    focusSidebarLink()
+  }, [sidebarOpen, handleToggleSidebar, focusSidebarLink])
+
   const boundShortcuts = useMemo(
-    () => fileShortcutBindings(parentDir, handleToggleSidebar),
-    [parentDir, handleToggleSidebar],
+    () => [
+      ...fileShortcutBindings(parentDir, handleToggleSidebar),
+      {
+        def: focusSidebarContent,
+        action(e: KeyboardEvent) {
+          e.preventDefault()
+          focusSidebarOrContent()
+        },
+      },
+    ],
+    [parentDir, handleToggleSidebar, focusSidebarOrContent],
   )
   const shortcutDefs = useShortcuts(boundShortcuts)
 
@@ -550,7 +592,11 @@ export function FileView({ path }: Props) {
             aria-orientation="vertical"
           />
         )}
-        <div class={`file-content${stale ? " file-content--stale" : ""}`}>
+        <div
+          ref={contentRef}
+          tabIndex={-1}
+          class={`file-content${stale ? " file-content--stale" : ""}`}
+        >
           {content}
         </div>
       </div>

@@ -35,6 +35,12 @@ export const toggleSidebar: ShortcutDef = {
   match: (e) => e.key === "b" && (e.ctrlKey || e.metaKey),
 }
 
+export const focusSidebarContent: ShortcutDef = {
+  keys: "Ctrl+E",
+  description: "Focus sidebar / content",
+  match: (e) => e.key === "e" && (e.ctrlKey || e.metaKey),
+}
+
 /** Display-only defs for the help dialog — handled by useListKeys. */
 const noop = () => false
 export const listNavShortcuts: ShortcutDef[] = [
