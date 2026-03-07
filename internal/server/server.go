@@ -2,6 +2,7 @@
 package server
 
 import (
+	"bytes"
 	"compress/gzip"
 	"encoding/json"
 	"errors"
@@ -55,6 +56,7 @@ type Server struct {
 	allowedHosts map[string]struct{}
 	mux          *http.ServeMux
 	pathCache    sync.Map // cleaned request path → *pathCacheEntry
+	done         chan struct{}
 }
 
 // Option configures a Server.
@@ -73,7 +75,7 @@ func WithAllowedHosts(hosts ...string) Option {
 	return func(s *Server) {
 		s.allowedHosts = make(map[string]struct{}, len(hosts))
 		for _, h := range hosts {
-			s.allowedHosts[h] = struct{}{}
+			s.allowedHosts[strings.ToLower(h)] = struct{}{}
 		}
 	}
 }
@@ -105,10 +107,11 @@ func New(
 		return nil, errors.New("root is not a directory")
 	}
 
-	s := &Server{root: abs, mux: http.NewServeMux()}
+	s := &Server{root: abs, mux: http.NewServeMux(), done: make(chan struct{})}
 	for _, opt := range opts {
 		opt(s)
 	}
+	go s.sweepPathCache()
 	s.mux.HandleFunc("GET /api/browse/{path...}", s.handleBrowse)
 	s.mux.HandleFunc("GET /api/raw/{path...}", s.handleRaw)
 	s.mux.HandleFunc("GET /api/htmlpreview/{path...}", s.handleHTMLPreview)
@@ -152,7 +155,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		// DNS names are case-insensitive (RFC 4343). Normalize to
 		// lowercase so "LOCALHOST" matches the lowercase allowlist.
-		host = strings.ToLower(host)
+		host = asciiLower(host)
 		if _, ok := s.allowedHosts[host]; !ok {
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return
@@ -176,6 +179,23 @@ func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(resp)
+}
+
+// asciiLower returns s with ASCII uppercase letters lowered.
+// Returns s unchanged (no allocation) when already lowercase.
+func asciiLower(s string) string {
+	for i := range len(s) {
+		if s[i] >= 'A' && s[i] <= 'Z' {
+			b := []byte(s)
+			for ; i < len(b); i++ {
+				if b[i] >= 'A' && b[i] <= 'Z' {
+					b[i] += 'a' - 'A'
+				}
+			}
+			return string(b)
+		}
+	}
+	return s
 }
 
 func isLoopback(host string) bool {
@@ -247,6 +267,38 @@ func (s *Server) resolvePath(
 	})
 
 	return resolved, fi, nil
+}
+
+// Close stops background goroutines. Safe to call multiple times.
+func (s *Server) Close() {
+	select {
+	case <-s.done:
+	default:
+		close(s.done)
+	}
+}
+
+// sweepPathCache periodically evicts expired entries so the cache
+// doesn't grow unboundedly from crawlers hitting unique paths.
+func (s *Server) sweepPathCache() {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-s.done:
+			return
+		case <-ticker.C:
+			now := time.Now()
+			s.pathCache.Range(func(key, value any) bool {
+				if entry, ok := value.(*pathCacheEntry); ok {
+					if now.Sub(entry.cachedAt) >= pathCacheTTL {
+						s.pathCache.Delete(key)
+					}
+				}
+				return true
+			})
+		}
+	}
 }
 
 func (s *Server) handleBrowse(w http.ResponseWriter, r *http.Request) {
@@ -344,17 +396,55 @@ func (s *Server) serveDirEntries(
 	w http.ResponseWriter,
 	dirEntries []os.DirEntry,
 ) {
+	entries := s.collectEntries(dirEntries)
+	resp := BrowseResponse{Type: "dir", Entries: entries}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-cache")
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+	}
+}
+
+func dirEntryToEntry(de os.DirEntry) (Entry, bool) {
+	info, err := de.Info()
+	if err != nil {
+		return Entry{}, false
+	}
+	return Entry{
+		Name:    de.Name(),
+		IsDir:   de.IsDir(),
+		IsExec:  !de.IsDir() && info.Mode()&0o111 != 0,
+		Size:    info.Size(),
+		ModTime: info.ModTime(),
+	}, true
+}
+
+// collectEntries converts DirEntry slices to Entry slices. For small
+// directories the conversion is sequential; larger directories use
+// parallel workers to overlap Info() syscalls.
+func (s *Server) collectEntries(dirEntries []os.DirEntry) []Entry {
+	const parallelThreshold = 200
+
+	if len(dirEntries) < parallelThreshold {
+		entries := make([]Entry, 0, len(dirEntries))
+		for _, de := range dirEntries {
+			if e, ok := dirEntryToEntry(de); ok {
+				entries = append(entries, e)
+			}
+		}
+		return entries
+	}
+
 	numWorkers := 16
 	chunkSize := (len(dirEntries) + numWorkers - 1) / numWorkers
 
 	type result struct {
 		entries []Entry
 	}
-
 	results := make([]result, numWorkers)
 	var wg sync.WaitGroup
 
-	for i := 0; i < numWorkers; i++ {
+	for i := range numWorkers {
 		start := i * chunkSize
 		if start >= len(dirEntries) {
 			break
@@ -365,23 +455,15 @@ func (s *Server) serveDirEntries(
 		}
 
 		wg.Add(1)
-		go func(idx int, entries []os.DirEntry) {
+		go func(idx int, chunk []os.DirEntry) {
 			defer wg.Done()
-			var localEntries []Entry
-			for _, de := range entries {
-				info, err := de.Info()
-				if err != nil {
-					continue
+			local := make([]Entry, 0, len(chunk))
+			for _, de := range chunk {
+				if e, ok := dirEntryToEntry(de); ok {
+					local = append(local, e)
 				}
-				localEntries = append(localEntries, Entry{
-					Name:    de.Name(),
-					IsDir:   de.IsDir(),
-					IsExec:  !de.IsDir() && info.Mode()&0o111 != 0,
-					Size:    info.Size(),
-					ModTime: info.ModTime(),
-				})
 			}
-			results[idx].entries = localEntries
+			results[idx].entries = local
 		}(i, dirEntries[start:end])
 	}
 	wg.Wait()
@@ -390,13 +472,7 @@ func (s *Server) serveDirEntries(
 	for _, res := range results {
 		entries = append(entries, res.entries...)
 	}
-
-	resp := BrowseResponse{Type: "dir", Entries: entries}
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "no-cache")
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-	}
+	return entries
 }
 
 func (s *Server) handleRaw(w http.ResponseWriter, r *http.Request) {
@@ -546,22 +622,26 @@ func (s *Server) handleHTMLPreview(w http.ResponseWriter, r *http.Request) {
 	// page resolve assets (_astro/, images/, etc.) from the same place.
 	baseHref := "/api/htmlpreview/" + url.PathEscape(siteRoot) + "/"
 
-	html := string(content)
-
 	// Strip leading "/" from absolute-path attribute values so <base>
 	// can resolve them (e.g., href="/_astro/x" → href="_astro/x").
-	html = reAbsAttr.ReplaceAllString(html, "${1}${2}")
+	content = reAbsAttr.ReplaceAll(content, []byte("${1}${2}"))
 
 	// Inject <base> after <head> so relative URLs resolve through
 	// this endpoint, keeping site-internal navigation working.
-	baseTag := `<base href="` + baseHref + `">`
-	if idx := strings.Index(strings.ToLower(html), "<head"); idx != -1 {
-		if closeIdx := strings.IndexByte(html[idx:], '>'); closeIdx != -1 {
+	baseTag := []byte(`<base href="` + baseHref + `">`)
+	lower := bytes.ToLower(content)
+	if idx := bytes.Index(lower, []byte("<head")); idx != -1 {
+		if closeIdx := bytes.IndexByte(content[idx:], '>'); closeIdx != -1 {
 			insertAt := idx + closeIdx + 1
-			html = html[:insertAt] + baseTag + html[insertAt:]
+			var buf bytes.Buffer
+			buf.Grow(len(content) + len(baseTag))
+			buf.Write(content[:insertAt])
+			buf.Write(baseTag)
+			buf.Write(content[insertAt:])
+			content = buf.Bytes()
 		}
 	} else {
-		html = baseTag + html
+		content = append(baseTag, content...)
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -586,7 +666,7 @@ func (s *Server) handleHTMLPreview(w http.ResponseWriter, r *http.Request) {
 		"default-src 'self'; script-src 'unsafe-inline' 'unsafe-eval'; "+
 			"style-src 'self' 'unsafe-inline'; img-src * data: blob:; "+
 			"media-src * data: blob:; font-src * data:; connect-src 'none'")
-	_, _ = w.Write([]byte(html))
+	_, _ = w.Write(content)
 }
 
 func (s *Server) mountSPA(appFS fs.FS) {

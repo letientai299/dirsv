@@ -180,12 +180,13 @@ func main() {
 		openBrowser(u, *browser)
 	}
 
-	// Serve blocks until error; clean up watcher afterward.
+	// Serve blocks until error; clean up watcher and server afterward.
 	httpSrv := &http.Server{
 		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	err = httpSrv.Serve(ln)
+	srv.Close()
 	_ = w.Close()
 	if err != nil {
 		log.Fatal(err)

@@ -169,10 +169,17 @@ func isEditorTempFile(name string) bool {
 // ensureWatched walks dir and adds all sub-directories to the fsnotify
 // watcher, skipping subtrees that are already watched.
 func (w *Watcher) ensureWatched(dir string) {
+	// Snapshot already-watched dirs to skip during walk (no lock held
+	// during the potentially slow WalkDir).
 	w.watchMu.Lock()
-	defer w.watchMu.Unlock()
+	snapshot := make(map[string]struct{}, len(w.watched))
+	for k := range w.watched {
+		snapshot[k] = struct{}{}
+	}
+	w.watchMu.Unlock()
 
-	var dirs []string
+	// Walk without holding the lock.
+	var newDirs []string
 	_ = filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -190,22 +197,38 @@ func (w *Watcher) ensureWatched(dir string) {
 		if p != dir && shouldSkipDir(d.Name()) {
 			return filepath.SkipDir
 		}
-		if _, ok := w.watched[p]; ok {
+		if _, ok := snapshot[p]; ok {
 			return filepath.SkipDir // subtree already covered
 		}
+		newDirs = append(newDirs, p)
+		return nil
+	})
+
+	if len(newDirs) == 0 {
+		return
+	}
+
+	// Lock only for the batch add.
+	w.watchMu.Lock()
+	defer w.watchMu.Unlock()
+
+	var added []string
+	for _, p := range newDirs {
+		if _, ok := w.watched[p]; ok {
+			continue // added by a concurrent call
+		}
 		if err := w.fsw.Add(p); err != nil {
-			return err
+			continue
 		}
 		w.watched[p] = struct{}{}
 		rel, _ := filepath.Rel(w.root, p)
-		dirs = append(dirs, filepath.ToSlash(rel))
-		return nil
-	})
-	if len(dirs) > 0 {
+		added = append(added, filepath.ToSlash(rel))
+	}
+	if len(added) > 0 {
 		//nolint:gosec // G706: dirs derived from filepath.Abs
 		w.logf("%s%-10s%s %s",
 			colorDim, "watch", colorReset,
-			strings.Join(dirs, ", "))
+			strings.Join(added, ", "))
 	}
 }
 
