@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "preact/hooks"
+import { FocusOverlay } from "../components/focus-overlay"
 import { ChevronLeft, ChevronRight } from "../lib/icons"
 import { imageExts, videoExts } from "../lib/media-types"
 import { navigate } from "../lib/navigate"
 import { parentOf } from "../lib/path"
+import type { FocusItem } from "../lib/use-focus-overlay"
+import { useFocusOverlay } from "../lib/use-focus-overlay"
 import { useKeys } from "../lib/use-keys"
 import { useSiblings } from "../lib/use-siblings"
 import { useWS } from "../lib/use-ws"
@@ -65,6 +68,24 @@ export function MediaView({ path, kind }: Props) {
   const position =
     currentIdx >= 0 ? `${currentIdx + 1} / ${siblings.length}` : ""
 
+  const focus = useFocusOverlay()
+
+  const focusItems: FocusItem[] = useMemo(
+    () =>
+      siblings.map((p) => ({
+        type: kind as "image" | "video",
+        src: `/api/raw${p}`,
+        alt: p.split("/").pop() ?? p,
+      })),
+    [siblings, kind],
+  )
+
+  const openFocus = useCallback(() => {
+    if (focusItems.length > 0) {
+      focus.open(focusItems, Math.max(0, currentIdx))
+    }
+  }, [focusItems, currentIdx, focus])
+
   // Fade-in: track which URL has finished loading. Comparing against rawUrl
   // resets the fade synchronously during render — no useEffect race where
   // a deferred setLoaded(false) can clobber an onLoad that already fired
@@ -92,9 +113,15 @@ export function MediaView({ path, kind }: Props) {
             alt={fileName}
             class={`media-content media-fade ${loaded ? "media-fade--in" : ""}`}
             onLoad={() => setLoadedUrl(rawUrl)}
+            onDblClick={openFocus}
           />
         ) : (
-          <video src={rawUrl} controls class="media-content">
+          <video
+            src={rawUrl}
+            controls
+            class="media-content"
+            onDblClick={openFocus}
+          >
             <track kind="captions" />
           </video>
         )}
@@ -122,6 +149,7 @@ export function MediaView({ path, kind }: Props) {
           </button>
         </div>
       )}
+      {focus.overlayProps && <FocusOverlay {...focus.overlayProps} />}
     </div>
   )
 }

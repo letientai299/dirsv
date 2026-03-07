@@ -1,5 +1,6 @@
 import morphdom from "morphdom"
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
+import { FocusOverlay } from "../components/focus-overlay"
 import { TableOfContents } from "../components/toc"
 import { renderD2Blocks } from "../lib/d2-render"
 import { renderDbmlBlocks } from "../lib/dbml-render"
@@ -13,6 +14,8 @@ import { renderMermaidBlocks } from "../lib/mermaid-render"
 import { renderPlantumlBlocks } from "../lib/plantuml-render"
 import { preloadDiagramBundles } from "../lib/preload-diagrams"
 import { renderTypstBlocks } from "../lib/typst-render"
+import type { FocusItem } from "../lib/use-focus-overlay"
+import { useFocusOverlay } from "../lib/use-focus-overlay"
 import "github-markdown-css/github-markdown.css"
 import "katex/dist/katex.min.css"
 import "remark-github-blockquote-alert/alert.css"
@@ -28,6 +31,7 @@ export function MarkdownView({ content, path }: Props) {
   const contentRef = useRef<HTMLElement>(null)
   const prevContentRef = useRef("")
   const prevPathRef = useRef("")
+  const focus = useFocusOverlay()
 
   useEffect(() => {
     // Skip re-render if both path and content are unchanged (WS may re-fetch same file).
@@ -113,15 +117,16 @@ export function MarkdownView({ content, path }: Props) {
     [path],
   )
 
-  // Enter on a focused <a> fires a click event in browsers, so onClick covers
-  // keyboard nav. This handler satisfies the a11y lint rule (useKeyWithClickEvents).
-  const onLinkKeyDown = useCallback(() => {
-    // Handled by the browser's native click dispatch on Enter.
-  }, [])
+  const renderingRef = useRef(false)
 
-  const reRenderDiagrams = useCallback(() => {
+  const reRenderDiagrams = useCallback(async () => {
+    if (renderingRef.current) return
+    renderingRef.current = true
     const el = contentRef.current
-    if (!el) return
+    if (!el) {
+      renderingRef.current = false
+      return
+    }
     for (const rendered of el.querySelectorAll<HTMLElement>(
       ".mermaid-rendered",
     )) {
@@ -132,19 +137,88 @@ export function MarkdownView({ content, path }: Props) {
       rendered.classList.remove("d2-rendered", "diagram-rendered")
       delete rendered.dataset["d2Hash"]
     }
-    void renderMermaidBlocks(el)
-    void renderD2Blocks(el)
-  }, [])
+    await Promise.all([renderMermaidBlocks(el), renderD2Blocks(el)])
+    renderingRef.current = false
+    // updateItems is a no-op when overlay is closed (state null → null).
+    const { items } = collectFocusItems(el)
+    focus.updateItems(items)
+  }, [focus])
 
   useEffect(() => {
-    window.addEventListener("theme-change", reRenderDiagrams)
-    return () => window.removeEventListener("theme-change", reRenderDiagrams)
+    const onThemeChange = () => void reRenderDiagrams()
+    window.addEventListener("theme-change", onThemeChange)
+    return () => window.removeEventListener("theme-change", onThemeChange)
   }, [reRenderDiagrams])
 
   const tocHeadings = useMemo(
     () => result?.headings.filter((h) => h.depth > 1) ?? [],
     [result],
   )
+
+  // Open focus overlay for a given DOM element inside the article.
+  const openFocusFor = useCallback(
+    (target: HTMLElement) => {
+      const el = contentRef.current
+      if (!el) return
+      const { items, index } = collectFocusItems(el, target)
+      if (items.length > 0) focus.open(items, index)
+    },
+    [focus],
+  )
+
+  // Event delegation: dblclick on images/videos/diagrams opens focus mode.
+  // Works regardless of when elements appear in the DOM (async diagram renders).
+  const onDblClick = useCallback(
+    (e: MouseEvent) => {
+      const target = findFocusTarget(e.target as HTMLElement)
+      if (!target) return
+      e.preventDefault()
+      openFocusFor(target)
+    },
+    [openFocusFor],
+  )
+
+  // Enter key on focused images / .figure-container wrappers opens focus mode.
+  const onContentKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key !== "Enter") return
+      const el = e.target as HTMLElement
+      if (el.tagName === "IMG") {
+        e.preventDefault()
+        openFocusFor(el)
+        return
+      }
+      if (el.classList.contains("figure-container")) {
+        const diagram = el.querySelector<HTMLElement>(".diagram-rendered")
+        if (diagram) {
+          e.preventDefault()
+          openFocusFor(diagram)
+        }
+      }
+    },
+    [openFocusFor],
+  )
+
+  // Listen for "focus-expand" custom events from the figure toolbar expand button.
+  const onFocusExpand = useCallback(
+    (e: Event) => {
+      const target = (e as CustomEvent).detail?.element as
+        | HTMLElement
+        | undefined
+      if (target) openFocusFor(target)
+    },
+    [openFocusFor],
+  )
+
+  // Attach focus-expand listener. Depends on `result` so it re-runs after the
+  // article mounts (result null → loading div, result set → article exists).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: result triggers re-attach when article mounts
+  useEffect(() => {
+    const el = contentRef.current
+    if (!el) return
+    el.addEventListener("focus-expand", onFocusExpand)
+    return () => el.removeEventListener("focus-expand", onFocusExpand)
+  }, [result, onFocusExpand])
 
   if (error) return <div class="error">Render error: {error}</div>
   if (result === null) return <div class="loading">Rendering...</div>
@@ -155,9 +229,63 @@ export function MarkdownView({ content, path }: Props) {
         ref={contentRef}
         class="markdown-body"
         onClick={onLinkClick}
-        onKeyDown={onLinkKeyDown}
+        onDblClick={onDblClick}
+        onKeyDown={onContentKeyDown}
       />
       <TableOfContents headings={tocHeadings} contentRef={contentRef} />
+      {focus.overlayProps && <FocusOverlay {...focus.overlayProps} />}
     </div>
   )
+}
+
+function elementToFocusItem(el: HTMLElement): FocusItem | null {
+  if (el.tagName === "IMG") {
+    const img = el as HTMLImageElement
+    return { type: "image", src: img.src, alt: img.alt || "" }
+  }
+  if (el.tagName === "VIDEO") {
+    const video = el as HTMLVideoElement
+    return { type: "video", src: video.src }
+  }
+  if (el.classList.contains("diagram-rendered")) {
+    const svg = el.querySelector("svg")
+    return svg ? { type: "diagram", svg: svg.outerHTML } : null
+  }
+  return null
+}
+
+/** Collect all graphical content elements from the article in DOM order. */
+function collectFocusItems(
+  container: HTMLElement,
+  target?: HTMLElement,
+): { items: FocusItem[]; index: number } {
+  const items: FocusItem[] = []
+  let index = 0
+
+  for (const el of container.querySelectorAll<HTMLElement>(
+    "img, video, .diagram-rendered",
+  )) {
+    const item = elementToFocusItem(el)
+    if (!item) continue
+    if (
+      target &&
+      (el === target || el.contains(target) || target.contains(el))
+    ) {
+      index = items.length
+    }
+    items.push(item)
+  }
+
+  return { items, index }
+}
+
+/** Walk up from the event target to find a focusable graphical element. */
+function findFocusTarget(el: HTMLElement | null): HTMLElement | null {
+  while (el) {
+    if (el.tagName === "IMG" || el.tagName === "VIDEO") return el
+    if (el.classList.contains("diagram-rendered")) return el
+    if (el.classList.contains("markdown-body")) return null
+    el = el.parentElement
+  }
+  return null
 }

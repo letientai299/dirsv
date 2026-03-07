@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "preact/hooks"
+import { useCallback, useEffect, useRef, useState } from "preact/hooks"
+import { FocusOverlay } from "../components/focus-overlay"
+import { useFocusOverlay } from "../lib/use-focus-overlay"
 
 interface Props {
   content: string
@@ -16,6 +18,12 @@ export function DiagramView({
   const [svg, setSvg] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const focus = useFocusOverlay()
+
+  const openFocus = useCallback(() => {
+    if (!svg) return
+    focus.open([{ type: "diagram", svg }], 0)
+  }, [svg, focus])
 
   useEffect(() => {
     // Keep old SVG visible while the new one renders — no flash to loading spinner.
@@ -47,5 +55,20 @@ export function DiagramView({
     )
   if (svg === null) return <div class="loading">Rendering...</div>
 
-  return <div class={className} ref={containerRef} />
+  return (
+    <>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: diagram container acts as focus trigger */}
+      <div
+        class={className}
+        ref={containerRef}
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: needs focus for Enter key to open overlay
+        tabIndex={0}
+        onDblClick={openFocus}
+        onKeyDown={(e: KeyboardEvent) => {
+          if (e.key === "Enter") openFocus()
+        }}
+      />
+      {focus.overlayProps && <FocusOverlay {...focus.overlayProps} />}
+    </>
+  )
 }
