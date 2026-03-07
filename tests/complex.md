@@ -7,8 +7,6 @@ $O(n \log n)$ — a speedup that made digital signal processing practical.
 This document walks through the theory, implementation, complexity analysis, and
 applications in enough depth to serve as a study reference.
 
----
-
 ## Table of Contents
 
 - [1. The Discrete Fourier Transform](#1-the-discrete-fourier-transform)
@@ -18,8 +16,6 @@ applications in enough depth to serve as a study reference.
 - [5. Number Theoretic Transform](#5-number-theoretic-transform)
 - [6. Applications](#6-applications)
 - [7. Comparison of FFT Variants](#7-comparison-of-fft-variants)
-
----
 
 ## 1. The Discrete Fourier Transform
 
@@ -76,8 +72,6 @@ $$
 
 This matrix is **unitary** (up to scaling): $F_n^{-1} = \frac{1}{n} F_n^*$.
 Direct matrix multiplication requires $O(n^2)$ operations.
-
----
 
 ## 2. Cooley-Tukey FFT
 
@@ -172,8 +166,6 @@ bit-reversal is $b_0 b_1 \ldots b_{m-2} b_{m-1}$.
 | 5               | 101    | 101             | 5                  |
 | 6               | 110    | 011             | 3                  |
 | 7               | 111    | 111             | 7                  |
-
----
 
 ## 3. Implementation
 
@@ -368,8 +360,6 @@ func FFT(a []complex128, invert bool) {
 }
 ```
 
----
-
 ## 4. Complexity Analysis
 
 ### 4.1 Operation Counts
@@ -447,8 +437,6 @@ For practical sizes:
 | $2^{16}$ (65536) | $4.3 \times 10^9$    | $1.05 \times 10^6$ | 4,096×   |
 | $2^{20}$ (1M)    | $1.1 \times 10^{12}$ | $2.1 \times 10^7$  | 52,429×  |
 | $2^{24}$ (16M)   | $2.8 \times 10^{14}$ | $4.0 \times 10^8$  | 699,051× |
-
----
 
 ## 5. Number Theoretic Transform
 
@@ -550,8 +538,6 @@ flowchart LR
 
 Total complexity: $O(n \log n)$ instead of $O(n^2)$ for naive convolution.
 
----
-
 ## 6. Applications
 
 ### 6.1 Polynomial Multiplication
@@ -619,8 +605,6 @@ Common problems solvable with FFT/NTT:
 | Bitwise OR/AND convolution     | Subset-sum / Möbius transform | $O(n \log n)$ |
 | Power series inversion         | Newton's method + FFT         | $O(n \log n)$ |
 | Power series exp/log           | Newton's method + FFT         | $O(n \log n)$ |
-
----
 
 ## 7. Comparison of FFT Variants
 
@@ -717,8 +701,6 @@ across stages. Work-optimal for $P \leq n / \log n$.
 GPU implementations (cuFFT, VkFFT) achieve throughputs exceeding 1 TFLOP/s for
 large batches, limited primarily by memory bandwidth.
 
----
-
 ## Appendix: Worked Example
 
 Compute the 4-point DFT of $x = [1, 2, 3, 4]$.
@@ -749,13 +731,9 @@ X_3 &= -2 - (-i)(-2) = -2 - 2i \quad \checkmark
 \end{aligned}
 $$
 
----
-
 > **Further reading**: Cormen et al., _Introduction to Algorithms_ (Chapter 30);
 > Knuth, _The Art of Computer Programming_ Vol. 2 (Section 4.3.3); Press et al.,
 > _Numerical Recipes_ (Chapter 12).
-
----
 
 ## Appendix B: Practical Notes
 
@@ -779,8 +757,6 @@ $$
 > inverse transform produces values scaled by the transform length — omitting
 > the $1/n$ factor is one of the most common FFT bugs and leads to results that
 > are off by orders of magnitude.
-
----
 
 ## Appendix C: GFM Feature Showcase
 

@@ -15,8 +15,6 @@ GitHub (tables, strikethrough, task lists, footnotes, etc.) are covered in
 
 [[_TOC_]]
 
----
-
 ## 1. Math
 
 ### Inline Math
@@ -48,8 +46,6 @@ $$
 $$
 \sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}
 $$
-
----
 
 ## 2. Diagrams
 
@@ -97,8 +93,6 @@ App --> User: 201 Created
 deactivate App
 ```
 
----
-
 ## 3. Front Matter
 
 YAML front matter is at the top of this file. GitLab also supports TOML and JSON
@@ -126,8 +120,6 @@ draft = true
 ;;;
 ```
 
----
-
 ## 4. Color Chips
 
 GitLab renders backtick-wrapped color values as inline swatches:
@@ -145,8 +137,6 @@ GitLab renders backtick-wrapped color values as inline swatches:
 A palette: `#2E3440` `#3B4252` `#434C5E` `#4C566A` `#D8DEE9` `#E5E9F0`
 `#ECEFF4` `#8FBCBB` `#88C0D0` `#81A1C1` `#5E81AC` (Nord theme)
 
----
-
 ## 5. Inline Diff
 
 Review changes inline without a code block:
@@ -159,8 +149,6 @@ production.
 
 We {- removed the legacy API endpoint -} and {+ introduced a versioned REST
 interface +}.
-
----
 
 ## 6. Diff Code Block
 
@@ -176,8 +164,6 @@ interface +}.
 +  debug: false
    timeout: 30s
 ```
-
----
 
 ## 7. Multiline Blockquotes
 
@@ -200,8 +186,6 @@ No `>` prefix needed on each line.
 
 > > >
 
----
-
 ## 8. Definition Lists
 
 HTTP Methods
@@ -219,8 +203,6 @@ Throughput
 : The number of requests a system can handle per unit of time, typically
 measured in requests per second (RPS).
 
----
-
 ## 9. Abbreviations
 
 _[GLFM]: GitLab Flavored Markdown
@@ -237,8 +219,6 @@ rendering. When building a high-performance web app, choosing between SSR and CS
 affects initial load time. Modern bundlers support HMR for rapid development
 cycles. The app uses WASM modules for FFT, NTT, and DFT computations.
 
----
-
 ## 10. Task Lists (with Inapplicable State)
 
 Project launch checklist:
@@ -253,8 +233,6 @@ Project launch checklist:
 - [ ] Production deploy
 
 The `[~]` syntax marks tasks as inapplicable — distinct from incomplete.
-
----
 
 ## 11. Alerts / Admonitions
 
@@ -275,8 +253,6 @@ The `[~]` syntax marks tasks as inapplicable — distinct from incomplete.
 > [!CAUTION]
 > Inline diff syntax `{+ ... +}` and `{- ... -}` does not nest. Do not place
 > markdown formatting inside the diff markers.
-
----
 
 ## 12. Audio / Video Embedding
 
@@ -302,8 +278,6 @@ works everywhere:
 
 ![Spinning globe](/api/raw/tests/globe.gif)
 
----
-
 ## 13. JSON Table
 
 ```json:table
@@ -325,8 +299,6 @@ works everywhere:
   ]
 }
 ```
-
----
 
 ## 14. Collapsible Sections
 
@@ -379,8 +351,6 @@ deploy:
 
 </details>
 
----
-
 ## 15. Miscellaneous
 
 ### Emoji
@@ -399,12 +369,6 @@ Water is H<sub>2</sub>O. The reaction produces CO<sub>2</sub>. Einstein's
 equation: E = mc<sup>2</sup>. Footnote style<sup>[1]</sup>.
 
 ### Horizontal Rules
-
-Three styles (all render identically):
-
----
-
----
 
 ---
 

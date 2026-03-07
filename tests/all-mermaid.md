@@ -3,8 +3,6 @@
 A comprehensive test of every Mermaid diagram type. Used to verify the renderer
 handles all supported diagrams correctly.
 
----
-
 ## 1. Flowchart
 
 ```mermaid
@@ -545,8 +543,6 @@ treemap-beta
             "zod": 18
             "axios": 20
 ```
-
----
 
 ## Stress Tests — Advanced Features
 

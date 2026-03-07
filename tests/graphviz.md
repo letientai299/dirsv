@@ -3,10 +3,6 @@
 A comprehensive test of Graphviz diagrams rendered via `@hpcc-js/wasm-graphviz`.
 Both `graphviz` and `dot` language tags are supported.
 
----
-
----
-
 ## 1. Directed Graph — Microservice Architecture
 
 ```graphviz

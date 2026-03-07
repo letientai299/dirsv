@@ -3,8 +3,6 @@
 A comprehensive test of DBML diagram features. Used to verify the renderer
 handles all supported syntax correctly.
 
----
-
 ## 1. Tables, Columns, and References
 
 Column settings (`pk`, `not null`, `unique`, `default`, `increment`, `note`),
@@ -160,8 +158,6 @@ Ref: order_items.product_id > products.id
 Ref: products.category_id > categories.id
 Ref: categories.parent_id > categories.id
 ```
-
----
 
 ## Stress Tests
 
