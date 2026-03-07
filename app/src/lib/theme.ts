@@ -12,9 +12,12 @@ export function getEffectiveTheme(): Theme {
 
 export function toggleTheme(): Theme {
   const next = getEffectiveTheme() === "dark" ? "light" : "dark"
-  document.documentElement.setAttribute("data-theme", next)
+  const root = document.documentElement
+  root.classList.add("theme-transitioning")
+  root.setAttribute("data-theme", next)
   localStorage.setItem(STORAGE_KEY, next)
   window.dispatchEvent(new CustomEvent("theme-change"))
+  setTimeout(() => root.classList.remove("theme-transitioning"), 300)
   return next
 }
 

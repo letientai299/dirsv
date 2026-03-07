@@ -13,7 +13,8 @@ export function normalizePath(raw: string, base: string): string {
 
 /** SPA navigation helper. Encodes each path segment for proper URL handling. */
 export function navigate(to: string) {
-  const encoded = to
+  const normalized = normalizePath(to, "/")
+  const encoded = normalized
     .split("/")
     .map((s) => encodeURIComponent(s))
     .join("/")

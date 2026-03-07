@@ -1,19 +1,27 @@
 import { lazy, Suspense } from "preact/compat"
 import { useCallback, useEffect, useState } from "preact/hooks"
 import { type BrowseResponse, browse, fetchInfo } from "./lib/api"
+import { normalizePath } from "./lib/navigate"
 import { FileView } from "./views/file-view"
 
 const DirView = lazy(() =>
   import("./views/dir-view").then((m) => ({ default: m.DirView })),
 )
 
+function cleanPathname(): string {
+  const raw = decodeURIComponent(location.pathname)
+  const clean = normalizePath(raw, "/")
+  if (location.pathname !== clean) history.replaceState(null, "", clean)
+  return clean
+}
+
 export function App() {
-  const [path, setPath] = useState(decodeURIComponent(location.pathname))
+  const [path, setPath] = useState(cleanPathname)
   const [data, setData] = useState<BrowseResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const onPopState = () => setPath(decodeURIComponent(location.pathname))
+    const onPopState = () => setPath(cleanPathname())
     window.addEventListener("popstate", onPopState)
     return () => window.removeEventListener("popstate", onPopState)
   }, [])
