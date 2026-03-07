@@ -4,6 +4,80 @@ Test cases for SPA navigation and media rewriting. Every link on this page
 should work without a full page reload (check the network tab — no document
 requests).
 
+## Supported Diagram Kinds
+
+### Mermaid
+
+```mermaid
+flowchart LR
+    A([Start]) --> B{Auth?}
+    B -->|Yes| C[Process]
+    B -->|No| D[403]
+    C --> E([Done])
+```
+
+### Graphviz
+
+```graphviz
+digraph G {
+    rankdir=LR
+    node [shape=box, style="rounded,filled", fillcolor="#e3f2fd"]
+    Client -> Gateway -> Service -> DB [shape=cylinder, fillcolor="#fef3e0"]
+}
+```
+
+### D2
+
+```d2
+direction: right
+client -> gateway -> service -> db: {style.stroke-dash: 5}
+db: Database {shape: cylinder}
+```
+
+### DBML
+
+```dbml
+Table users {
+  id integer [pk, increment]
+  name varchar(255) [not null]
+  email varchar(255) [unique]
+}
+
+Table posts {
+  id integer [pk, increment]
+  user_id integer [not null]
+  title varchar(255)
+}
+
+Ref: posts.user_id > users.id
+```
+
+### PlantUML
+
+```plantuml
+@startuml
+actor User
+participant "API" as api
+database "DB" as db
+
+User -> api: GET /data
+api -> db: SELECT *
+db --> api: rows
+api --> User: 200 OK
+@enduml
+```
+
+### Typst
+
+```typst
+#set page(width: auto, height: auto, margin: 1em)
+#set text(size: 18pt)
+
+$ sum_(k=1)^n k = (n(n+1)) / 2 $
+```
+
+---
+
 ## Same-directory links
 
 - [Complex markdown](complex.md) — sibling file
