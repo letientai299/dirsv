@@ -1,5 +1,6 @@
-import { useEffect, useState } from "preact/hooks"
+import { useEffect, useRef, useState } from "preact/hooks"
 import type { Heading } from "../lib/rehype-extract-headings"
+import { useListKeys } from "../lib/use-list-keys"
 
 interface Props {
   headings: Heading[]
@@ -8,6 +9,8 @@ interface Props {
 
 export function TableOfContents({ headings, contentRef }: Props) {
   const [activeId, setActiveId] = useState<string>("")
+  const navRef = useRef<HTMLElement>(null)
+  useListKeys(navRef, ".toc-link")
 
   useEffect(() => {
     const container = contentRef.current
@@ -48,7 +51,7 @@ export function TableOfContents({ headings, contentRef }: Props) {
   const minDepth = Math.min(...headings.map((h) => h.depth))
 
   return (
-    <nav class="toc" aria-label="Table of contents">
+    <nav class="toc" aria-label="Table of contents" ref={navRef}>
       <ul class="toc-list">
         {headings.map((h) => (
           <li

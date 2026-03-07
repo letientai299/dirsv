@@ -16,8 +16,9 @@ import { ChevronLeft, ChevronRight, SidebarIcon } from "../lib/icons"
 import { imageRe, videoRe } from "../lib/media-types"
 import { navigate } from "../lib/navigate"
 import { parentOfFile } from "../lib/path"
-import { goToParent, toggleSidebar } from "../lib/shortcuts"
+import { goToParent, listNavShortcuts, toggleSidebar } from "../lib/shortcuts"
 import { useAbortEffect } from "../lib/use-abort-effect"
+import { useListKeys } from "../lib/use-list-keys"
 import type { BoundShortcut } from "../lib/use-shortcuts"
 import { useShortcuts } from "../lib/use-shortcuts"
 import { useSiblings } from "../lib/use-siblings"
@@ -287,6 +288,10 @@ export function FileView({ path }: Props) {
     })
   }, [])
 
+  // Sidebar list keyboard navigation
+  const sidebarRef = useRef<HTMLElement>(null)
+  useListKeys(sidebarRef, "a")
+
   // Resizable sidebar
   const [sidebarWidth, setSidebarWidth] = useState(readSavedWidth)
   const widthRef = useRef(sidebarWidth)
@@ -318,6 +323,29 @@ export function FileView({ path }: Props) {
     document.addEventListener("mousemove", onMove)
     document.addEventListener("mouseup", onUp)
   }, [])
+
+  const SIDEBAR_STEP = 10
+  const onHandleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      let next: number | null = null
+      if (e.key === "ArrowLeft")
+        next = Math.max(SIDEBAR_MIN, sidebarWidth - SIDEBAR_STEP)
+      else if (e.key === "ArrowRight")
+        next = Math.min(SIDEBAR_MAX, sidebarWidth + SIDEBAR_STEP)
+      else if (e.key === "Home") next = SIDEBAR_MIN
+      else if (e.key === "End") next = SIDEBAR_MAX
+      if (next === null) return
+      e.preventDefault()
+      widthRef.current = next
+      setSidebarWidth(next)
+      try {
+        localStorage.setItem(SIDEBAR_WIDTH_KEY, String(next))
+      } catch {
+        // localStorage may be unavailable
+      }
+    },
+    [sidebarWidth],
+  )
 
   // Cross-tab sync for sidebar visibility and width
   useEffect(() => {
@@ -449,13 +477,18 @@ export function FileView({ path }: Props) {
     <div class="file-layout">
       <Toolbar
         path={path}
-        shortcuts={shortcutDefs}
+        shortcuts={[...shortcutDefs, ...listNavShortcuts]}
         actions={sidebarToggleBtn}
       />
       <hr class="file-separator" />
       <div class="file-body">
         {sidebarOpen && (
-          <aside class="file-sidebar" style={{ width: `${sidebarWidth}px` }}>
+          <aside
+            class="file-sidebar"
+            style={{ width: `${sidebarWidth}px` }}
+            ref={sidebarRef}
+            aria-label="Sibling files"
+          >
             <a
               rel="up"
               href={parentDir}
@@ -506,11 +539,14 @@ export function FileView({ path }: Props) {
         {sidebarOpen && (
           <hr
             class="file-sidebar-handle"
+            aria-label="Resize sidebar"
             onMouseDown={onHandleMouseDown}
+            onKeyDown={onHandleKeyDown}
             tabIndex={0}
             aria-valuenow={sidebarWidth}
             aria-valuemin={SIDEBAR_MIN}
             aria-valuemax={SIDEBAR_MAX}
+            aria-valuetext={`${sidebarWidth} pixels`}
             aria-orientation="vertical"
           />
         )}

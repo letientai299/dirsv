@@ -5,14 +5,8 @@ import { browse, type DirEntry } from "../lib/api"
 import { FileIcon, ParentIcon } from "../lib/file-icon"
 import { formatSize } from "../lib/format"
 import { parentOf } from "../lib/path"
-import {
-  createJumpToTop,
-  goToParent,
-  jumpToBottom,
-  moveDown,
-  moveUp,
-  openEntry,
-} from "../lib/shortcuts"
+import { goToParent, listNavShortcuts } from "../lib/shortcuts"
+import { useListKeys } from "../lib/use-list-keys"
 import type { BoundShortcut } from "../lib/use-shortcuts"
 import { useShortcuts } from "../lib/use-shortcuts"
 import { useWS } from "../lib/use-ws"
@@ -39,8 +33,15 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
   useEffect(() => {
     setEntries(initialEntries)
   }, [initialEntries])
-  const [activeIndex, setActiveIndex] = useState(-1)
-  const tbodyRef = useRef<HTMLTableSectionElement>(null)
+
+  const scrollRef = useRef<HTMLDivElement>(null)
+  useListKeys(scrollRef, "a")
+
+  // Auto-focus the first link on path change so j/k work immediately
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional focus on path change
+  useEffect(() => {
+    scrollRef.current?.querySelector<HTMLElement>("a")?.focus()
+  }, [path])
 
   const refresh = useCallback(() => {
     browse(path)
@@ -56,94 +57,27 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
 
   const parentPath = path === "/" ? null : parentOf(path)
 
-  // Build flat list of navigable rows: parent (..) + entries
-  const rows = useMemo(() => {
-    const list: { href: string; key: string }[] = []
-    if (parentPath) list.push({ href: parentPath, key: ".." })
-    for (const entry of entries) {
-      const href = (path === "/" ? "/" : `${path}/`) + entry.name
-      list.push({ href, key: entry.name })
-    }
-    return list
-  }, [parentPath, path, entries])
-
-  // Reset active index on navigation
-  // biome-ignore lint/correctness/useExhaustiveDependencies: reset intentionally triggers on path change
-  useEffect(() => {
-    setActiveIndex(-1)
-  }, [path])
-
-  // Scroll active row into view
-  useEffect(() => {
-    if (activeIndex < 0 || !tbodyRef.current) return
-    const row = tbodyRef.current.children[activeIndex] as
-      | HTMLElement
-      | undefined
-    row?.scrollIntoView({ block: "nearest" })
-  }, [activeIndex])
-
-  const jumpToTop = useMemo(() => createJumpToTop(), [])
-
   const shortcuts = useMemo<BoundShortcut[]>(
     () => [
       {
         def: goToParent,
         action(e) {
-          const parent = rows[0]
-          if (parent?.key !== "..") return
+          if (!parentPath) return
           e.preventDefault()
-          onNavigate(parent.href)
-        },
-      },
-      {
-        def: jumpToTop,
-        action(e) {
-          e.preventDefault()
-          setActiveIndex(() => 0)
-        },
-      },
-      {
-        def: moveDown,
-        action(e) {
-          e.preventDefault()
-          setActiveIndex((i) => Math.min(i + 1, rows.length - 1))
-        },
-      },
-      {
-        def: moveUp,
-        action(e) {
-          e.preventDefault()
-          setActiveIndex((i) => Math.max(i - 1, 0))
-        },
-      },
-      {
-        def: openEntry,
-        action(e) {
-          const row = rows[activeIndex]
-          if (activeIndex >= 0 && row) {
-            e.preventDefault()
-            onNavigate(row.href)
-          }
-        },
-      },
-      {
-        def: jumpToBottom,
-        action(e) {
-          e.preventDefault()
-          setActiveIndex(() => rows.length - 1)
+          onNavigate(parentPath)
         },
       },
     ],
-    [rows, activeIndex, onNavigate, jumpToTop],
+    [parentPath, onNavigate],
   )
 
   const defs = useShortcuts(shortcuts, [shortcuts])
 
   return (
     <div class="dir-layout">
-      <Toolbar path={path} shortcuts={defs} />
+      <Toolbar path={path} shortcuts={[...defs, ...listNavShortcuts]} />
       <hr class="file-separator" />
-      <div class="dir-scroll">
+      <div class="dir-scroll" ref={scrollRef}>
         <table class="dir-table">
           <thead>
             <tr>
@@ -152,9 +86,9 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
               <th>Modified</th>
             </tr>
           </thead>
-          <tbody ref={tbodyRef}>
+          <tbody>
             {parentPath && (
-              <tr class={activeIndex === 0 ? "row-active" : ""}>
+              <tr>
                 <td>
                   <a
                     rel="up"
@@ -174,14 +108,10 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
                 <td class="col-date" />
               </tr>
             )}
-            {entries.map((entry, i) => {
+            {entries.map((entry) => {
               const href = (path === "/" ? "/" : `${path}/`) + entry.name
-              const rowIndex = parentPath ? i + 1 : i
               return (
-                <tr
-                  key={entry.name}
-                  class={activeIndex === rowIndex ? "row-active" : ""}
-                >
+                <tr key={entry.name}>
                   <td>
                     <a
                       href={href}

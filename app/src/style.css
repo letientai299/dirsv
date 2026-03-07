@@ -269,7 +269,7 @@ a.breadcrumb-root:hover .breadcrumb-sep {
   background: var(--surface);
 }
 
-.dir-table tbody tr.row-active {
+.dir-table tbody tr:focus-within {
   background: var(--row-active);
 }
 
