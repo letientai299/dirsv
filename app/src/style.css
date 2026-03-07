@@ -1240,17 +1240,14 @@ html.focus-lock {
 }
 
 /* Fit diagram SVG within the content area, preserving aspect ratio.
-   Inline max-width is stripped in JS; these rules size to the container. */
+   Inline max-width is stripped in JS; these rules size to the container.
+   Background ensures arrows, text, and thin lines render against their
+   intended color — readable in both light and dark. */
 .focus-diagram svg {
   width: auto;
   height: auto;
   max-width: 100vw;
   max-height: 100vh;
-}
-
-/* Give diagram SVGs the theme background so arrows, text, and thin lines
-   render against their intended color — readable in both light and dark. */
-.focus-diagram svg {
   background: var(--bg);
   border-radius: 6px;
   padding: 16px;

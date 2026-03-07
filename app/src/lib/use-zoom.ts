@@ -192,6 +192,9 @@ export function useZoom() {
   }, [onWheel])
 
   const style = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     width: "100%",
     height: "100%",
     transform: `translate(${state.x}px, ${state.y}px) scale(${state.scale})`,
