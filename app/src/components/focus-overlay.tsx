@@ -60,6 +60,34 @@ export function FocusOverlay({
     overlayRef.current?.focus()
   }, [])
 
+  // When fullscreen exits without our toggle (i.e. browser Esc), close overlay.
+  const togglingRef = useRef(false)
+  useEffect(() => {
+    const onChange = () => {
+      if (!document.fullscreenElement) {
+        if (togglingRef.current) {
+          togglingRef.current = false
+        } else {
+          onClose()
+        }
+      }
+    }
+    document.addEventListener("fullscreenchange", onChange)
+    return () => {
+      document.removeEventListener("fullscreenchange", onChange)
+      if (document.fullscreenElement) void document.exitFullscreen()
+    }
+  }, [onClose])
+
+  const toggleFullscreen = useCallback(() => {
+    if (document.fullscreenElement) {
+      togglingRef.current = true
+      void document.exitFullscreen()
+    } else {
+      void overlayRef.current?.requestFullscreen()
+    }
+  }, [])
+
   // Keyboard shortcuts — modal layer suppresses all global shortcuts.
   useModalKeys((e: KeyboardEvent) => {
     switch (e.key) {
@@ -107,7 +135,7 @@ export function FocusOverlay({
       case "F":
         if (!e.ctrlKey && !e.metaKey) {
           e.preventDefault()
-          void document.documentElement.requestFullscreen?.()
+          toggleFullscreen()
         }
         break
     }
