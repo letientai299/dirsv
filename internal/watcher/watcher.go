@@ -70,10 +70,11 @@ type wsClient struct {
 
 // Watcher watches a directory tree and broadcasts changes to WebSocket subscribers.
 type Watcher struct {
-	root  string
-	debug bool
-	fsw   *fsnotify.Watcher
-	done  chan struct{}
+	root           string
+	debug          bool
+	originPatterns []string
+	fsw            *fsnotify.Watcher
+	done           chan struct{}
 
 	mu      sync.RWMutex
 	clients map[*wsClient]struct{}
@@ -87,6 +88,15 @@ type Option func(*Watcher)
 
 // Debug enables verbose watcher log output (watches, events, connections).
 func Debug(w *Watcher) { w.debug = true }
+
+// WithOriginPatterns sets the allowed WebSocket origin patterns.
+// Patterns follow coder/websocket conventions (e.g., "localhost:*").
+// When set, connections from other origins are rejected during the
+// WebSocket upgrade, preventing cross-site WebSocket hijacking where
+// an attacker page opens a WS to dirsv and receives file change events.
+func WithOriginPatterns(patterns ...string) Option {
+	return func(w *Watcher) { w.originPatterns = patterns }
+}
 
 func (w *Watcher) logf(format string, args ...any) {
 	if w.debug {
@@ -208,6 +218,7 @@ func (w *Watcher) removeWatched(absPath string) {
 const (
 	coalesceDuration = 100 * time.Millisecond
 	maxClients       = 128
+	maxWatchPrefixes = 50 // per client, prevents unbounded goroutine spawning
 )
 
 func (w *Watcher) loop() {
@@ -531,7 +542,11 @@ func cleanWatchPath(raw string) string {
 // ServeHTTP handles WebSocket connections at /api/events.
 // Clients send {"watch":["path1","path2"]} to update their watch set.
 func (w *Watcher) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	conn, err := websocket.Accept(rw, r, nil)
+	var wsOpts *websocket.AcceptOptions
+	if len(w.originPatterns) > 0 {
+		wsOpts = &websocket.AcceptOptions{OriginPatterns: w.originPatterns}
+	}
+	conn, err := websocket.Accept(rw, r, wsOpts)
 	if err != nil {
 		return
 	}
@@ -592,6 +607,12 @@ func (w *Watcher) readLoop(
 		cleaned := make([]string, 0, len(msg.Watch))
 		for _, raw := range msg.Watch {
 			cleaned = append(cleaned, cleanWatchPath(raw))
+		}
+		// Cap prefixes per client to prevent a malicious client from
+		// spawning unbounded goroutines (each new prefix triggers a
+		// WalkDir via ensureWatched).
+		if len(cleaned) > maxWatchPrefixes {
+			cleaned = cleaned[:maxWatchPrefixes]
 		}
 
 		c.mu.Lock()
