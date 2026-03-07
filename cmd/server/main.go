@@ -115,6 +115,8 @@ func main() {
 	if *debug {
 		watcherOpts = append(watcherOpts, watcher.Debug)
 	}
+	watcherOpts = append(watcherOpts,
+		watcher.WithOriginPatterns(originPatternsFor(*host)...))
 	w, err := watcher.New(root, watcherOpts...)
 	if err != nil {
 		log.Fatal(err)
@@ -163,6 +165,11 @@ func main() {
 	fmt.Printf("serving %s on http://%s\n", target, ln.Addr())
 	if *dev {
 		fmt.Println("dev mode: proxying frontend to http://localhost:5173")
+	}
+	if !isLocalhostHost(*host) {
+		fmt.Fprintln(os.Stderr,
+			"WARNING: binding to a non-localhost address exposes all files "+
+				"in the served directory to the network without authentication.")
 	}
 
 	if !*noOpen {
@@ -252,6 +259,28 @@ func allowedHostsFor(host string) []string {
 		return []string{"localhost", "127.0.0.1", "::1"}
 	default:
 		return []string{host}
+	}
+}
+
+func isLocalhostHost(host string) bool {
+	switch host {
+	case "localhost", "127.0.0.1", "::1", "":
+		return true
+	default:
+		return false
+	}
+}
+
+// originPatternsFor returns WebSocket origin patterns for the given listen
+// host. Used by coder/websocket's AcceptOptions.OriginPatterns to reject
+// cross-origin WebSocket upgrades — without this, any page on any domain
+// can open a WebSocket to dirsv and receive file change notifications.
+func originPatternsFor(host string) []string {
+	switch host {
+	case "localhost", "127.0.0.1", "::1", "":
+		return []string{"localhost:*", "127.0.0.1:*", "[::1]:*"}
+	default:
+		return []string{host + ":*"}
 	}
 }
 
