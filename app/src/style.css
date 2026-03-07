@@ -249,6 +249,8 @@ a.breadcrumb-root:hover .breadcrumb-sep {
 
 .dir-table {
   width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
   border-collapse: collapse;
   font-size: 14px;
 }
