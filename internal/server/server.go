@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/fs"
 	"mime"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -49,10 +50,11 @@ const pathCacheTTL = 2 * time.Second
 
 // Server serves directory listings, raw files, and the SPA frontend.
 type Server struct {
-	root       string
-	singleFile string // if non-empty, restrict serving to this one file
-	mux        *http.ServeMux
-	pathCache  sync.Map // cleaned request path → *pathCacheEntry
+	root         string
+	singleFile   string // if non-empty, restrict serving to this one file
+	allowedHosts map[string]struct{}
+	mux          *http.ServeMux
+	pathCache    sync.Map // cleaned request path → *pathCacheEntry
 }
 
 // Option configures a Server.
@@ -62,6 +64,18 @@ type Option func(*Server)
 // (relative to root). Directory listings show only this file.
 func WithSingleFile(name string) Option {
 	return func(s *Server) { s.singleFile = name }
+}
+
+// WithAllowedHosts sets the hosts permitted by the Host header guard.
+// Requests whose Host header doesn't match any entry are rejected with 403.
+// When empty, all hosts are allowed (backwards-compatible default).
+func WithAllowedHosts(hosts ...string) Option {
+	return func(s *Server) {
+		s.allowedHosts = make(map[string]struct{}, len(hosts))
+		for _, h := range hosts {
+			s.allowedHosts[h] = struct{}{}
+		}
+	}
 }
 
 // New creates a Server rooted at the given filesystem path.
@@ -112,6 +126,35 @@ func New(
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Host header guard: mitigates DNS rebinding attacks.
+	//
+	// DNS rebinding allows an attacker to bypass the browser's same-origin
+	// policy against localhost services. The attack works as follows:
+	//
+	//  1. Victim visits attacker.example.com (resolves to attacker's IP).
+	//  2. Attacker's page loads JS, then the DNS record for
+	//     attacker.example.com is changed to resolve to 127.0.0.1.
+	//  3. Subsequent fetch() calls to attacker.example.com:PORT/api/raw/...
+	//     now hit dirsv on localhost.
+	//  4. The browser considers these requests same-origin with the
+	//     attacker's page, so JS can read the response body — exposing
+	//     the entire served directory tree.
+	//
+	// By rejecting requests whose Host header doesn't match the configured
+	// listen address, the rebinding fetch in step 3 is blocked: the browser
+	// sends Host: attacker.example.com, which isn't in the allowlist.
+	//
+	// See: https://en.wikipedia.org/wiki/DNS_rebinding
+	if len(s.allowedHosts) > 0 {
+		host, _, _ := net.SplitHostPort(r.Host)
+		if host == "" {
+			host = r.Host
+		}
+		if _, ok := s.allowedHosts[host]; !ok {
+			http.Error(w, "forbidden", http.StatusForbidden)
+			return
+		}
+	}
 	s.mux.ServeHTTP(w, r)
 }
 

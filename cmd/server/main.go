@@ -131,6 +131,7 @@ func main() {
 	if singleFile != "" {
 		opts = append(opts, server.WithSingleFile(singleFile))
 	}
+	opts = append(opts, server.WithAllowedHosts(allowedHostsFor(*host)...))
 
 	srv, err := server.New(root, appFS, w, opts...)
 	if err != nil {
@@ -231,6 +232,27 @@ func browserURL(addr string) string {
 		host = "localhost"
 	}
 	return "http://" + net.JoinHostPort(host, port)
+}
+
+// allowedHostsFor returns the set of Host header values that should be
+// accepted for a given listen address. This prevents DNS rebinding attacks
+// where an attacker-controlled domain resolves to 127.0.0.1, causing the
+// browser to send requests to dirsv with a foreign Host header. Without
+// this check, the attacker's page (now same-origin with the rebinding
+// domain) can read /api/raw/... responses and exfiltrate the entire served
+// directory tree.
+//
+// See: https://en.wikipedia.org/wiki/DNS_rebinding
+func allowedHostsFor(host string) []string {
+	switch host {
+	case "localhost", "127.0.0.1", "::1", "":
+		// Localhost bindings accept all loopback representations so
+		// that browsers resolving "localhost" to either IPv4 or IPv6
+		// work without friction.
+		return []string{"localhost", "127.0.0.1", "::1"}
+	default:
+		return []string{host}
+	}
 }
 
 func openBrowser(target, browser string) {
