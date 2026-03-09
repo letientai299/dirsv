@@ -16,6 +16,7 @@ import remarkParse from "remark-parse"
 import remarkRehype from "remark-rehype"
 import type { Processor } from "unified"
 import { unified } from "unified"
+import { rehypeAutolinkHeadings } from "./rehype-autolink-headings"
 import { rehypeD2 } from "./rehype-d2"
 import { rehypeDbml } from "./rehype-dbml"
 import type { Heading } from "./rehype-extract-headings"
@@ -87,12 +88,10 @@ const sanitizeSchema: typeof defaultSchema = {
 // biome-ignore lint/suspicious/noExplicitAny: unified's generic types are deeply nested; the processor is used only via .process(string)
 type AnyProcessor = Processor<any, any, any, any, any>
 
-/** Shared remark/rehype pipeline without Shiki — produces plain <pre><code>. */
-let cachedBase: AnyProcessor | undefined
-
-function getBaseProcessor(): AnyProcessor {
-  if (!cachedBase) {
-    cachedBase = unified()
+/** Apply the shared remark + early rehype stages (parse → sanitize → diagrams). */
+function applySharedPlugins(processor: AnyProcessor): AnyProcessor {
+  return (
+    processor
       .use(remarkParse)
       .use(remarkFrontmatter)
       .use(remarkGithubYamlMetadata)
@@ -118,9 +117,24 @@ function getBaseProcessor(): AnyProcessor {
       .use(rehypeD2)
       .use(rehypeDbml)
       .use(rehypeTypstDiagram)
-      .use(rehypeFigure)
-      .use(rehypeSlug)
-      .use(rehypeStringify)
+  )
+}
+
+/** Apply the final stages after code highlighting (figure, slug, stringify). */
+function applyFinalPlugins(processor: AnyProcessor): AnyProcessor {
+  return processor
+    .use(rehypeFigure)
+    .use(rehypeSlug)
+    .use(rehypeAutolinkHeadings)
+    .use(rehypeStringify)
+}
+
+/** Shared remark/rehype pipeline without Shiki — produces plain <pre><code>. */
+let cachedBase: AnyProcessor | undefined
+
+function getBaseProcessor(): AnyProcessor {
+  if (!cachedBase) {
+    cachedBase = applyFinalPlugins(applySharedPlugins(unified()))
   }
   return cachedBase
 }
@@ -147,29 +161,7 @@ function getShikiProcessor(): Promise<AnyProcessor> {
         langs: [],
       })
 
-      return unified()
-        .use(remarkParse)
-        .use(remarkFrontmatter)
-        .use(remarkGithubYamlMetadata)
-        .use(remarkGfm)
-        .use(remarkDefinitionList)
-        .use(remarkMath)
-        .use(remarkAlert)
-        .use(remarkEmoji)
-        .use(remarkDirective)
-        .use(remarkDirectivesHandler)
-        .use(remarkRehype, { allowDangerousHtml: true })
-        .use(rehypeRaw)
-        .use(rehypeColorChips)
-        .use(rehypeVideo)
-        .use(rehypeSanitize, sanitizeSchema)
-        .use(rehypeKatexPlaceholder)
-        .use(rehypeMermaid)
-        .use(rehypePlantuml)
-        .use(rehypeGraphviz)
-        .use(rehypeD2)
-        .use(rehypeDbml)
-        .use(rehypeTypstDiagram)
+      const processor = applySharedPlugins(unified())
         .use(rehypeShikiCachedPre)
         .use(rehypeShiki, {
           themes: { light: SHIKI_THEMES.light, dark: SHIKI_THEMES.dark },
@@ -179,9 +171,8 @@ function getShikiProcessor(): Promise<AnyProcessor> {
           fallbackLanguage: "text",
         })
         .use(rehypeShikiCachedPost)
-        .use(rehypeFigure)
-        .use(rehypeSlug)
-        .use(rehypeStringify)
+
+      return applyFinalPlugins(processor)
     })()
   }
 
