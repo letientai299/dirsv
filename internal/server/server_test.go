@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -76,7 +77,12 @@ func newTestServer(t *testing.T) *Server {
 
 func TestBrowseRoot(t *testing.T) {
 	srv := newTestServer(t)
-	req := httptest.NewRequest(http.MethodGet, "/api/browse/", nil)
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"/api/browse/",
+		nil,
+	)
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
 
@@ -108,7 +114,12 @@ func TestBrowseRoot(t *testing.T) {
 
 func TestBrowseFile(t *testing.T) {
 	srv := newTestServer(t)
-	req := httptest.NewRequest(http.MethodGet, "/api/browse/hello.txt", nil)
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"/api/browse/hello.txt",
+		nil,
+	)
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
 
@@ -134,7 +145,12 @@ func TestBrowseFile(t *testing.T) {
 
 func TestRawFile(t *testing.T) {
 	srv := newTestServer(t)
-	req := httptest.NewRequest(http.MethodGet, "/api/raw/hello.txt", nil)
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"/api/raw/hello.txt",
+		nil,
+	)
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
 
@@ -148,7 +164,12 @@ func TestRawFile(t *testing.T) {
 
 func TestRawMIME(t *testing.T) {
 	srv := newTestServer(t)
-	req := httptest.NewRequest(http.MethodGet, "/api/raw/readme.md", nil)
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"/api/raw/readme.md",
+		nil,
+	)
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
 
@@ -165,7 +186,12 @@ func TestRawMIME(t *testing.T) {
 
 func TestRawTSNotBinary(t *testing.T) {
 	srv := newTestServer(t)
-	req := httptest.NewRequest(http.MethodGet, "/api/raw/vite.config.ts", nil)
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"/api/raw/vite.config.ts",
+		nil,
+	)
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
 
@@ -181,7 +207,12 @@ func TestRawTSNotBinary(t *testing.T) {
 
 func TestRawSQLNotBinary(t *testing.T) {
 	srv := newTestServer(t)
-	req := httptest.NewRequest(http.MethodGet, "/api/raw/query.sql", nil)
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"/api/raw/query.sql",
+		nil,
+	)
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
 
@@ -197,7 +228,12 @@ func TestRawSQLNotBinary(t *testing.T) {
 
 func TestRawDir(t *testing.T) {
 	srv := newTestServer(t)
-	req := httptest.NewRequest(http.MethodGet, "/api/raw/sub", nil)
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"/api/raw/sub",
+		nil,
+	)
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
 
@@ -208,7 +244,12 @@ func TestRawDir(t *testing.T) {
 
 func TestRawNested(t *testing.T) {
 	srv := newTestServer(t)
-	req := httptest.NewRequest(http.MethodGet, "/api/raw/sub/nested.txt", nil)
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"/api/raw/sub/nested.txt",
+		nil,
+	)
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
 
@@ -224,7 +265,15 @@ func TestNotFound(t *testing.T) {
 	srv := newTestServer(t)
 	for _, path := range []string{"/api/browse/nope.txt", "/api/raw/nope.txt"} {
 		rec := httptest.NewRecorder()
-		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		srv.ServeHTTP(
+			rec,
+			httptest.NewRequestWithContext(
+				context.Background(),
+				http.MethodGet,
+				path,
+				nil,
+			),
+		)
 		if rec.Code != http.StatusNotFound {
 			t.Errorf("%s: want 404, got %d", path, rec.Code)
 		}
@@ -238,7 +287,15 @@ func TestPathTraversal(t *testing.T) {
 		"/api/raw/../../../etc/passwd",
 	} {
 		rec := httptest.NewRecorder()
-		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, p, nil))
+		srv.ServeHTTP(
+			rec,
+			httptest.NewRequestWithContext(
+				context.Background(),
+				http.MethodGet,
+				p,
+				nil,
+			),
+		)
 		// ServeMux may clean /../ and redirect (307) before our handler runs.
 		// Any of 307, 403, 404 are safe — only 200 is a problem.
 		if rec.Code == http.StatusOK {
@@ -252,7 +309,15 @@ func TestPathTraversal(t *testing.T) {
 		"/api/raw/..%2F..%2F..%2Fetc%2Fpasswd",
 	} {
 		rec := httptest.NewRecorder()
-		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, p, nil))
+		srv.ServeHTTP(
+			rec,
+			httptest.NewRequestWithContext(
+				context.Background(),
+				http.MethodGet,
+				p,
+				nil,
+			),
+		)
 		if rec.Code == http.StatusOK {
 			t.Errorf("%s: traversal returned 200 (body: %s)", p, rec.Body.String())
 		}
@@ -274,7 +339,15 @@ func TestSymlinkEscape(t *testing.T) {
 
 	for _, p := range []string{"/api/browse/escape", "/api/raw/escape"} {
 		rec := httptest.NewRecorder()
-		srv.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, p, nil))
+		srv.ServeHTTP(
+			rec,
+			httptest.NewRequestWithContext(
+				context.Background(),
+				http.MethodGet,
+				p,
+				nil,
+			),
+		)
 		if rec.Code == http.StatusOK {
 			t.Errorf("%s: symlink escape should not return 200", p)
 		}
@@ -285,7 +358,12 @@ func TestTrailingSlashIndex(t *testing.T) {
 	srv := newTestServer(t)
 
 	// No trailing slash on dir with index.html → type=index.
-	req := httptest.NewRequest(http.MethodGet, "/api/browse/site", nil)
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"/api/browse/site",
+		nil,
+	)
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
 
@@ -309,7 +387,12 @@ func TestTrailingSlashDirListing(t *testing.T) {
 	srv := newTestServer(t)
 
 	// Trailing slash on dir with index.html → type=dir (dir listing).
-	req := httptest.NewRequest(http.MethodGet, "/api/browse/site/", nil)
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"/api/browse/site/",
+		nil,
+	)
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
 
@@ -345,7 +428,12 @@ func TestHostGuard(t *testing.T) {
 		{"evil.com:8080", http.StatusForbidden},
 	}
 	for _, tt := range tests {
-		req := httptest.NewRequest(http.MethodGet, "/api/browse/", nil)
+		req := httptest.NewRequestWithContext(
+			context.Background(),
+			http.MethodGet,
+			"/api/browse/",
+			nil,
+		)
 		req.Host = tt.host
 		rec := httptest.NewRecorder()
 		srv.ServeHTTP(rec, req)
@@ -376,7 +464,12 @@ func TestSPAFallback(t *testing.T) {
 	}
 
 	// Non-API, non-asset path should return index.html (SPA fallback).
-	req := httptest.NewRequest(http.MethodGet, "/some/deep/path", nil)
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodGet,
+		"/some/deep/path",
+		nil,
+	)
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
 

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -39,7 +40,12 @@ func setupBenchServer(b *testing.B, nFiles int) (srv *Server, dir string) {
 // BenchmarkHandleBrowseSmallDir benchmarks directory listing with 10 files.
 func BenchmarkHandleBrowseSmallDir(b *testing.B) {
 	srv, _ := setupBenchServer(b, 10)
-	req := httptest.NewRequest("GET", "/api/browse/", nil)
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		"GET",
+		"/api/browse/",
+		nil,
+	)
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -66,7 +72,12 @@ func BenchmarkHandleBrowseLargeDir(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	req := httptest.NewRequest("GET", "/api/browse/", nil)
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		"GET",
+		"/api/browse/",
+		nil,
+	)
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -84,7 +95,12 @@ func BenchmarkHandleRawSmallFile(b *testing.B) {
 	srv, dir := setupBenchServer(b, 1)
 	entries, _ := os.ReadDir(dir)
 	name := entries[0].Name()
-	req := httptest.NewRequest("GET", "/api/raw/"+name, nil)
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		"GET",
+		"/api/raw/"+name,
+		nil,
+	)
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -116,7 +132,12 @@ func BenchmarkHandleRawLargeFile(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	req := httptest.NewRequest("GET", "/api/raw/large.bin", nil)
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		"GET",
+		"/api/raw/large.bin",
+		nil,
+	)
 
 	b.ReportAllocs()
 	b.ResetTimer()

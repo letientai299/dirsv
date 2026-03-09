@@ -23,6 +23,14 @@
   color-scheme: light;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
 /* Smooth theme transition — only active during manual toggle, not on page load */
 .theme-transitioning,
 .theme-transitioning *,
@@ -34,15 +42,7 @@
     border-color 0.3s ease,
     fill 0.3s ease,
     stroke 0.3s ease,
-    box-shadow 0.3s ease !important;
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+    box-shadow 0.3s ease;
 }
 
 /* Unified focus ring for all interactive elements. */

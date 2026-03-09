@@ -39,7 +39,8 @@ func run(root string) error {
 	// exists (meaning a fresh build produced new originals to compress).
 	// This keeps the directory idempotent without destroying .gz files when
 	// build:fe was skipped by the task runner.
-	if err := filepath.WalkDir( //nolint:gosec // G703: build-time tool, root is a trusted project path
+	//nolint:gosec // G703,G122: build-time tool, root is a trusted project path
+	if err := filepath.WalkDir(
 		root,
 		func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() {
@@ -60,7 +61,8 @@ func run(root string) error {
 
 	// Second pass: compress matching files and remove originals.
 	var count int
-	err := filepath.WalkDir( //nolint:gosec // G703: build-time tool, root is a trusted project path
+	//nolint:gosec // G703,G122,G304: build-time tool, trusted path
+	err := filepath.WalkDir(
 		root,
 		func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() {
@@ -70,13 +72,13 @@ func run(root string) error {
 				return nil
 			}
 
-			data, err := os.ReadFile(path) //nolint:gosec // G304: trusted path
+			data, err := os.ReadFile(path)
 			if err != nil {
 				return err
 			}
 
 			gzPath := path + ".gz"
-			f, err := os.Create(gzPath) //nolint:gosec // G304: trusted path
+			f, err := os.Create(gzPath)
 			if err != nil {
 				return err
 			}
