@@ -5,6 +5,7 @@ import rehypeSlug from "rehype-slug"
 import rehypeStringify from "rehype-stringify"
 import rehypeVideo from "rehype-video"
 import remarkDefinitionList from "remark-definition-list"
+import remarkDirective from "remark-directive"
 import remarkEmoji from "remark-emoji"
 import remarkFrontmatter from "remark-frontmatter"
 import remarkGfm from "remark-gfm"
@@ -24,6 +25,7 @@ import { rehypeKatexPlaceholder } from "./rehype-katex-placeholder"
 import { rehypeMermaid } from "./rehype-mermaid"
 import { rehypePlantuml } from "./rehype-plantuml"
 import { rehypeTypstDiagram } from "./rehype-typst-diagram"
+import { remarkDirectivesHandler } from "./remark-directives"
 import { SHIKI_THEME_LIST, SHIKI_THEMES } from "./shiki-config"
 
 export type { Heading }
@@ -52,9 +54,13 @@ const sanitizeSchema: typeof defaultSchema = {
     // allows via /^language-/. No extra allowlist needed for math classes.
     code: [...schemaAttrs("code")],
     // remark-github-blockquote-alert
-    div: [...schemaAttrs("div"), "dir", ["className", /^markdown-alert/]],
+    div: [
+      ...schemaAttrs("div"),
+      "dir",
+      ["className", /^markdown-alert/, /^directive/],
+    ],
     p: [...schemaAttrs("p"), "dir", ["className", "markdown-alert-title"]],
-    span: [...schemaAttrs("span"), "dir"],
+    span: [...schemaAttrs("span"), "dir", ["className", /^directive/]],
     // SVG icons from remark-github-blockquote-alert title paragraphs
     svg: ["viewBox", "width", "height", "ariaHidden", "className"],
     path: ["d"],
@@ -95,6 +101,8 @@ function getBaseProcessor(): AnyProcessor {
       .use(remarkMath)
       .use(remarkAlert)
       .use(remarkEmoji)
+      .use(remarkDirective)
+      .use(remarkDirectivesHandler)
       // SECURITY: allowDangerousHtml lets raw HTML through as "raw" HAST nodes.
       // rehype-raw parses them into proper elements, then rehype-sanitize strips
       // anything unsafe. This allows <kbd>, <sub>, <sup>, <details>, etc.
@@ -148,6 +156,8 @@ function getShikiProcessor(): Promise<AnyProcessor> {
         .use(remarkMath)
         .use(remarkAlert)
         .use(remarkEmoji)
+        .use(remarkDirective)
+        .use(remarkDirectivesHandler)
         .use(remarkRehype, { allowDangerousHtml: true })
         .use(rehypeRaw)
         .use(rehypeColorChips)
@@ -193,9 +203,21 @@ function extractHeadings(html: string): Heading[] {
   return headings
 }
 
+/**
+ * Normalize ADO-style `::: name` (space after colons) to `:::name` so
+ * remark-directive can parse it. Only touches lines that look like a
+ * directive opener — won't affect fenced code blocks or other content.
+ */
+const ADO_DIRECTIVE_RE = /^([ \t]*:{3,})\s+(\w)/gm
+
+export function normalizeDirectives(source: string): string {
+  if (!source.includes(":::")) return source
+  return source.replace(ADO_DIRECTIVE_RE, "$1$2")
+}
+
 /** Render markdown without syntax highlighting (fast first paint). */
 export async function renderMarkdown(source: string): Promise<MarkdownResult> {
-  const result = await getBaseProcessor().process(source)
+  const result = await getBaseProcessor().process(normalizeDirectives(source))
   const html = String(result)
   return { html, headings: extractHeadings(html) }
 }
@@ -205,7 +227,7 @@ export async function renderMarkdownHighlighted(
   source: string,
 ): Promise<MarkdownResult> {
   const processor = await getShikiProcessor()
-  const result = await processor.process(source)
+  const result = await processor.process(normalizeDirectives(source))
   const html = String(result)
   return { html, headings: extractHeadings(html) }
 }

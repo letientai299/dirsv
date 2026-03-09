@@ -25,6 +25,7 @@ const DIAGRAM_IMPORTS: Record<string, () => Promise<unknown>> = {
 }
 
 const FENCE_RE = /^[ \t]*`{3,}(\w+)/gm
+const DIRECTIVE_RE = /^[ \t]*:{3,}\s*(\w+)/gm
 const MATH_RE = /\$\$[\s\S]+?\$\$|\$[^$\n]+\$/
 
 /** Fire-and-forget preloads for diagram bundles detected in markdown. */
@@ -36,6 +37,16 @@ export function preloadDiagramBundles(markdown: string): void {
     let m = FENCE_RE.exec(markdown);
     m !== null;
     m = FENCE_RE.exec(markdown)
+  ) {
+    const lang = m[1]?.toLowerCase()
+    if (lang && lang in DIAGRAM_IMPORTS) needed.add(lang)
+  }
+
+  DIRECTIVE_RE.lastIndex = 0
+  for (
+    let m = DIRECTIVE_RE.exec(markdown);
+    m !== null;
+    m = DIRECTIVE_RE.exec(markdown)
   ) {
     const lang = m[1]?.toLowerCase()
     if (lang && lang in DIAGRAM_IMPORTS) needed.add(lang)
