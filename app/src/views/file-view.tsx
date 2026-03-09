@@ -78,20 +78,6 @@ const HtmlView = lazy(() =>
 const MediaView = lazy(() =>
   import("./media-view").then((m) => ({ default: m.MediaView })),
 )
-const TypstView = lazy(() =>
-  Promise.all([import("./diagram-view"), import("../lib/typst-render")]).then(
-    ([{ DiagramView }, { renderTypst }]) => ({
-      default: (props: { content: string }) => (
-        <DiagramView
-          content={props.content}
-          render={renderTypst}
-          label="Typst"
-          class="diagram-standalone"
-        />
-      ),
-    }),
-  ),
-)
 const MarkdownView = lazy(() =>
   import("./markdown-view").then((m) => ({ default: m.MarkdownView })),
 )
@@ -193,12 +179,6 @@ function renderFileContent(
     return (
       <Suspense fallback={fallback}>
         <DbmlView content={result.content} />
-      </Suspense>
-    )
-  if (/\.typ$/i.test(path))
-    return (
-      <Suspense fallback={fallback}>
-        <TypstView content={result.content} />
       </Suspense>
     )
   if (/\.json$/i.test(path)) {

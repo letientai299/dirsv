@@ -39,9 +39,9 @@ None of the existing solutions covers all my need. So, I build `dirsv` and
   sticky table of contents sidebar. Supports `:::` [container directives][directives]
   as an alternative to fenced code blocks for diagrams and admonitions
 - **Diagrams** — fenced code blocks or `:::` directives for [Mermaid][mermaid],
-  [PlantUML][plantuml], [Graphviz][graphviz], [D2][d2], [DBML][dbml], and
-  [Typst][typst]. Standalone `.gv`/`.dot`, `.d2`, `.dbml`, and `.typ` files
-  render directly. All client-side via WASM or JS
+  [PlantUML][plantuml], [Graphviz][graphviz], [D2][d2], and [DBML][dbml].
+  Standalone `.gv`/`.dot`, `.d2`, and `.dbml` files render directly.
+  All client-side via WASM or JS
 - **Code view** — syntax highlighting for 100+ languages, line numbers, copy
   button
 - **JSON / YAML tree view** — collapsible tree with path filtering, Tree/Raw
@@ -165,7 +165,6 @@ MIT
 [graphviz]: https://graphviz.org/
 [d2]: https://d2lang.com/
 [dbml]: https://dbml.dbdiagram.io/
-[typst]: https://typst.app/
 [mise]: https://mise.jdx.dev/
 [vite]: https://vite.dev/
 [bun]: https://bun.sh/

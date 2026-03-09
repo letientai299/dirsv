@@ -249,7 +249,7 @@ func devProxy(srv *server.Server) http.Handler {
 	viteURL, _ := url.Parse("http://localhost:5173")
 	proxy := httputil.NewSingleHostReverseProxy(viteURL)
 	// Vite's on-demand dep optimization can take a while for large WASM
-	// packages (typst). Increase the proxy timeout so the browser doesn't
+	// packages. Increase the proxy timeout so the browser doesn't
 	// get a 504 on first load.
 	proxy.Transport = &http.Transport{
 		ResponseHeaderTimeout: 120 * time.Second,

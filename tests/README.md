@@ -67,15 +67,6 @@ api --> User: 200 OK
 @enduml
 ```
 
-### Typst
-
-```typst
-#set page(width: auto, height: auto, margin: 1em)
-#set text(size: 18pt)
-
-$ sum_(k=1)^n k = (n(n+1)) / 2 $
-```
-
 ---
 
 ## Same-directory links
@@ -86,7 +77,6 @@ $ sum_(k=1)^n k = (n(n+1)) / 2 $
 - [D2 diagrams](d2.md)
 - [DBML](dbml.md)
 - [PlantUML](plantuml.md)
-- [Typst](typst.md)
 - [GitLab-flavored](gitlab.md)
 
 ## Same-directory with ./

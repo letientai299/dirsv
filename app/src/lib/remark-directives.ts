@@ -16,7 +16,6 @@ const DIAGRAM_LANGUAGES = new Set([
   "dot",
   "d2",
   "dbml",
-  "typst",
 ])
 
 /** Maps to the same HTML structure as remark-github-blockquote-alert. */

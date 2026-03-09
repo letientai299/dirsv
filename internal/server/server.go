@@ -214,7 +214,6 @@ var textMIME = map[string]string{
 	".cts":  "text/plain; charset=utf-8",
 	".sql":  "text/plain; charset=utf-8",
 	".dbml": "text/plain; charset=utf-8",
-	".typ":  "text/plain; charset=utf-8",
 	".cast": "text/plain; charset=utf-8",
 }
 

@@ -18,10 +18,6 @@ const DIAGRAM_IMPORTS: Record<string, () => Promise<unknown>> = {
   plantuml: () => import("pako"),
   katex: () => import("katex"),
   math: () => import("katex"),
-  typst: () => {
-    const url = `https://esm.sh/@myriaddreamin/typst.ts@0.6.0`
-    return import(/* @vite-ignore */ url)
-  },
 }
 
 const FENCE_RE = /^[ \t]*`{3,}(\w+)/gm

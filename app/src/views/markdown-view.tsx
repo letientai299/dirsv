@@ -13,7 +13,6 @@ import { handleRelativeLinkClick, rewriteMediaSrc } from "../lib/markdown-urls"
 import { renderMermaidBlocks } from "../lib/mermaid-render"
 import { renderPlantumlBlocks } from "../lib/plantuml-render"
 import { preloadDiagramBundles } from "../lib/preload-diagrams"
-import { renderTypstBlocks } from "../lib/typst-render"
 import type { FocusItem } from "../lib/use-focus-overlay"
 import { useFocusOverlay } from "../lib/use-focus-overlay"
 import "github-markdown-css/github-markdown.css"
@@ -107,7 +106,6 @@ export function MarkdownView({ content, path }: Props) {
     void renderGraphvizBlocks(el)
     void renderD2Blocks(el)
     void renderDbmlBlocks(el)
-    void renderTypstBlocks(el)
     injectFigureToolbars(el)
 
     // Scroll to hash fragment after first render for this path.

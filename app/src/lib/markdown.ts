@@ -25,7 +25,6 @@ import { rehypeGraphviz } from "./rehype-graphviz"
 import { rehypeKatexPlaceholder } from "./rehype-katex-placeholder"
 import { rehypeMermaid } from "./rehype-mermaid"
 import { rehypePlantuml } from "./rehype-plantuml"
-import { rehypeTypstDiagram } from "./rehype-typst-diagram"
 import { remarkDirectivesHandler } from "./remark-directives"
 import { SHIKI_THEME_LIST, SHIKI_THEMES } from "./shiki-config"
 
@@ -116,7 +115,6 @@ function applySharedPlugins(processor: AnyProcessor): AnyProcessor {
       .use(rehypeGraphviz)
       .use(rehypeD2)
       .use(rehypeDbml)
-      .use(rehypeTypstDiagram)
   )
 }
 

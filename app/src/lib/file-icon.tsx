@@ -124,7 +124,6 @@ import svgRedhat from "simple-icons/icons/redhat.svg?raw"
 import svgRubygems from "simple-icons/icons/rubygems.svg?raw"
 import svgSnapcraft from "simple-icons/icons/snapcraft.svg?raw"
 import svgToml from "simple-icons/icons/toml.svg?raw"
-import svgTypst from "simple-icons/icons/typst.svg?raw"
 import svgV from "simple-icons/icons/v.svg?raw"
 import svgVala from "simple-icons/icons/vala.svg?raw"
 import svgVim from "simple-icons/icons/vim.svg?raw"
@@ -149,7 +148,6 @@ const siGraphql = colored(svgGraphql, "E10098")
 const siV = colored(svgV, "5D87BF")
 const siMdx = colored(svgMdx, "F9AC00")
 const siDbml = colored(svgDiagramsnet, "F08705")
-const siTypst = colored(svgTypst, "239DAD")
 const siAsciinema = colored(svgAsciinema, "D40000")
 const siDotenv = colored(svgDotenv, "ECD53F")
 const siOdin = colored(svgOdin, "1E5184")
@@ -278,7 +276,6 @@ const EXT_ICON: Record<string, string> = {
   v: siV,
   mdx: siMdx,
   dbml: siDbml,
-  typ: siTypst,
   cast: siAsciinema,
   env: siDotenv,
   odin: siOdin,

@@ -30,7 +30,6 @@ describe("remarkDirectivesHandler", () => {
       { lang: "dot", body: "digraph { X -> Y }" },
       { lang: "plantuml", body: "@startuml\nBob -> Alice\n@enduml" },
       { lang: "dbml", body: "Table users {\n  id integer\n}" },
-      { lang: "typst", body: "#set page(width: 10cm)\nHello" },
     ]
 
     for (const { lang, body } of cases) {
