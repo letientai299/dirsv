@@ -21,61 +21,67 @@ I **write various kind of markdown docs in nvim**:
 - [Learning notes][sicp-1.45] that are math heavy.
 - Personal knowledge graphs.
 
-[sicp-1.45]: https://github.com/letientai299/read-sicp/blob/master/ch01/1.45.md
-
 I also would like **preview more kinds of diagrams**, not just mermaid,
 **offline browsing a repo**, **previewing web static assets**.
 
-Some usecase obviously have better solution. For example `caddy`/`nginx` is
-great for previewing static web. However, they don't support live reload on
-changes (I might be wrong here).
-
 None of the existing solutions covers all my need. So, I build `dirsv` and
-[dirsv.nvim][dnvim]. Compare to other plugins, `dirsv.nvim` **doesn't** cover
-some common features provided by prior arts:
-
-- Sync scrolling
-- Review from buffer, not from disk, so changes are rendered as we type.
-- Auto switch browser tab to new page on buffer changing
-
-However, I don't really need those features. I just want more supported
-syntaxes, much more than what GFM can supports.
+[dirsv.nvim][dnvim].
 
 ## Features
 
+### Viewers
+
 - **Directory browsing** — table view with [Devicon][devicon] file-type icons,
-  sizes, and modification dates. Keyboard navigation (arrow keys, `j`/`k`,
-  Enter to open). Directories with `index.html` auto-route to HTML preview
-- **File sidebar** — resizable panel listing sibling files with type icons.
-  Prev/next navigation across siblings
-- **Breadcrumb navigation** — clickable path segments in the toolbar
+  sizes, and modification dates. Keyboard navigation (`j`/`k`, Enter to open)
 - **Markdown rendering** — [GFM][gfm] via [unified/remark][remark] with
   [Shiki][shiki] syntax highlighting, [KaTeX][katex] math, definition lists,
   color chips, GitHub-style alerts, emoji, raw HTML blocks, video embeds, and a
-  sticky table of contents sidebar
-- **Diagrams in markdown** — fenced code blocks for [Mermaid][mermaid],
+  sticky table of contents sidebar. Supports `:::` [container directives][directives]
+  as an alternative to fenced code blocks for diagrams and admonitions
+- **Diagrams** — fenced code blocks or `:::` directives for [Mermaid][mermaid],
   [PlantUML][plantuml], [Graphviz][graphviz], [D2][d2], [DBML][dbml], and
-  [Typst][typst]. All rendered client-side via WASM or JS
-- **Standalone diagram files** — `.gv`/`.dot`, `.d2`, `.dbml`, and `.typ`
-  files render directly
-- **Code view** — syntax highlighting for 100+ languages, line numbers, and a
-  copy button
+  [Typst][typst]. Standalone `.gv`/`.dot`, `.d2`, `.dbml`, and `.typ` files
+  render directly. All client-side via WASM or JS
+- **Code view** — syntax highlighting for 100+ languages, line numbers, copy
+  button
 - **JSON / YAML tree view** — collapsible tree with path filtering, Tree/Raw
-  toggle, and copy-to-clipboard per node. Large files (>500 KB) default to raw
-- **Image viewer** — gallery navigation between sibling images with arrow keys,
-  preloading, and fade transitions
+  toggle, copy-to-clipboard per node. Large files (>500 KB) default to raw
+- **Image viewer** — gallery navigation between sibling images, preloading, fade
+  transitions
 - **Video player** — HTML5 controls with gallery navigation for `.mp4`, `.webm`,
   `.ogg`, `.mov`
-- **Terminal recordings** — [asciinema][asciinema] `.cast` file playback with
+- **Terminal recordings** — [asciinema][asciinema] `.cast` playback with
   [asciinema-player][asciinema-player]
 - **HTML preview** — iframe sandbox with automatic URL rewriting for static
   sites
 - **Binary files** — detected by MIME type, shown with an "Open in app" link
-- **Live reload** — per-path WebSocket updates with server-side filtering. Only
-  watched paths are broadcast to each client
+
+### UI
+
+- **File sidebar** — resizable panel listing sibling files with type icons.
+  Prev/next navigation. State syncs across browser tabs
+- **Breadcrumb navigation** — clickable path segments, or press `Alt+L` to edit
+  the full path directly (with validation)
+- **Focus overlay** — double-click any image, video, or diagram to open a
+  full-screen lightbox. Scroll-to-zoom, drag-to-pan, `+`/`-`/`0` keys, pinch
+  gesture, `←`/`→` to cycle items, `f` for browser fullscreen
+- **Figure toolbar** — each code block and diagram gets copy, view-source
+  toggle, and expand buttons
+- **Content prefetch** — hovering sidebar links prefetches content; adjacent
+  siblings auto-prefetch after load
 - **Dark/light theme** — toggle with persistent override, respects
-  `prefers-color-scheme`
-- **Keyboard shortcuts** — `?` opens a help popover listing all bindings
+  `prefers-color-scheme`. Syncs across tabs
+- **Keyboard shortcuts** — `?` opens a help popover listing all bindings.
+  `Ctrl+B` toggle sidebar, `Ctrl+E` focus toggle, `h`/`Backspace` parent dir
+
+### Server
+
+- **Live reload** — per-path WebSocket with server-side filtering. Only watched
+  paths are broadcast
+- **Rate limiting** — per-IP token bucket (50 req/s, burst 100). Use
+  `--trusted-proxy` behind a reverse proxy
+- **Security** — DNS rebinding protection, tightened CSP for HTML previews,
+  WebSocket origin checks
 - **Single binary** — frontend assets embedded via `go:embed` with
   pre-compressed gzip, no runtime dependencies
 
@@ -108,21 +114,6 @@ dirsv           # serve current directory on :8080, open browser
 dirsv ./docs    # serve a specific directory
 ```
 
-### Build from source
-
-Requires [mise][mise] (manages Go, [Bun][bun], and [golangci-lint][gclint] automatically).
-
-```sh
-mise build   # build frontend + Go binary
-./bin/server # serves current directory on :8080, opens browser
-```
-
-Or in one step:
-
-```sh
-mise run
-```
-
 ### CLI flags
 
 ```
@@ -133,12 +124,23 @@ Usage: dirsv [flags] [path]
       --host string      listen address (default "localhost")
       --no-open          don't auto-open browser
   -p, --port int         listen port (default 8080)
+      --trusted-proxy    trust proxy headers for rate limiting
   -v, --version          print version and exit
 ```
 
 When `[path]` is a file, the server restricts browsing to that single file.
 If the port is taken and wasn't explicitly set, the server auto-finds a free
-port in the 8080–8179 range.
+port in the 8080-8179 range.
+
+### Build from source
+
+Requires [mise][mise] (manages Go, [Bun][bun], and [golangci-lint][gclint]
+automatically).
+
+```sh
+mise build   # build frontend + Go binary
+./bin/server # serves current directory on :8080, opens browser
+```
 
 ## Development
 
@@ -146,7 +148,8 @@ port in the 8080–8179 range.
 mise dev   # Go server + Vite dev server in parallel (HMR)
 ```
 
-The Go server runs on `:8080` and proxies non-API requests to [Vite][vite] on `:5173`.
+The Go server runs on `:8080` and proxies non-API requests to [Vite][vite] on
+`:5173`.
 
 ## License
 
@@ -171,3 +174,5 @@ MIT
 [asciinema]: https://asciinema.org/
 [asciinema-player]: https://github.com/asciinema/asciinema-player
 [dnvim]: https://github.com/letientai299/dirsv.nvim
+[sicp-1.45]: https://github.com/letientai299/read-sicp/blob/master/ch01/1.45.md
+[directives]: https://talk.commonmark.org/t/generic-directives-plugins-syntax/444

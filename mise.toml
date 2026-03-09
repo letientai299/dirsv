@@ -1,6 +1,7 @@
 [tools]
 go = "latest"
 bun = "latest"
+git-cliff = "latest"
 golangci-lint = "2"
 prek = "latest"
 watchexec = "2"
@@ -63,6 +64,22 @@ run = "bun run scripts/dev.ts"
 description = "Pre-compress frontend assets with gzip (replaces originals with .gz)"
 depends = ["build:fe"]
 run = "go run ./cmd/compress app/dist/assets"
+
+[tasks.changelog]
+description = "Generate changelog for a tag (default: latest)"
+usage = 'arg "[tag]" help="Tag to generate changelog for"'
+run = """
+if [ -z "${usage_tag:-}" ]; then
+  git cliff --latest --strip header
+else
+  prev=$(git tag --sort=-v:refname | grep -A1 "^${usage_tag}$" | tail -1)
+  if [ "$prev" = "$usage_tag" ]; then
+    git cliff --strip header "$usage_tag"
+  else
+    git cliff --strip header "${prev}..${usage_tag}"
+  fi
+fi
+"""
 
 [tasks.release]
 description = "Build smallest production binary"

@@ -1,0 +1,30 @@
+[changelog]
+header = ""
+body = """
+{%- set groups = commits | group_by(attribute="group") -%}
+{% for name in ["Features", "Documentation", "Performance", "Bug Fixes", "Refactor", "Other"] %}
+{%- if groups[name] %}
+
+### {{ name }}
+{% for commit in groups[name] %}
+- {{ commit.message }} ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/letientai299/dirsv/commit/{{ commit.id }}))
+{%- endfor %}
+{% endif -%}
+{% endfor %}
+"""
+trim = true
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+commit_parsers = [
+  { message = "^feat", group = "Features" },
+  { message = "^fix", group = "Bug Fixes" },
+  { message = "^perf", group = "Performance" },
+  { message = "^doc", group = "Documentation" },
+  { message = "^refactor", group = "Refactor" },
+  { message = "^chore\\(release\\)", skip = true },
+  { message = "^chore", group = "Other" },
+]
+tag_pattern = "v[0-9].*"
