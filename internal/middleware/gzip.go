@@ -100,7 +100,10 @@ func Gzip(next http.Handler) http.Handler {
 			return
 		}
 
-		gz := gzipPool.Get().(*gzip.Writer) //nolint:errcheck // pool New always returns *gzip.Writer
+		gz, ok := gzipPool.Get().(*gzip.Writer)
+		if !ok {
+			gz, _ = gzip.NewWriterLevel(io.Discard, gzip.DefaultCompression)
+		}
 		defer gzipPool.Put(gz)
 
 		grw := &gzipResponseWriter{ResponseWriter: w, gw: gz}

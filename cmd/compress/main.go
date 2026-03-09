@@ -34,14 +34,20 @@ func main() {
 	}
 }
 
-func run(root string) error {
+func run(dir string) error {
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = root.Close() }()
+
 	// First pass: remove stale .gz files only when the original source file
 	// exists (meaning a fresh build produced new originals to compress).
 	// This keeps the directory idempotent without destroying .gz files when
 	// build:fe was skipped by the task runner.
-	//nolint:gosec // G703,G122: build-time tool, root is a trusted project path
-	if err := filepath.WalkDir(
-		root,
+	if err := fs.WalkDir(
+		root.FS(),
+		".",
 		func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() {
 				return err
@@ -50,8 +56,8 @@ func run(root string) error {
 				return nil
 			}
 			orig := strings.TrimSuffix(path, filepath.Ext(path))
-			if _, e := os.Stat(orig); e == nil {
-				return os.Remove(path)
+			if _, e := root.Stat(orig); e == nil {
+				return root.Remove(path)
 			}
 			return nil
 		},
@@ -61,9 +67,9 @@ func run(root string) error {
 
 	// Second pass: compress matching files and remove originals.
 	var count int
-	//nolint:gosec // G703,G122,G304: build-time tool, trusted path
-	err := filepath.WalkDir(
-		root,
+	if err := fs.WalkDir(
+		root.FS(),
+		".",
 		func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() {
 				return err
@@ -72,17 +78,18 @@ func run(root string) error {
 				return nil
 			}
 
-			data, err := os.ReadFile(path)
+			data, err := root.ReadFile(path)
 			if err != nil {
 				return err
 			}
 
 			gzPath := path + ".gz"
-			f, err := os.Create(gzPath)
+			f, err := root.Create(gzPath)
 			if err != nil {
 				return err
 			}
 
+			// NewWriterLevel never errors for valid levels.
 			w, _ := gzip.NewWriterLevel(f, gzip.BestCompression)
 			if _, err := w.Write(data); err != nil {
 				_ = f.Close()
@@ -96,16 +103,15 @@ func run(root string) error {
 				return err
 			}
 
-			if err := os.Remove(path); err != nil {
+			if err := root.Remove(path); err != nil {
 				return err
 			}
 			count++
 			return nil
 		},
-	)
-	if err != nil {
+	); err != nil {
 		return err
 	}
-	fmt.Printf("compressed %d files in %s\n", count, root)
+	fmt.Printf("compressed %d files in %s\n", count, dir)
 	return nil
 }

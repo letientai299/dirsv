@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
@@ -71,6 +72,7 @@ type wsClient struct {
 // Watcher watches a directory tree and broadcasts changes to WebSocket subscribers.
 type Watcher struct {
 	root           string
+	osRoot         *os.Root
 	debug          bool
 	originPatterns []string
 	fsw            *fsnotify.Watcher
@@ -113,13 +115,20 @@ func New(root string, opts ...Option) (*Watcher, error) {
 		return nil, err
 	}
 
+	osRoot, err := os.OpenRoot(abs)
+	if err != nil {
+		return nil, err
+	}
+
 	fsw, err := fsnotify.NewWatcher()
 	if err != nil {
+		_ = osRoot.Close()
 		return nil, err
 	}
 
 	w := &Watcher{
 		root:     abs,
+		osRoot:   osRoot,
 		fsw:      fsw,
 		done:     make(chan struct{}),
 		clients:  make(map[*wsClient]struct{}),
@@ -137,6 +146,7 @@ func New(root string, opts ...Option) (*Watcher, error) {
 // Close stops the watcher and releases resources.
 func (w *Watcher) Close() error {
 	close(w.done)
+	_ = w.osRoot.Close()
 	return w.fsw.Close()
 }
 
@@ -166,9 +176,11 @@ func isEditorTempFile(name string) bool {
 	return false
 }
 
-// ensureWatched walks dir and adds all sub-directories to the fsnotify
-// watcher, skipping subtrees that are already watched.
-func (w *Watcher) ensureWatched(dir string) {
+// ensureWatched walks relDir (relative to w.root) via w.osRoot.FS() and
+// adds all sub-directories to the fsnotify watcher, skipping subtrees
+// that are already watched. Walking through os.Root confines traversal
+// to the root fd — symlink swaps cannot escape.
+func (w *Watcher) ensureWatched(relDir string) {
 	// Snapshot already-watched dirs to skip during walk (no lock held
 	// during the potentially slow WalkDir).
 	w.watchMu.Lock()
@@ -178,31 +190,37 @@ func (w *Watcher) ensureWatched(dir string) {
 	}
 	w.watchMu.Unlock()
 
-	// Walk without holding the lock.
+	// Walk without holding the lock. Paths from fs.WalkDir on
+	// osRoot.FS() are relative to w.root (forward-slash separated).
 	var newDirs []string
-	_ = filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		select {
-		case <-w.done:
-			return filepath.SkipAll
-		default:
-		}
-		if !d.IsDir() {
+	_ = fs.WalkDir(
+		w.osRoot.FS(),
+		relDir,
+		func(p string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			select {
+			case <-w.done:
+				return fs.SkipAll
+			default:
+			}
+			if !d.IsDir() {
+				return nil
+			}
+			// Never skip the walk root itself — it may start with "."
+			// (e.g., dirsv -root .hidden).
+			abs := filepath.Join(w.root, filepath.FromSlash(p))
+			if p != relDir && shouldSkipDir(d.Name()) {
+				return fs.SkipDir
+			}
+			if _, ok := snapshot[abs]; ok {
+				return fs.SkipDir // subtree already covered
+			}
+			newDirs = append(newDirs, abs)
 			return nil
-		}
-		// Never skip the walk root itself — it may start with "."
-		// (e.g., dirsv -root .hidden).
-		if p != dir && shouldSkipDir(d.Name()) {
-			return filepath.SkipDir
-		}
-		if _, ok := snapshot[p]; ok {
-			return filepath.SkipDir // subtree already covered
-		}
-		newDirs = append(newDirs, p)
-		return nil
-	})
+		},
+	)
 
 	if len(newDirs) == 0 {
 		return
@@ -213,15 +231,15 @@ func (w *Watcher) ensureWatched(dir string) {
 	defer w.watchMu.Unlock()
 
 	var added []string
-	for _, p := range newDirs {
-		if _, ok := w.watched[p]; ok {
+	for _, abs := range newDirs {
+		if _, ok := w.watched[abs]; ok {
 			continue // added by a concurrent call
 		}
-		if err := w.fsw.Add(p); err != nil {
+		if err := w.fsw.Add(abs); err != nil {
 			continue
 		}
-		w.watched[p] = struct{}{}
-		rel, _ := filepath.Rel(w.root, p)
+		w.watched[abs] = struct{}{}
+		rel, _ := filepath.Rel(w.root, abs)
 		added = append(added, filepath.ToSlash(rel))
 	}
 	if len(added) > 0 {
@@ -527,25 +545,25 @@ func (w *Watcher) pruneWatches() {
 }
 
 // watchForClient resolves prefix to an absolute path under root and
-// ensures the subtree is watched. Rejects paths that escape the root.
+// ensures the subtree is watched. Rejects paths that escape the root
+// (os.Root enforces containment via the directory fd).
 // If prefix points to a file, the file's parent directory is watched.
 func (w *Watcher) watchForClient(prefix string) {
-	abs := filepath.Join(w.root, filepath.FromSlash(prefix))
-	// Resolve symlinks so the containment check uses the real target.
-	resolved, err := filepath.EvalSymlinks(abs)
-	if err != nil {
-		return
+	// os.Root.Stat follows symlinks but confines resolution to the
+	// root directory — paths that escape via ../ or symlinks are rejected
+	// by the kernel, replacing the manual EvalSymlinks + prefix check.
+	target := prefix
+	if target == "" {
+		target = "."
 	}
-	if resolved != w.root &&
-		!strings.HasPrefix(resolved, w.root+string(filepath.Separator)) {
+	info, err := w.osRoot.Stat(target)
+	if err != nil {
 		return
 	}
 	// If target is a file, watch its parent directory so fsnotify
 	// can report changes to it.
-	//nolint:gosec // G703: resolved is boundary-checked above
-	info, statErr := os.Stat(resolved)
-	if statErr == nil && !info.IsDir() {
-		resolved = filepath.Dir(resolved)
+	if !info.IsDir() {
+		target = path.Dir(target)
 	}
 	// Run asynchronously so the client's read loop isn't blocked by
 	// the WalkDir inside ensureWatched. The semaphore caps concurrent
@@ -553,7 +571,7 @@ func (w *Watcher) watchForClient(prefix string) {
 	go func() {
 		w.watchSem <- struct{}{}
 		defer func() { <-w.watchSem }()
-		w.ensureWatched(resolved)
+		w.ensureWatched(target)
 	}()
 }
 
@@ -579,7 +597,7 @@ func (w *Watcher) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	defer conn.CloseNow() //nolint:errcheck // best-effort cleanup
+	defer func() { _ = conn.CloseNow() }()
 
 	// Watch messages are small JSON ({"watch":["path",...]}). Set an
 	// explicit read limit instead of relying on the library default
