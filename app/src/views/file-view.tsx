@@ -443,15 +443,9 @@ export function FileView({ path }: Props) {
     [path, isHtml, isImage, isVideo],
   )
 
-  useAbortEffect((signal) => load(signal), [load])
-
-  // Re-fetch on file changes — invalidate cache so we get fresh content
-  useWS(path.replace(/^\//, ""), () => {
-    invalidate(path)
-    load()
-  })
-
-  // Clear cache when switching directories — siblings change entirely
+  // Clear cache when switching directories — siblings change entirely.
+  // Must run before the fetch effect so in-flight requests from the old
+  // directory are aborted before the new fetch starts.
   const prevParentRef = useRef(parentDir)
   useEffect(() => {
     if (prevParentRef.current !== parentDir) {
@@ -459,6 +453,14 @@ export function FileView({ path }: Props) {
       prevParentRef.current = parentDir
     }
   }, [parentDir])
+
+  useAbortEffect((signal) => load(signal), [load])
+
+  // Re-fetch on file changes — invalidate cache so we get fresh content
+  useWS(path.replace(/^\//, ""), () => {
+    invalidate(path)
+    load()
+  })
 
   // Prev/next among all siblings (dirs included) so navigation matches
   // the sidebar order instead of mysteriously jumping over directories.
