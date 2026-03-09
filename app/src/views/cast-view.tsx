@@ -1,8 +1,7 @@
 import { useEffect, useRef } from "preact/hooks"
 import "asciinema-player/dist/bundle/asciinema-player.css"
 
-const NERD_FONT_CSS =
-  "https://cdn.jsdelivr.net/gh/mshaugh/nerdfont-webfonts@v3.3.0/build/firacode-nerd-font.css"
+const NERD_FONT_CSS = "/fonts/firacode-nerd-font.css"
 const NERD_FONT_FAMILY = "'FiraCode Nerd Font', monospace"
 
 const NERD_FONT_LINK_ID = "nerd-font-css"
