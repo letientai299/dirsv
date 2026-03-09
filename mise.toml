@@ -76,10 +76,19 @@ outputs = ["bin/dirsv"]
 
 # -- test --
 
-[tasks.test]
+[tasks."test:be"]
 description = "Run Go tests"
-alias = "t"
 run = "go test -race -cover -count=1 -shuffle=on -timeout=5m ./..."
+
+[tasks."test:fe"]
+description = "Run frontend tests"
+dir = "app"
+run = "bun run test"
+
+[tasks.test]
+description = "Run all tests"
+alias = "t"
+depends = ["test:be", "test:fe"]
 
 # -- lint / fmt --
 
