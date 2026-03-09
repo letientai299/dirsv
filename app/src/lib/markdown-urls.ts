@@ -1,7 +1,9 @@
+import { navigate } from "./navigate"
+
 /**
  * Resolve a relative URL path against the markdown file's parent directory.
- * Returns an absolute path (leading `/`). External and already-absolute URLs
- * pass through unchanged.
+ * Returns an absolute path (leading `/`) with any hash fragment preserved.
+ * External and already-absolute URLs pass through unchanged.
  */
 export function resolveRelativeUrl(href: string, mdPath: string): string {
   // External URL — pass through.
@@ -19,7 +21,7 @@ export function resolveRelativeUrl(href: string, mdPath: string): string {
   // Combine dir + href and resolve `.` / `..` segments via URL constructor.
   const base = `http://x${dir.endsWith("/") ? dir : `${dir}/`}`
   const resolved = new URL(href, base)
-  return resolved.pathname
+  return resolved.pathname + resolved.hash
 }
 
 /** Rewrite relative `src` on `<img>` and `<video><source>` to `/api/raw/`. */
@@ -57,7 +59,5 @@ export function handleRelativeLinkClick(e: MouseEvent, mdPath: string): void {
   if (href.startsWith("#")) return
 
   e.preventDefault()
-  const resolved = resolveRelativeUrl(href, mdPath)
-  history.pushState(null, "", resolved)
-  window.dispatchEvent(new PopStateEvent("popstate"))
+  navigate(resolveRelativeUrl(href, mdPath))
 }

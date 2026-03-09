@@ -23,8 +23,11 @@ function encodePath(normalized: string): string {
 
 /** SPA navigation helper. Encodes each path segment for proper URL handling. */
 export function navigate(to: string) {
-  const normalized = normalizePath(to, "/")
-  history.pushState(null, "", encodePath(normalized))
+  const hashIdx = to.indexOf("#")
+  const hash = hashIdx >= 0 ? to.slice(hashIdx) : ""
+  const path = hashIdx >= 0 ? to.slice(0, hashIdx) : to
+  const normalized = normalizePath(path, "/")
+  history.pushState(null, "", encodePath(normalized) + hash)
   window.dispatchEvent(new PopStateEvent("popstate"))
 }
 

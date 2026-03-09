@@ -31,6 +31,7 @@ export function MarkdownView({ content, path }: Props) {
   const contentRef = useRef<HTMLElement>(null)
   const prevContentRef = useRef("")
   const prevPathRef = useRef("")
+  const scrolledHashRef = useRef("")
   const focus = useFocusOverlay()
 
   useEffect(() => {
@@ -38,6 +39,7 @@ export function MarkdownView({ content, path }: Props) {
     if (content === prevContentRef.current && path === prevPathRef.current)
       return
     prevContentRef.current = content
+    if (path !== prevPathRef.current) scrolledHashRef.current = ""
     prevPathRef.current = path
 
     preloadDiagramBundles(content)
@@ -107,6 +109,17 @@ export function MarkdownView({ content, path }: Props) {
     void renderDbmlBlocks(el)
     void renderTypstBlocks(el)
     injectFigureToolbars(el)
+
+    // Scroll to hash fragment after first render for this path.
+    // Covers both fresh page loads and SPA navigations with a fragment.
+    const hash = location.hash.slice(1)
+    if (hash && hash !== scrolledHashRef.current) {
+      const target = document.getElementById(hash)
+      if (target) {
+        target.scrollIntoView()
+        scrolledHashRef.current = hash
+      }
+    }
   }, [result, path])
 
   // Re-render mermaid diagrams when the user toggles the colour scheme.

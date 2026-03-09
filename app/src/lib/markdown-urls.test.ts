@@ -51,6 +51,18 @@ describe("resolveRelativeUrl", () => {
   it("passes through anchor-only links", () => {
     expect(resolveRelativeUrl("#heading", "/docs/guide.md")).toBe("#heading")
   })
+
+  it("preserves hash fragment in relative links", () => {
+    expect(resolveRelativeUrl("./idea.md#architecture", "/docs/guide.md")).toBe(
+      "/docs/idea.md#architecture",
+    )
+  })
+
+  it("preserves hash fragment with ../ traversal", () => {
+    expect(
+      resolveRelativeUrl("../other.md#section", "/docs/sub/guide.md"),
+    ).toBe("/docs/other.md#section")
+  })
 })
 
 describe("rewriteMediaSrc", () => {
@@ -164,6 +176,23 @@ describe("handleRelativeLinkClick", () => {
     }
 
     expect(pushState).not.toHaveBeenCalled()
+  })
+
+  it("navigates with hash fragment preserved", () => {
+    const pushState = vi.spyOn(history, "pushState")
+
+    const a = document.createElement("a")
+    a.setAttribute("href", "./idea.md#architecture")
+    const event = makeClickEvent(a)
+
+    handleRelativeLinkClick(event, "/docs/guide.md")
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(pushState).toHaveBeenCalledWith(
+      null,
+      "",
+      "/docs/idea.md#architecture",
+    )
   })
 
   it("handles click on child of anchor", () => {
