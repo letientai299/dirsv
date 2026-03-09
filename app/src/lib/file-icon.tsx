@@ -1,234 +1,465 @@
-/** Maps file extensions to Devicon SVG icons from CDN. */
+/** Maps file extensions to locally-bundled SVG icons. */
+
+import diAstro from "devicon/icons/astro/astro-original.svg"
+import diAwk from "devicon/icons/awk/awk-original.svg"
+import diBash from "devicon/icons/bash/bash-original.svg"
+import diC from "devicon/icons/c/c-original.svg"
+import diClojure from "devicon/icons/clojure/clojure-original.svg"
+import diCmake from "devicon/icons/cmake/cmake-original.svg"
+import diCoffeescript from "devicon/icons/coffeescript/coffeescript-original.svg"
+import diCplusplus from "devicon/icons/cplusplus/cplusplus-original.svg"
+import diCrystal from "devicon/icons/crystal/crystal-original.svg"
+import diCsharp from "devicon/icons/csharp/csharp-original.svg"
+import diCss3 from "devicon/icons/css3/css3-original.svg"
+import diDart from "devicon/icons/dart/dart-original.svg"
+import diDocker from "devicon/icons/docker/docker-original.svg"
+import diElixir from "devicon/icons/elixir/elixir-original.svg"
+import diElm from "devicon/icons/elm/elm-original.svg"
+import diErlang from "devicon/icons/erlang/erlang-original.svg"
+import diFsharp from "devicon/icons/fsharp/fsharp-original.svg"
+import diGit from "devicon/icons/git/git-original.svg"
+import diGo from "devicon/icons/go/go-original.svg"
+import diGradle from "devicon/icons/gradle/gradle-original.svg"
+import diGroovy from "devicon/icons/groovy/groovy-original.svg"
+import diHaskell from "devicon/icons/haskell/haskell-original.svg"
+import diHaxe from "devicon/icons/haxe/haxe-original.svg"
+import diHtml5 from "devicon/icons/html5/html5-original.svg"
+import diJava from "devicon/icons/java/java-original.svg"
+import diJavascript from "devicon/icons/javascript/javascript-original.svg"
+import diJulia from "devicon/icons/julia/julia-original.svg"
+import diKotlin from "devicon/icons/kotlin/kotlin-original.svg"
+import diLatex from "devicon/icons/latex/latex-original.svg"
+import diLess from "devicon/icons/less/less-plain-wordmark.svg"
+import diLua from "devicon/icons/lua/lua-original.svg"
+import diNim from "devicon/icons/nim/nim-original.svg"
+import diNixos from "devicon/icons/nixos/nixos-original.svg"
+import diObjectivec from "devicon/icons/objectivec/objectivec-plain.svg"
+import diOcaml from "devicon/icons/ocaml/ocaml-original.svg"
+import diPerl from "devicon/icons/perl/perl-original.svg"
+import diPhp from "devicon/icons/php/php-original.svg"
+import diPowershell from "devicon/icons/powershell/powershell-original.svg"
+import diPurescript from "devicon/icons/purescript/purescript-original.svg"
+import diPython from "devicon/icons/python/python-original.svg"
+import diR from "devicon/icons/r/r-original.svg"
+import diRuby from "devicon/icons/ruby/ruby-original.svg"
+import diRust from "devicon/icons/rust/rust-original.svg"
+import diSass from "devicon/icons/sass/sass-original.svg"
+import diScala from "devicon/icons/scala/scala-original.svg"
+import diSolidity from "devicon/icons/solidity/solidity-original.svg"
+import diSvelte from "devicon/icons/svelte/svelte-original.svg"
+import diSwift from "devicon/icons/swift/swift-original.svg"
+import diTerraform from "devicon/icons/terraform/terraform-original.svg"
+import diTypescript from "devicon/icons/typescript/typescript-original.svg"
+import diVisualbasic from "devicon/icons/visualbasic/visualbasic-line.svg"
+import diVuejs from "devicon/icons/vuejs/vuejs-original.svg"
+import diWindows from "devicon/icons/windows11/windows11-original.svg"
+import diYaml from "devicon/icons/yaml/yaml-original.svg"
+import diZig from "devicon/icons/zig/zig-original.svg"
+import matAda from "material-icon-theme/icons/ada.svg"
+import matAssembly from "material-icon-theme/icons/assembly.svg"
+import matAudio from "material-icon-theme/icons/audio.svg"
+import matBicep from "material-icon-theme/icons/bicep.svg"
+import matCobol from "material-icon-theme/icons/cobol.svg"
+import matD from "material-icon-theme/icons/d.svg"
+import matEditorconfig from "material-icon-theme/icons/editorconfig.svg"
+import matEpub from "material-icon-theme/icons/epub.svg"
+import matFont from "material-icon-theme/icons/font.svg"
+import matFortran from "material-icon-theme/icons/fortran.svg"
+import matGleam from "material-icon-theme/icons/gleam.svg"
+import matGodot from "material-icon-theme/icons/godot-assets.svg"
+import matHandlebars from "material-icon-theme/icons/handlebars.svg"
+import matHjson from "material-icon-theme/icons/hjson.svg"
+import matHttp from "material-icon-theme/icons/http.svg"
+import matJinja from "material-icon-theme/icons/jinja.svg"
+import matJson from "material-icon-theme/icons/json.svg"
+import matJust from "material-icon-theme/icons/just.svg"
+import matLiquid from "material-icon-theme/icons/liquid.svg"
+import matLisp from "material-icon-theme/icons/lisp.svg"
+import matMarkdown from "material-icon-theme/icons/markdown.svg"
+import matMarko from "material-icon-theme/icons/markojs.svg"
+import matMojo from "material-icon-theme/icons/mojo.svg"
+import matPdf from "material-icon-theme/icons/pdf.svg"
+import matPowerpoint from "material-icon-theme/icons/powerpoint.svg"
+import matPrisma from "material-icon-theme/icons/prisma.svg"
+import matProto from "material-icon-theme/icons/proto.svg"
+import matPug from "material-icon-theme/icons/pug.svg"
+import matPuppet from "material-icon-theme/icons/puppet.svg"
+import matRacket from "material-icon-theme/icons/racket.svg"
+import matRazor from "material-icon-theme/icons/razor.svg"
+import matRust from "material-icon-theme/icons/rust.svg"
+import matShader from "material-icon-theme/icons/shader.svg"
+import matStylus from "material-icon-theme/icons/stylus.svg"
+import matTable from "material-icon-theme/icons/table.svg"
+import matTwig from "material-icon-theme/icons/twig.svg"
+import matVerilog from "material-icon-theme/icons/verilog.svg"
+import matWord from "material-icon-theme/icons/word.svg"
+import matXml from "material-icon-theme/icons/xml.svg"
+import matZip from "material-icon-theme/icons/zip.svg"
+import svgMaven from "simple-icons/icons/apachemaven.svg?raw"
+import svgApple from "simple-icons/icons/apple.svg?raw"
+import svgAsciinema from "simple-icons/icons/asciinema.svg?raw"
+import svgBabel from "simple-icons/icons/babel.svg?raw"
+import svgBiome from "simple-icons/icons/biome.svg?raw"
+import svgBun from "simple-icons/icons/bun.svg?raw"
+import svgDebian from "simple-icons/icons/debian.svg?raw"
+import svgDiagramsnet from "simple-icons/icons/diagramsdotnet.svg?raw"
+import svgDotenv from "simple-icons/icons/dotenv.svg?raw"
+import svgEslint from "simple-icons/icons/eslint.svg?raw"
+import svgFlatpak from "simple-icons/icons/flatpak.svg?raw"
+import svgGraphql from "simple-icons/icons/graphql.svg?raw"
+import svgLoCalc from "simple-icons/icons/libreofficecalc.svg?raw"
+import svgLoImpress from "simple-icons/icons/libreofficeimpress.svg?raw"
+import svgLoWriter from "simple-icons/icons/libreofficewriter.svg?raw"
+import svgLinux from "simple-icons/icons/linux.svg?raw"
+import svgMdx from "simple-icons/icons/mdx.svg?raw"
+import svgNginx from "simple-icons/icons/nginx.svg?raw"
+import svgNodejs from "simple-icons/icons/nodedotjs.svg?raw"
+import svgNpm from "simple-icons/icons/npm.svg?raw"
+import svgNushell from "simple-icons/icons/nushell.svg?raw"
+import svgOdin from "simple-icons/icons/odin.svg?raw"
+import svgPnpm from "simple-icons/icons/pnpm.svg?raw"
+import svgPostgresql from "simple-icons/icons/postgresql.svg?raw"
+import svgPrettier from "simple-icons/icons/prettier.svg?raw"
+import svgRedhat from "simple-icons/icons/redhat.svg?raw"
+import svgRubygems from "simple-icons/icons/rubygems.svg?raw"
+import svgSnapcraft from "simple-icons/icons/snapcraft.svg?raw"
+import svgToml from "simple-icons/icons/toml.svg?raw"
+import svgTypst from "simple-icons/icons/typst.svg?raw"
+import svgV from "simple-icons/icons/v.svg?raw"
+import svgVala from "simple-icons/icons/vala.svg?raw"
+import svgVim from "simple-icons/icons/vim.svg?raw"
+import svgYarn from "simple-icons/icons/yarn.svg?raw"
+import svgEmacs from "../assets/icons/Emacs.svg?raw"
+import svgGraphViz from "../assets/icons/GraphViz.svg?raw"
+import vendorJsonnet from "../assets/icons/jsonnet.svg"
+import svgScheme from "../assets/icons/Scheme.svg?raw"
+import vendorVyper from "../assets/icons/vyper.svg"
 import { IMAGE_EXTS, VIDEO_EXTS } from "./media-types"
 
-const DEVICON_CDN = "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons"
-const FILE_ICONS_CDN = "https://cdn.jsdelivr.net/gh/file-icons/icons@master/svg"
-const VSCODE_ICONS_CDN =
-  "https://cdn.jsdelivr.net/gh/vscode-icons/vscode-icons@master/icons"
+// ---------------------------------------------------------------------------
+// Colorize a monochrome simple-icons SVG into a data URI.
+// ---------------------------------------------------------------------------
+function colored(svg: string, hex: string): string {
+  return `data:image/svg+xml,${encodeURIComponent(svg.replace("<svg ", `<svg fill="#${hex}" `))}`
+}
 
-const SI = "https://cdn.simpleicons.org"
+const siToml = colored(svgToml, "9C4121")
+const siPostgresql = colored(svgPostgresql, "4169E1")
+const siGraphql = colored(svgGraphql, "E10098")
+const siV = colored(svgV, "5D87BF")
+const siMdx = colored(svgMdx, "F9AC00")
+const siDbml = colored(svgDiagramsnet, "F08705")
+const siTypst = colored(svgTypst, "239DAD")
+const siAsciinema = colored(svgAsciinema, "D40000")
+const siDotenv = colored(svgDotenv, "ECD53F")
+const siOdin = colored(svgOdin, "1E5184")
+const siVala = colored(svgVala, "7239B3")
+const siNushell = colored(svgNushell, "4E9A06")
+const siVim = colored(svgVim, "019733")
+const siLoWriter = colored(svgLoWriter, "18A303")
+const siLoCalc = colored(svgLoCalc, "18A303")
+const siLoImpress = colored(svgLoImpress, "18A303")
+const siApple = colored(svgApple, "A2AAAD")
+const siDebian = colored(svgDebian, "A81D33")
+const siRedhat = colored(svgRedhat, "EE0000")
+const siLinux = colored(svgLinux, "FCC624")
+const siSnapcraft = colored(svgSnapcraft, "82BEA0")
+const siFlatpak = colored(svgFlatpak, "4A90D9")
+const siRubygems = colored(svgRubygems, "E9573F")
+const siMaven = colored(svgMaven, "C71A36")
+const siNpm = colored(svgNpm, "CB3837")
+const siNodejs = colored(svgNodejs, "5FA04E")
+const siYarn = colored(svgYarn, "2C8EBB")
+const siPnpm = colored(svgPnpm, "F69220")
+const siPrettier = colored(svgPrettier, "F7B93E")
+const siBabel = colored(svgBabel, "F9DC3E")
+const siNginx = colored(svgNginx, "009639")
+const siBiome = colored(svgBiome, "60A5FA")
+const siBun = colored(svgBun, "F9F1E1")
+const siEslint = colored(svgEslint, "4B32C3")
+const vendorGraphViz = colored(svgGraphViz, "3B78E7")
+const vendorScheme = colored(svgScheme, "DC3545")
+const vendorEmacs = colored(svgEmacs, "7F5AB6")
 
-// Extensions with direct SVG URLs (not available in Devicon)
-const EXT_URL_MAP: Record<string, string> = {
-  toml: `${SI}/toml/9C4121`,
-  editorconfig: `${SI}/editorconfig/000000`,
-  sql: `${SI}/postgresql/4169E1`,
-  graphql: `${SI}/graphql/E10098`,
-  gql: `${SI}/graphql/E10098`,
-  v: `${SI}/v/5D87BF`,
-  proto: `${VSCODE_ICONS_CDN}/file_type_protobuf.svg`,
-  mdx: `${SI}/mdx/F9AC00`,
-  gv: `${FILE_ICONS_CDN}/GraphViz.svg`,
-  dot: `${FILE_ICONS_CDN}/GraphViz.svg`,
+// ---------------------------------------------------------------------------
+// Extension → icon URL
+// ---------------------------------------------------------------------------
+const EXT_ICON: Record<string, string> = {
+  // Languages (devicon)
+  go: diGo,
+  mod: diGo,
+  sum: diGo,
+  ts: diTypescript,
+  tsx: diTypescript,
+  js: diJavascript,
+  jsx: diJavascript,
+  mjs: diJavascript,
+  cjs: diJavascript,
+  mts: diTypescript,
+  cts: diTypescript,
+  py: diPython,
+  rb: diRuby,
+  rs: diRust,
+  java: diJava,
+  kt: diKotlin,
+  kts: diKotlin,
+  swift: diSwift,
+  php: diPhp,
+  c: diC,
+  h: diC,
+  cpp: diCplusplus,
+  cs: diCsharp,
+  lua: diLua,
+  dart: diDart,
+  zig: diZig,
+  ex: diElixir,
+  exs: diElixir,
+  hs: diHaskell,
+  scala: diScala,
+  r: diR,
+  pl: diPerl,
+  pm: diPerl,
+  jl: diJulia,
+  clj: diClojure,
+  cljs: diClojure,
+  erl: diErlang,
+  hrl: diErlang,
+  ml: diOcaml,
+  mli: diOcaml,
+  fs: diFsharp,
+  fsx: diFsharp,
+  m: diObjectivec,
+  mm: diObjectivec,
+  groovy: diGroovy,
+  nim: diNim,
+  cr: diCrystal,
+  coffee: diCoffeescript,
+  elm: diElm,
+  purs: diPurescript,
+  haxe: diHaxe,
+  sol: diSolidity,
+  // Markup & data (devicon)
+  yml: diYaml,
+  yaml: diYaml,
+  json: matJson,
+  xml: matXml,
+  md: matMarkdown,
+  html: diHtml5,
+  css: diCss3,
+  scss: diSass,
+  sass: diSass,
+  less: diLess,
+  tex: diLatex,
+  // Web frameworks (devicon)
+  vue: diVuejs,
+  svelte: diSvelte,
+  astro: diAstro,
+  // Shell & infra (devicon)
+  sh: diBash,
+  bash: diBash,
+  zsh: diBash,
+  ps1: diPowershell,
+  gradle: diGradle,
+  // Git (devicon)
+  gitignore: diGit,
+  gitattributes: diGit,
+  gitmodules: diGit,
+  // Containers & infra (devicon)
+  dockerfile: diDocker,
+  tf: diTerraform,
+  tfvars: diTerraform,
+  nix: diNixos,
+  // Simple-icons (colored)
+  toml: siToml,
+  editorconfig: matEditorconfig,
+  sql: siPostgresql,
+  graphql: siGraphql,
+  gql: siGraphql,
+  v: siV,
+  mdx: siMdx,
+  dbml: siDbml,
+  typ: siTypst,
+  cast: siAsciinema,
+  env: siDotenv,
+  odin: siOdin,
+  vala: siVala,
+  nu: siNushell,
+  vim: siVim,
+  odt: siLoWriter,
+  ods: siLoCalc,
+  odp: siLoImpress,
+  // D2 — inline data URI (no external package)
   d2: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23007AD6'%3E%3Ctext x='1' y='13' font-size='13' font-weight='700' font-family='system-ui,sans-serif'%3ED2%3C/text%3E%3C/svg%3E",
-  dbml: `${SI}/diagramsdotnet/F08705`,
-  typ: `${SI}/typst/239DAD`,
-  cast: `${SI}/asciinema/D40000`,
-  env: `${SI}/dotenv/ECD53F`,
+  // Material-icon-theme
+  proto: matProto,
+  http: matHttp,
+  pug: matPug,
+  jade: matPug,
+  hbs: matHandlebars,
+  liquid: matLiquid,
+  twig: matTwig,
+  erb: diRuby,
+  cshtml: matRazor,
+  razor: matRazor,
+  j2: matJinja,
+  jinja: matJinja,
+  marko: matMarko,
+  styl: matStylus,
+  lisp: matLisp,
+  scm: vendorScheme,
+  ss: vendorScheme,
+  rkt: matRacket,
+  el: vendorEmacs,
+  d: matD,
+  asm: matAssembly,
+  s: matAssembly,
+  f90: matFortran,
+  f95: matFortran,
+  f03: matFortran,
+  ada: matAda,
+  gleam: matGleam,
+  mojo: matMojo,
+  gd: matGodot,
+  vy: vendorVyper,
+  glsl: matShader,
+  vert: matShader,
+  frag: matShader,
+  hlsl: matShader,
+  wgsl: matShader,
+  sv: matVerilog,
+  vhd: matVerilog,
+  vhdl: matVerilog,
+  bicep: matBicep,
+  pp: matPuppet,
+  just: matJust,
+  awk: diAwk,
+  prisma: matPrisma,
+  hjson: matHjson,
+  jsonnet: vendorJsonnet,
+  ron: matRust,
+  vb: diVisualbasic,
+  cbl: matCobol,
+  cob: matCobol,
+  gv: vendorGraphViz,
+  dot: vendorGraphViz,
   // Documents
-  pdf: `${VSCODE_ICONS_CDN}/file_type_pdf2.svg`,
-  doc: `${VSCODE_ICONS_CDN}/file_type_word2.svg`,
-  docx: `${VSCODE_ICONS_CDN}/file_type_word2.svg`,
-  xls: `${VSCODE_ICONS_CDN}/file_type_excel2.svg`,
-  xlsx: `${VSCODE_ICONS_CDN}/file_type_excel2.svg`,
-  ppt: `${VSCODE_ICONS_CDN}/file_type_powerpoint2.svg`,
-  pptx: `${VSCODE_ICONS_CDN}/file_type_powerpoint2.svg`,
-  odt: `${SI}/libreofficewriter/18A303`,
-  ods: `${SI}/libreofficecalc/18A303`,
-  odp: `${SI}/libreofficeimpress/18A303`,
-  epub: `${VSCODE_ICONS_CDN}/file_type_epub.svg`,
+  pdf: matPdf,
+  doc: matWord,
+  docx: matWord,
+  xls: matTable,
+  xlsx: matTable,
+  ppt: matPowerpoint,
+  pptx: matPowerpoint,
+  epub: matEpub,
   // Archives
-  zip: `${VSCODE_ICONS_CDN}/file_type_zip.svg`,
-  gz: `${VSCODE_ICONS_CDN}/file_type_zip.svg`,
-  tar: `${VSCODE_ICONS_CDN}/file_type_zip.svg`,
-  bz2: `${VSCODE_ICONS_CDN}/file_type_zip.svg`,
-  xz: `${VSCODE_ICONS_CDN}/file_type_zip.svg`,
-  "7z": `${VSCODE_ICONS_CDN}/file_type_zip.svg`,
-  rar: `${VSCODE_ICONS_CDN}/file_type_zip.svg`,
+  zip: matZip,
+  gz: matZip,
+  tar: matZip,
+  bz2: matZip,
+  xz: matZip,
+  "7z": matZip,
+  rar: matZip,
   // Media
-  ttf: `${VSCODE_ICONS_CDN}/file_type_font.svg`,
-  otf: `${VSCODE_ICONS_CDN}/file_type_font.svg`,
-  woff: `${VSCODE_ICONS_CDN}/file_type_font.svg`,
-  woff2: `${VSCODE_ICONS_CDN}/file_type_font.svg`,
-  mp3: `${VSCODE_ICONS_CDN}/file_type_audio.svg`,
-  wav: `${VSCODE_ICONS_CDN}/file_type_audio.svg`,
-  flac: `${VSCODE_ICONS_CDN}/file_type_audio.svg`,
-  aac: `${VSCODE_ICONS_CDN}/file_type_audio.svg`,
+  ttf: matFont,
+  otf: matFont,
+  woff: matFont,
+  woff2: matFont,
+  mp3: matAudio,
+  wav: matAudio,
+  flac: matAudio,
+  aac: matAudio,
   // Platform binaries
-  exe: `${DEVICON_CDN}/windows11/windows11-original.svg`,
-  msi: `${DEVICON_CDN}/windows11/windows11-original.svg`,
-  dll: `${DEVICON_CDN}/windows11/windows11-original.svg`,
-  dmg: `${SI}/apple/000000`,
-  pkg: `${SI}/apple/000000`,
-  app: `${SI}/apple/000000`,
-  deb: `${SI}/debian/A81D33`,
-  rpm: `${SI}/redhat/EE0000`,
-  appimage: `${SI}/linux/FCC624`,
-  snap: `${SI}/snapcraft/82BEA0`,
-  flatpak: `${SI}/flatpak/4A90D9`,
+  exe: diWindows,
+  msi: diWindows,
+  dll: diWindows,
+  dmg: siApple,
+  pkg: siApple,
+  app: siApple,
+  deb: siDebian,
+  rpm: siRedhat,
+  appimage: siLinux,
+  snap: siSnapcraft,
+  flatpak: siFlatpak,
 }
 
-// Extension → [deviconName, variant]
-const EXT_MAP: Record<string, [string, string]> = {
-  // Languages
-  go: ["go", "original"],
-  mod: ["go", "original"],
-  sum: ["go", "original"],
-  ts: ["typescript", "original"],
-  tsx: ["typescript", "original"],
-  js: ["javascript", "original"],
-  jsx: ["javascript", "original"],
-  mjs: ["javascript", "original"],
-  cjs: ["javascript", "original"],
-  mts: ["typescript", "original"],
-  cts: ["typescript", "original"],
-  py: ["python", "original"],
-  rb: ["ruby", "original"],
-  rs: ["rust", "original"],
-  java: ["java", "original"],
-  kt: ["kotlin", "original"],
-  kts: ["kotlin", "original"],
-  swift: ["swift", "original"],
-  php: ["php", "original"],
-  c: ["c", "original"],
-  h: ["c", "original"],
-  cpp: ["cplusplus", "original"],
-  cs: ["csharp", "original"],
-  lua: ["lua", "original"],
-  dart: ["dart", "original"],
-  zig: ["zig", "original"],
-  ex: ["elixir", "original"],
-  exs: ["elixir", "original"],
-  hs: ["haskell", "original"],
-  scala: ["scala", "original"],
-  r: ["r", "original"],
-  pl: ["perl", "original"],
-  pm: ["perl", "original"],
-  jl: ["julia", "original"],
-  clj: ["clojure", "original"],
-  cljs: ["clojure", "original"],
-  erl: ["erlang", "original"],
-  hrl: ["erlang", "original"],
-  ml: ["ocaml", "original"],
-  mli: ["ocaml", "original"],
-  fs: ["fsharp", "original"],
-  fsx: ["fsharp", "original"],
-  m: ["objectivec", "plain"],
-  groovy: ["groovy", "original"],
-  nim: ["nim", "original"],
-  cr: ["crystal", "original"],
-  // Markup & data
-  yml: ["yaml", "original"],
-  yaml: ["yaml", "original"],
-  json: ["json", "original"],
-  xml: ["xml", "original"],
-  md: ["markdown", "original"],
-  html: ["html5", "original"],
-  css: ["css3", "original"],
-  scss: ["sass", "original"],
-  sass: ["sass", "original"],
-  less: ["less", "plain-wordmark"],
-  tex: ["latex", "original"],
-  // Web frameworks
-  vue: ["vuejs", "original"],
-  svelte: ["svelte", "original"],
-  astro: ["astro", "original"],
-  // Shell & infra
-  sh: ["bash", "original"],
-  bash: ["bash", "original"],
-  zsh: ["bash", "original"],
-  ps1: ["powershell", "original"],
-  gradle: ["gradle", "original"],
-  // Git
-  gitignore: ["git", "original"],
-  gitattributes: ["git", "original"],
-  gitmodules: ["git", "original"],
-  // Containers & infra
-  dockerfile: ["docker", "original"],
-  tf: ["terraform", "original"],
-  nix: ["nixos", "original"],
+// ---------------------------------------------------------------------------
+// Full-filename matches (case-insensitive)
+// ---------------------------------------------------------------------------
+const NAME_ICON: Record<string, string> = {
+  dockerfile: diDocker,
+  "docker-compose.yml": diDocker,
+  "docker-compose.yaml": diDocker,
+  makefile: diCmake,
+  "cmakelists.txt": diCmake,
+  gemfile: siRubygems,
+  "gemfile.lock": siRubygems,
+  "pom.xml": siMaven,
+  ".npmrc": siNpm,
+  ".nvmrc": siNodejs,
+  ".node-version": siNodejs,
+  "package.json": siNpm,
+  "package-lock.json": siNpm,
+  "yarn.lock": siYarn,
+  ".yarnrc.yml": siYarn,
+  "pnpm-lock.yaml": siPnpm,
+  ".prettierrc": siPrettier,
+  "prettier.config.js": siPrettier,
+  "prettier.config.ts": siPrettier,
+  "prettier.config.mjs": siPrettier,
+  ".babelrc": siBabel,
+  "babel.config.js": siBabel,
+  "nginx.conf": siNginx,
+  "requirements.txt": diPython,
+  "pyproject.toml": diPython,
+  pipfile: diPython,
+  "pipfile.lock": diPython,
+  "cargo.toml": diRust,
+  "cargo.lock": diRust,
+  "go.mod": diGo,
+  "go.sum": diGo,
+  "tsconfig.json": diTypescript,
+  "biome.json": siBiome,
+  "biome.jsonc": siBiome,
+  "bun.lock": siBun,
+  "bun.lockb": siBun,
 }
 
-// Special full-filename matches (case-insensitive)
-const NAME_MAP: Record<string, [string, string] | string> = {
-  dockerfile: ["docker", "original"],
-  "docker-compose.yml": ["docker", "original"],
-  "docker-compose.yaml": ["docker", "original"],
-  makefile: ["cmake", "original"],
-  "cmakelists.txt": ["cmake", "original"],
-  gemfile: `${SI}/rubygems/E9573F`,
-  "gemfile.lock": `${SI}/rubygems/E9573F`,
-  "pom.xml": `${SI}/apachemaven/C71A36`,
-  ".npmrc": `${SI}/npm/CB3837`,
-  ".nvmrc": `${SI}/nodedotjs/5FA04E`,
-  ".node-version": `${SI}/nodedotjs/5FA04E`,
-  "package.json": `${SI}/npm/CB3837`,
-  "package-lock.json": `${SI}/npm/CB3837`,
-  "yarn.lock": `${SI}/yarn/2C8EBB`,
-  ".yarnrc.yml": `${SI}/yarn/2C8EBB`,
-  "pnpm-lock.yaml": `${SI}/pnpm/F69220`,
-  ".prettierrc": `${SI}/prettier/F7B93E`,
-  "prettier.config.js": `${SI}/prettier/F7B93E`,
-  "prettier.config.ts": `${SI}/prettier/F7B93E`,
-  "prettier.config.mjs": `${SI}/prettier/F7B93E`,
-  ".babelrc": `${SI}/babel/F9DC3E`,
-  "babel.config.js": `${SI}/babel/F9DC3E`,
-  "nginx.conf": `${SI}/nginx/009639`,
-  "requirements.txt": ["python", "original"],
-  "pyproject.toml": ["python", "original"],
-  pipfile: ["python", "original"],
-  "pipfile.lock": ["python", "original"],
-  "cargo.toml": ["rust", "original"],
-  "cargo.lock": ["rust", "original"],
-  "go.mod": ["go", "original"],
-  "go.sum": ["go", "original"],
-  "tsconfig.json": ["typescript", "original"],
-  "biome.json": `${SI}/biome/60A5FA`,
-  "biome.jsonc": `${SI}/biome/60A5FA`,
-  "bun.lock": `${SI}/bun/000000`,
-  "bun.lockb": `${SI}/bun/000000`,
+// Prefix → icon URL for config files with variable extensions
+const PREFIX_ICON: Record<string, string> = {
+  "eslint.config.": siEslint,
+  ".eslintrc": siEslint,
+  "prettier.config.": siPrettier,
+  ".prettierrc": siPrettier,
+  "babel.config.": siBabel,
 }
 
-function deviconUrl(name: string, variant: string): string {
-  return `${DEVICON_CDN}/${name}/${name}-${variant}.svg`
-}
+// ---------------------------------------------------------------------------
+// Resolution
+// ---------------------------------------------------------------------------
 
 function resolveExt(fileName: string): string | null {
-  const lower = fileName.toLowerCase()
-  return lower.includes(".") ? (lower.split(".").pop() ?? null) : null
+  return fileName.includes(".") ? (fileName.split(".").pop() ?? null) : null
 }
 
-// Prefix → icon URL for config files with variable extensions (e.g. eslint.config.*)
-const PREFIX_MAP: Record<string, string> = {
-  "eslint.config.": `${SI}/eslint/4B32C3`,
-  ".eslintrc": `${SI}/eslint/4B32C3`,
-  "prettier.config.": `${SI}/prettier/F7B93E`,
-  ".prettierrc": `${SI}/prettier/F7B93E`,
-  "babel.config.": `${SI}/babel/F9DC3E`,
-}
-
-function resolve(fileName: string): [string, string] | string | null {
+function resolve(fileName: string): string | null {
   const lower = fileName.toLowerCase()
-  const nameMatch = NAME_MAP[lower]
+
+  const nameMatch = NAME_ICON[lower]
   if (nameMatch) return nameMatch
 
-  for (const prefix in PREFIX_MAP) {
-    if (lower.startsWith(prefix)) return PREFIX_MAP[prefix] ?? null
+  for (const prefix in PREFIX_ICON) {
+    if (lower.startsWith(prefix)) return PREFIX_ICON[prefix] ?? null
   }
 
   const ext = resolveExt(lower)
-  if (ext) {
-    const urlMatch = EXT_URL_MAP[ext]
-    if (urlMatch) return urlMatch
-
-    const extMatch = EXT_MAP[ext]
-    if (extMatch) return extMatch
-  }
+  if (ext) return EXT_ICON[ext] ?? null
 
   return null
 }
 
+// ---------------------------------------------------------------------------
 // Inline Octicon SVGs for folder, generic file, and parent navigation.
+// ---------------------------------------------------------------------------
 export const FolderIcon = () => FOLDER_SVG
 
 const FOLDER_SVG = (
@@ -293,7 +524,6 @@ const VIDEO_SVG = (
   </svg>
 )
 
-// Octicon terminal icon for extensionless executables.
 const EXEC_SVG = (
   <svg
     width="16"
@@ -305,6 +535,10 @@ const EXEC_SVG = (
     <path d="M0 2.75C0 1.784.784 1 1.75 1h12.5c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 14.25 15H1.75A1.75 1.75 0 0 1 0 13.25Zm1.75-.25a.25.25 0 0 0-.25.25v10.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V2.75a.25.25 0 0 0-.25-.25ZM7.25 8a.749.749 0 0 1-.22.53l-2.25 2.25a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L5.44 8 3.72 6.28a.749.749 0 0 1 .326-1.275.749.749 0 0 1 .734.215l2.25 2.25c.141.14.22.331.22.53Zm1.5 1.5h3a.75.75 0 0 1 0 1.5h-3a.75.75 0 0 1 0-1.5Z" />
   </svg>
 )
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 /** Returns the appropriate icon element for a directory entry. */
 export function FileIcon({
@@ -318,24 +552,23 @@ export function FileIcon({
 }) {
   if (isDir) return FOLDER_SVG
 
-  const match = resolve(name)
-  if (!match) {
-    if (isExec) return EXEC_SVG
-    const ext = resolveExt(name)
-    if (ext && IMAGE_EXTS.has(ext)) return IMAGE_SVG
-    if (ext && VIDEO_EXTS.has(ext)) return VIDEO_SVG
-    return FILE_SVG
+  const src = resolve(name)
+  if (src) {
+    return (
+      <img
+        src={src}
+        width={16}
+        height={16}
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+      />
+    )
   }
 
-  const src = typeof match === "string" ? match : deviconUrl(match[0], match[1])
-  return (
-    <img
-      src={src}
-      width={16}
-      height={16}
-      alt=""
-      aria-hidden="true"
-      loading="lazy"
-    />
-  )
+  if (isExec) return EXEC_SVG
+  const ext = resolveExt(name)
+  if (ext && IMAGE_EXTS.has(ext)) return IMAGE_SVG
+  if (ext && VIDEO_EXTS.has(ext)) return VIDEO_SVG
+  return FILE_SVG
 }
