@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "preact/compat"
-import { useCallback, useEffect, useState } from "preact/hooks"
+import { useCallback, useEffect, useRef, useState } from "preact/hooks"
 import { type BrowseResponse, browse, fetchInfo } from "./lib/api"
-import { normalizePath } from "./lib/navigate"
+import { normalizePath, replaceLocation } from "./lib/navigate"
 import { FileView } from "./views/file-view"
 
 const DirView = lazy(() =>
@@ -11,7 +11,7 @@ const DirView = lazy(() =>
 function cleanPathname(): string {
   const raw = decodeURIComponent(location.pathname)
   const clean = normalizePath(raw, "/")
-  if (location.pathname !== clean) history.replaceState(null, "", clean)
+  if (location.pathname !== clean) replaceLocation(clean)
   return clean
 }
 
@@ -33,17 +33,44 @@ export function App() {
 
   useEffect(() => {
     if (!rootName) return
-    document.title = path === "/" ? rootName : `${path} — ${rootName}`
+    const display =
+      path.endsWith("/") && path !== "/" ? path.slice(0, -1) : path
+    document.title = display === "/" ? rootName : `${display} — ${rootName}`
   }, [path, rootName])
 
+  // Skip the next browse when we already resolved the response via redirect.
+  const skipBrowse = useRef(false)
+
   useEffect(() => {
+    if (skipBrowse.current) {
+      skipBrowse.current = false
+      return
+    }
     const controller = new AbortController()
     // Don't setData(null) — keep the previous response so FileView stays
     // mounted (toolbar, sidebar, footer persist) while the next browse resolves.
     // FileView already manages its own loading state via the stale/fresh pattern.
     setError(null)
     browse(path, controller.signal)
-      .then(setData)
+      .then((res) => {
+        // Dir with index.html → redirect to explicit index.html URL.
+        if (res.type === "index") {
+          const indexPath = `/${res.path}`
+          skipBrowse.current = true
+          replaceLocation(indexPath)
+          setPath(indexPath)
+          setData({ type: "file", path: res.path })
+          return
+        }
+        // Dir listing without trailing slash → add it.
+        if (res.type === "dir" && path !== "/" && !path.endsWith("/")) {
+          const dirPath = `${path}/`
+          skipBrowse.current = true
+          replaceLocation(dirPath)
+          setPath(dirPath)
+        }
+        setData(res)
+      })
       .catch((err: Error) => {
         if (err.name !== "AbortError") setError(err.message)
       })
@@ -72,7 +99,5 @@ export function App() {
     )
   }
 
-  // "index" response carries the resolved file path (e.g., "docs/index.html").
-  const filePath = data.type === "index" ? `/${data.path}` : path
-  return <FileView path={filePath} />
+  return <FileView path={path} />
 }

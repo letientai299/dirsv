@@ -109,7 +109,7 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
               </tr>
             )}
             {entries.map((entry) => {
-              const href = (path === "/" ? "/" : `${path}/`) + entry.name
+              const href = `${path}${entry.name}`
               return (
                 <tr key={entry.name}>
                   <td>

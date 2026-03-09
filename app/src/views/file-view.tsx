@@ -15,7 +15,7 @@ import { formatSize } from "../lib/format"
 import { ChevronLeft, ChevronRight, SidebarIcon } from "../lib/icons"
 import { imageRe, videoRe } from "../lib/media-types"
 import { navigate } from "../lib/navigate"
-import { parentOfFile } from "../lib/path"
+import { parentOf } from "../lib/path"
 import {
   focusSidebarContent,
   goToParent,
@@ -378,7 +378,7 @@ export function FileView({ path }: Props) {
     result: RawResult
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const parentDir = useMemo(() => parentOfFile(path), [path])
+  const parentDir = useMemo(() => parentOf(path), [path])
   const siblings = useSiblings(parentDir)
 
   const focusSidebarLink = useCallback(() => {
@@ -471,7 +471,7 @@ export function FileView({ path }: Props) {
       : null
 
   const siblingHref = useCallback(
-    (name: string) => (parentDir === "/" ? "/" : `${parentDir}/`) + name,
+    (name: string) => `${parentDir}${name}`,
     [parentDir],
   )
 
