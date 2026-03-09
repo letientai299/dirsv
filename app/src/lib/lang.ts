@@ -15,14 +15,32 @@ const extMap: Record<string, string> = {
   scss: "scss",
   sass: "sass",
   less: "less",
+  styl: "stylus",
   vue: "vue",
   svelte: "svelte",
   astro: "astro",
+  mdx: "mdx",
+  coffee: "coffeescript",
+
+  // Web templates
+  pug: "pug",
+  jade: "pug",
+  hbs: "handlebars",
+  liquid: "liquid",
+  twig: "twig",
+  erb: "erb",
+  cshtml: "razor",
+  razor: "razor",
+  j2: "jinja",
+  jinja: "jinja",
+  marko: "marko",
 
   // Data / config
   json: "json",
   jsonc: "jsonc",
   json5: "json5",
+  jsonl: "jsonl",
+  hjson: "hjson",
   yaml: "yaml",
   yml: "yaml",
   toml: "toml",
@@ -31,6 +49,12 @@ const extMap: Record<string, string> = {
   ini: "ini",
   env: "dotenv",
   properties: "properties",
+  prisma: "prisma",
+  kdl: "kdl",
+  ron: "ron",
+  pkl: "pkl",
+  cue: "cue",
+  jsonnet: "jsonnet",
 
   // Systems
   go: "go",
@@ -41,7 +65,23 @@ const extMap: Record<string, string> = {
   cxx: "cpp",
   cc: "cpp",
   hpp: "cpp",
+  cs: "csharp",
+  csx: "csharp",
+  m: "objective-c",
+  mm: "objective-cpp",
   zig: "zig",
+  cr: "crystal",
+  d: "d",
+  asm: "asm",
+  s: "asm",
+  f90: "fortran-free-form",
+  f95: "fortran-free-form",
+  f03: "fortran-free-form",
+  pas: "pascal",
+  ada: "ada",
+  odin: "odin",
+  vala: "vala",
+  haxe: "haxe",
 
   // Scripting
   py: "python",
@@ -55,7 +95,9 @@ const extMap: Record<string, string> = {
   ex: "elixir",
   exs: "elixir",
   erl: "erlang",
+  hrl: "erlang",
   clj: "clojure",
+  cljs: "clojure",
   hs: "haskell",
   scala: "scala",
   kt: "kotlin",
@@ -64,10 +106,31 @@ const extMap: Record<string, string> = {
   dart: "dart",
   groovy: "groovy",
   nim: "nim",
+  v: "v",
+  gleam: "gleam",
+  mojo: "mojo",
+  nu: "nushell",
+  tcl: "tcl",
+  gd: "gdscript",
 
-  // JVM
+  // Functional / ML
+  ml: "ocaml",
+  mli: "ocaml",
+  fs: "fsharp",
+  fsx: "fsharp",
+  elm: "elm",
+  purs: "purescript",
+  lisp: "common-lisp",
+  scm: "scheme",
+  ss: "scheme",
+  rkt: "racket",
+  el: "emacs-lisp",
+  fennel: "fennel",
+
+  // JVM / .NET
   java: "java",
   gradle: "groovy",
+  vb: "vb",
 
   // Shell
   sh: "shellscript",
@@ -78,6 +141,7 @@ const extMap: Record<string, string> = {
   psm1: "powershell",
   bat: "bat",
   cmd: "bat",
+  awk: "awk",
 
   // Markup / docs
   tex: "latex",
@@ -87,8 +151,12 @@ const extMap: Record<string, string> = {
   // DevOps / config
   dockerfile: "dockerfile",
   tf: "hcl",
+  tfvars: "tfvars",
   hcl: "hcl",
   nix: "nix",
+  bicep: "bicep",
+  pp: "puppet",
+  just: "just",
   proto: "protobuf",
   graphql: "graphql",
   gql: "graphql",
@@ -96,10 +164,33 @@ const extMap: Record<string, string> = {
   // SQL
   sql: "sql",
 
+  // Smart contracts
+  sol: "solidity",
+  move: "move",
+  vy: "vyper",
+
+  // GPU / shaders
+  glsl: "glsl",
+  vert: "glsl",
+  frag: "glsl",
+  hlsl: "hlsl",
+  wgsl: "wgsl",
+
+  // Hardware description
+  sv: "system-verilog",
+  vhd: "vhdl",
+  vhdl: "vhdl",
+
+  // Legacy
+  cbl: "cobol",
+  cob: "cobol",
+
   // Misc
   diff: "diff",
   patch: "diff",
   log: "log",
+  http: "http",
+  vim: "vimscript",
   makefile: "makefile",
   mk: "makefile",
   cmake: "cmake",
