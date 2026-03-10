@@ -197,9 +197,26 @@ export function FocusOverlay({
         onPointerDown={zoom.onPointerDown}
         onPointerMove={zoom.onPointerMove}
         onPointerUp={zoom.onPointerUp}
-        onClick={zoom.onClick}
+        onClick={(e: MouseEvent) => {
+          // After a drag gesture, consume the click (zoom.onClick handles its
+          // own didDrag check, but we need it here too for the close path).
+          if (zoom.consumeDrag()) return
+          // Click on empty area around content → close overlay.
+          if (e.target === e.currentTarget) {
+            onClose()
+            return
+          }
+          // Click on diagram content → no zoom (use scroll/pinch/keyboard).
+          if (item.type === "diagram") return
+          zoom.onClick(e)
+        }}
       >
-        <div style={zoom.style}>
+        <div
+          style={{
+            ...zoom.style,
+            ...(item.type === "diagram" ? { cursor: "default" } : undefined),
+          }}
+        >
           <FocusContent item={item} />
         </div>
       </div>

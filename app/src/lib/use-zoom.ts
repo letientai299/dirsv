@@ -74,6 +74,15 @@ export function useZoom() {
     setState((s) => ({ ...s, x: s.x + dx, y: s.y + dy }))
   }, [])
 
+  /** Check and clear the drag flag. Call before custom click logic. */
+  const consumeDrag = useCallback((): boolean => {
+    if (didDrag.current) {
+      didDrag.current = false
+      return true
+    }
+    return false
+  }, [])
+
   const onClick = useCallback((e: MouseEvent) => {
     if (didDrag.current) {
       didDrag.current = false
@@ -161,6 +170,8 @@ export function useZoom() {
     if (!didDrag.current && Math.hypot(dx, dy) > 5) {
       didDrag.current = true
     }
+    // Only pan when zoomed in — at scale=1 content already fits.
+    if (stateRef.current.scale <= 1) return
     setState((s) => ({
       ...s,
       x: dragStart.current.sx + dx,
@@ -215,5 +226,6 @@ export function useZoom() {
     panBy,
     resetZoom,
     onClick,
+    consumeDrag,
   }
 }
