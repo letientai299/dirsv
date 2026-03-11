@@ -510,6 +510,10 @@ a.breadcrumb-root:hover .breadcrumb-sep {
   flex-shrink: 0;
 }
 
+.app-footer a.footer-version {
+  color: var(--text-dim);
+}
+
 .file-footer .app-footer {
   border: none;
   padding: 0;

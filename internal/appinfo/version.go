@@ -4,49 +4,70 @@ package appinfo
 import (
 	"fmt"
 	"runtime/debug"
+	"sync"
 )
 
 // Set via -ldflags at build time. When unset, the binary is a dev build.
-var (
-	tag    string // e.g. "v0.3.1"
-	commit string // e.g. "a857dcc"
-	dirty  string // "true" or ""
-)
+var tag string // e.g. "v0.3.1"
 
 const repo = "https://github.com/letientai299/dirsv"
 
-// String returns a human-readable version string.
-// Release build: "v0.3.1  https://github.com/letientai299/dirsv/releases/tag/v0.3.1"
-// Dev build:     "dev (a857dcc-dirty)"
-func String() string {
+// VersionInfo holds structured version data for API consumers.
+type VersionInfo struct {
+	Label string `json:"label"`
+	URL   string `json:"url"`
+}
+
+var (
+	infoOnce sync.Once
+	infoVal  VersionInfo
+)
+
+func resolveInfo() VersionInfo {
 	if tag != "" {
-		return fmt.Sprintf("%s  %s/releases/tag/%s", tag, repo, tag)
+		return VersionInfo{
+			Label: tag,
+			URL:   fmt.Sprintf("%s/releases/tag/%s", repo, tag),
+		}
 	}
 
-	rev, mod := vcsBuildInfo()
-	if commit == "" {
-		commit = rev
-	}
-	if dirty == "" {
-		dirty = mod
-	}
-
-	if commit == "" {
-		return "dev (unknown)"
+	rev, dirty := vcsBuildInfo()
+	if rev == "" {
+		return VersionInfo{Label: "dev", URL: repo}
 	}
 	suffix := ""
-	if dirty == "true" {
-		suffix = "-dirty"
+	if dirty {
+		suffix = "*"
 	}
-	return fmt.Sprintf("dev (%s%s)", commit, suffix)
+	return VersionInfo{
+		Label: rev + suffix,
+		URL:   fmt.Sprintf("%s/commit/%s", repo, rev),
+	}
+}
+
+// Info returns structured version info suitable for JSON serialization.
+func Info() VersionInfo {
+	infoOnce.Do(func() { infoVal = resolveInfo() })
+	return infoVal
+}
+
+// String returns a human-readable version string.
+// Release build: "v0.3.1  https://github.com/letientai299/dirsv/releases/tag/v0.3.1"
+// Dev build:     "a857dcc*"
+func String() string {
+	v := Info()
+	if tag != "" {
+		return fmt.Sprintf("%s  %s", v.Label, v.URL)
+	}
+	return v.Label
 }
 
 // vcsBuildInfo extracts VCS revision and modified status from Go's embedded
 // build info (populated by `go build` when building within a VCS checkout).
-func vcsBuildInfo() (rev, modified string) {
+func vcsBuildInfo() (rev string, dirty bool) {
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
-		return "", ""
+		return "", false
 	}
 	for _, s := range info.Settings {
 		switch s.Key {
@@ -57,10 +78,8 @@ func vcsBuildInfo() (rev, modified string) {
 				rev = s.Value
 			}
 		case "vcs.modified":
-			if s.Value == "true" {
-				modified = "true"
-			}
+			dirty = s.Value == "true"
 		}
 	}
-	return rev, modified
+	return rev, dirty
 }

@@ -1,11 +1,11 @@
 import { useEffect, useState } from "preact/hooks"
-import { fetchInfo } from "../lib/api"
+import { fetchInfo, type ServerInfo } from "../lib/api"
 
 export function AppFooter() {
-  const [pid, setPid] = useState<number | null>(null)
+  const [info, setInfo] = useState<ServerInfo | null>(null)
 
   useEffect(() => {
-    void fetchInfo().then((info) => setPid(info.pid ?? null))
+    void fetchInfo().then(setInfo)
   }, [])
 
   return (
@@ -24,7 +24,17 @@ export function AppFooter() {
         />
         dirsv
       </a>
-      {pid !== null && <span>| PID {pid}</span>}
+      {info?.version && (
+        <a
+          href={info.version.url}
+          target="_blank"
+          rel="noopener"
+          class="footer-version"
+        >
+          {info.version.label}
+        </a>
+      )}
+      {info?.pid != null && <span>| PID {info.pid}</span>}
     </footer>
   )
 }

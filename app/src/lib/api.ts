@@ -28,9 +28,15 @@ export type RawResult =
 const textTypes =
   /^(text\/|application\/(json|xml|javascript|typescript|x-sh|x-httpd-php|toml|yaml|x-yaml))/
 
+export interface VersionInfo {
+  label: string
+  url: string
+}
+
 export interface ServerInfo {
   pid?: number
   root: string
+  version: VersionInfo
 }
 
 let cachedInfo: ServerInfo | null = null

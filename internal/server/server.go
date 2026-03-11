@@ -19,6 +19,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/letientai299/dirsv/internal/appinfo"
 )
 
 // Entry represents a single directory entry in a listing response.
@@ -166,7 +168,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 	resp := map[string]any{
-		"root": filepath.Base(s.root),
+		"root":    filepath.Base(s.root),
+		"version": appinfo.Info(),
 	}
 	// Only expose the server PID to loopback clients. The PID is used by
 	// the frontend to display a "kill server" affordance, but on shared
