@@ -125,8 +125,8 @@ func BenchmarkCleanWatchPath(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for range b.N {
-		cleanWatchPath("../../../etc/passwd")
-		cleanWatchPath("src/components/")
-		cleanWatchPath("./src/../src/views")
+		CleanWatchPath("../../../etc/passwd")
+		CleanWatchPath("src/components/")
+		CleanWatchPath("./src/../src/views")
 	}
 }

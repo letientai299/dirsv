@@ -51,15 +51,26 @@ type pathCacheEntry struct {
 
 const pathCacheTTL = 2 * time.Second
 
+// EditorEvent represents an editor sync event (cursor, scroll, selection, clear).
+type EditorEvent struct {
+	Type      string `json:"type"`
+	Path      string `json:"path"`
+	Line      int    `json:"line,omitempty"`
+	StartLine int    `json:"startLine,omitempty"`
+	EndLine   int    `json:"endLine,omitempty"`
+	Total     int    `json:"total,omitempty"`
+}
+
 // Server serves directory listings, raw files, and the SPA frontend.
 type Server struct {
-	root         string
-	singleFile   string // if non-empty, restrict serving to this one file
-	highlightMs  int    // highlight duration for live-reload change flash
-	allowedHosts map[string]struct{}
-	mux          *http.ServeMux
-	pathCache    sync.Map // cleaned request path → *pathCacheEntry
-	done         chan struct{}
+	root           string
+	singleFile     string // if non-empty, restrict serving to this one file
+	highlightMs    int    // highlight duration for live-reload change flash
+	allowedHosts   map[string]struct{}
+	editorCallback func(EditorEvent)
+	mux            *http.ServeMux
+	pathCache      sync.Map // cleaned request path → *pathCacheEntry
+	done           chan struct{}
 }
 
 // Option configures a Server.
@@ -87,6 +98,12 @@ func WithAllowedHosts(hosts ...string) Option {
 			s.allowedHosts[strings.ToLower(h)] = struct{}{}
 		}
 	}
+}
+
+// WithEditorCallback sets the function called when a valid editor event
+// is received on POST /api/editor.
+func WithEditorCallback(fn func(EditorEvent)) Option {
+	return func(s *Server) { s.editorCallback = fn }
 }
 
 // New creates a Server rooted at the given filesystem path.
@@ -125,6 +142,8 @@ func New(
 	s.mux.HandleFunc("GET /api/raw/{path...}", s.handleRaw)
 	s.mux.HandleFunc("GET /api/htmlpreview/{path...}", s.handleHTMLPreview)
 	s.mux.HandleFunc("GET /api/info", s.handleInfo)
+
+	s.mux.HandleFunc("POST /api/editor", s.handleEditor)
 
 	if sseHandler != nil {
 		s.mux.Handle("GET /api/events", sseHandler)
@@ -190,6 +209,40 @@ func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(resp)
+}
+
+// editorEventTypes is the set of valid editor event types.
+var editorEventTypes = map[string]struct{}{
+	"scroll":    {},
+	"cursor":    {},
+	"selection": {},
+	"clear":     {},
+}
+
+func (s *Server) handleEditor(w http.ResponseWriter, r *http.Request) {
+	var ev EditorEvent
+	dec := json.NewDecoder(io.LimitReader(r.Body, 4096))
+	if err := dec.Decode(&ev); err != nil {
+		http.Error(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+	if _, ok := editorEventTypes[ev.Type]; !ok {
+		http.Error(w, "invalid type", http.StatusBadRequest)
+		return
+	}
+	if ev.Path == "" {
+		http.Error(w, "missing path", http.StatusBadRequest)
+		return
+	}
+	ev.Path = path.Clean("/" + ev.Path)
+	ev.Path = strings.TrimPrefix(ev.Path, "/")
+	if ev.Path == "." {
+		ev.Path = ""
+	}
+	if s.editorCallback != nil {
+		s.editorCallback(ev)
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // asciiLower returns s with ASCII uppercase letters lowered.

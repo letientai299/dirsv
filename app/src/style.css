@@ -1332,6 +1332,17 @@ html.focus-lock {
   text-align: center;
 }
 
+/* ---------- editor sync highlight ---------- */
+
+.code-view pre .line--cursor {
+  background: var(--editor-cursor-bg, rgba(100, 149, 237, 0.15));
+  outline: 1px solid var(--editor-cursor-border, rgba(100, 149, 237, 0.3));
+}
+
+.code-view pre .line--selected {
+  background: var(--editor-selection-bg, rgba(100, 149, 237, 0.1));
+}
+
 /* ---------- live-reload highlight ---------- */
 
 @keyframes highlight-flash {

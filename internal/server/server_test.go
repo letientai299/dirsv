@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -478,5 +479,103 @@ func TestSPAFallback(t *testing.T) {
 	}
 	if body := rec.Body.String(); body != "<!doctype html><div id=app></div>" {
 		t.Errorf("want SPA index.html, got %q", body)
+	}
+}
+
+func postEditor(srv *Server, body string) *httptest.ResponseRecorder {
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/api/editor",
+		strings.NewReader(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestHandleEditor(t *testing.T) {
+	tests := []struct {
+		name     string
+		body     string
+		wantCode int
+		wantCB   bool
+	}{
+		{
+			name:     "valid scroll",
+			body:     `{"type":"scroll","path":"hello.txt","line":42,"total":300}`,
+			wantCode: http.StatusNoContent,
+			wantCB:   true,
+		},
+		{
+			name:     "valid cursor",
+			body:     `{"type":"cursor","path":"hello.txt","line":10}`,
+			wantCode: http.StatusNoContent,
+			wantCB:   true,
+		},
+		{
+			name:     "valid selection",
+			body:     `{"type":"selection","path":"hello.txt","startLine":10,"endLine":25}`,
+			wantCode: http.StatusNoContent,
+			wantCB:   true,
+		},
+		{
+			name:     "valid clear",
+			body:     `{"type":"clear","path":"hello.txt"}`,
+			wantCode: http.StatusNoContent,
+			wantCB:   true,
+		},
+		{
+			name:     "missing path",
+			body:     `{"type":"cursor","line":10}`,
+			wantCode: http.StatusBadRequest,
+		},
+		{
+			name:     "invalid type",
+			body:     `{"type":"bogus","path":"hello.txt"}`,
+			wantCode: http.StatusBadRequest,
+		},
+		{
+			name:     "malformed JSON",
+			body:     `{not json`,
+			wantCode: http.StatusBadRequest,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var called bool
+			dir := setupTestDir(t)
+			srv, err := New(dir, nil, nil, WithEditorCallback(func(_ EditorEvent) {
+				called = true
+			}))
+			if err != nil {
+				t.Fatal(err)
+			}
+			rec := postEditor(srv, tt.body)
+			if rec.Code != tt.wantCode {
+				t.Errorf("want %d, got %d (body: %s)",
+					tt.wantCode, rec.Code, rec.Body.String())
+			}
+			if called != tt.wantCB {
+				t.Errorf("callback called=%v, want %v", called, tt.wantCB)
+			}
+		})
+	}
+}
+
+func TestHandleEditorPathCleaning(t *testing.T) {
+	var got EditorEvent
+	dir := setupTestDir(t)
+	srv, err := New(dir, nil, nil, WithEditorCallback(func(ev EditorEvent) {
+		got = ev
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	postEditor(srv, `{"type":"cursor","path":"./sub/../sub/nested.txt","line":1}`)
+	if got.Path != "sub/nested.txt" {
+		t.Errorf("want cleaned path sub/nested.txt, got %q", got.Path)
 	}
 }

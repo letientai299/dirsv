@@ -1,13 +1,56 @@
 import type { RefObject } from "preact"
-import { useEffect, useMemo, useRef } from "preact/hooks"
+import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import { markChanged } from "../lib/highlight"
 import { langFromPath } from "../lib/lang"
+import { watchPrefix } from "../lib/path"
+import type { EditorState } from "../lib/use-editor-sync"
+import { useEditorSync } from "../lib/use-editor-sync"
 import { useShiki } from "../lib/use-shiki"
 
 interface Props {
   path: string
   content: string
   changedLinesRef: RefObject<number[] | null>
+}
+
+const USER_SCROLL_TIMEOUT = 2000
+
+/** Apply editor cursor/selection/scroll to .line elements via direct DOM ops. */
+function applyEditorState(
+  container: HTMLElement,
+  state: EditorState,
+  skipScroll: boolean,
+): void {
+  const lineEls = container.querySelectorAll<HTMLElement>(".line")
+  if (lineEls.length === 0) return
+
+  const clamp = (n: number) => Math.max(0, Math.min(n - 1, lineEls.length - 1))
+
+  // Clear previous editor highlights.
+  for (const prev of container.querySelectorAll(
+    ".line--cursor, .line--selected",
+  )) {
+    prev.classList.remove("line--cursor", "line--selected")
+  }
+
+  if (state.cursor) {
+    lineEls[clamp(state.cursor.line)]?.classList.add("line--cursor")
+  }
+
+  if (state.selection) {
+    const start = clamp(state.selection.startLine)
+    const end = clamp(state.selection.endLine)
+    for (let i = Math.min(start, end); i <= Math.max(start, end); i++) {
+      lineEls[i]?.classList.add("line--selected")
+    }
+  }
+
+  if (state.scroll && !skipScroll) {
+    lineEls[clamp(state.scroll.line)]?.scrollIntoView({
+      block: "start",
+      behavior: "smooth",
+    })
+  }
 }
 
 export function CodeView({ path, content, changedLinesRef }: Props) {
@@ -18,6 +61,34 @@ export function CodeView({ path, content, changedLinesRef }: Props) {
   // finishes. The parent ref is consumed once; this local copy persists
   // across the fallback→Shiki effect re-runs.
   const pendingRef = useRef<number[] | null>(null)
+
+  // Editor sync — subscribe directly so parent doesn't re-render on every
+  // editor event. State is stored in a ref; a tick counter triggers the effect.
+  const editorRef = useRef<EditorState>({})
+  const [editorTick, setEditorTick] = useState(0)
+  useEditorSync(watchPrefix(path), (state) => {
+    editorRef.current = state
+    setEditorTick((n) => n + 1)
+  })
+
+  // Scroll-fight prevention: track user scroll, suppress editor scroll for 2s.
+  const userScrollingRef = useRef(false)
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout>>()
+
+  const onUserScroll = useCallback(() => {
+    userScrollingRef.current = true
+    clearTimeout(scrollTimerRef.current)
+    scrollTimerRef.current = setTimeout(() => {
+      userScrollingRef.current = false
+    }, USER_SCROLL_TIMEOUT)
+  }, [])
+
+  useEffect(() => {
+    const el = containerRef.current?.closest(".file-content")
+    if (!el) return
+    el.addEventListener("scroll", onUserScroll, { passive: true })
+    return () => el.removeEventListener("scroll", onUserScroll)
+  }, [onUserScroll])
 
   const fallbackLines = useMemo(() => {
     const lines = content.split("\n")
@@ -47,6 +118,15 @@ export function CodeView({ path, content, changedLinesRef }: Props) {
       if (lineEl) markChanged(lineEl)
     }
   }, [content, html])
+
+  // Apply editor state (scroll, cursor, selection) via direct DOM manipulation.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: html triggers reapply after Shiki DOM replace
+  useEffect(() => {
+    const el = containerRef.current
+    const state = editorRef.current
+    if (!el || !state) return
+    applyEditorState(el, state, userScrollingRef.current)
+  }, [editorTick, html])
 
   return html ? (
     <div

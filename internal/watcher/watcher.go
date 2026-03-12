@@ -528,6 +528,34 @@ func (w *Watcher) fanOut(ev Event) {
 		colorDim, notified, colorReset)
 }
 
+// BroadcastEditor forwards a pre-marshaled editor event JSON blob to
+// matching WebSocket clients. The path is extracted from the JSON to
+// apply prefix filtering.
+func (w *Watcher) BroadcastEditor(data []byte) {
+	var peek struct {
+		Type string `json:"type"`
+		Path string `json:"path"`
+	}
+	if err := json.Unmarshal(data, &peek); err != nil {
+		return
+	}
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	var notified int
+	for c := range w.clients {
+		if matchesClient(c, peek.Path) {
+			select {
+			case c.ch <- data:
+				notified++
+			default:
+			}
+		}
+	}
+	w.logf("%s%-10s%s %s %s→ %d client(s)%s",
+		colorCyan, "editor", colorReset, peek.Path,
+		colorDim, notified, colorReset)
+}
+
 var errTooManyClients = errors.New("too many clients")
 
 // subscribe registers a new client with no initial prefixes.
@@ -650,9 +678,9 @@ func (w *Watcher) watchForClient(prefix string) {
 	}()
 }
 
-// cleanWatchPath normalizes the watch query parameter to match the format
+// CleanWatchPath normalizes the watch query parameter to match the format
 // of event paths (relative, slash-separated, no leading slash or dots).
-func cleanWatchPath(raw string) string {
+func CleanWatchPath(raw string) string {
 	cleaned := path.Clean("/" + raw)
 	cleaned = strings.TrimPrefix(cleaned, "/")
 	if cleaned == "." {
@@ -733,7 +761,7 @@ func (w *Watcher) readLoop(
 		}
 		cleaned := make([]string, 0, len(msg.Watch))
 		for _, raw := range msg.Watch {
-			cleaned = append(cleaned, cleanWatchPath(raw))
+			cleaned = append(cleaned, CleanWatchPath(raw))
 		}
 		// Cap prefixes per client to prevent a malicious client from
 		// spawning unbounded goroutines (each new prefix triggers a

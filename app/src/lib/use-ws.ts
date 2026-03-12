@@ -1,9 +1,21 @@
 import { useEffect, useRef } from "preact/hooks"
 
-interface WsEvent {
-  type: "change" | "create" | "delete" | "rename"
+export interface WsEvent {
+  type:
+    | "change"
+    | "create"
+    | "delete"
+    | "rename"
+    | "scroll"
+    | "cursor"
+    | "selection"
+    | "clear"
   path: string
   changedLines?: number[]
+  line?: number
+  startLine?: number
+  endLine?: number
+  total?: number
 }
 
 type Listener = (ev: WsEvent) => void

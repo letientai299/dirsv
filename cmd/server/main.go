@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -151,6 +152,13 @@ func main() {
 	opts = append(opts,
 		server.WithHighlightMs(*highlightMs),
 		server.WithAllowedHosts(allowedHostsFor(*host)...),
+		server.WithEditorCallback(func(ev server.EditorEvent) {
+			data, marshalErr := json.Marshal(ev)
+			if marshalErr != nil {
+				return
+			}
+			w.BroadcastEditor(data)
+		}),
 	)
 
 	srv, err := server.New(root, appFS, w, opts...)
