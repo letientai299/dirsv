@@ -12,6 +12,7 @@ import remarkGfm from "remark-gfm"
 import { remarkAlert } from "remark-github-blockquote-alert"
 import remarkGithubYamlMetadata from "remark-github-yaml-metadata"
 import remarkMath from "remark-math"
+import remarkMdx from "remark-mdx"
 import remarkParse from "remark-parse"
 import remarkRehype from "remark-rehype"
 import type { Processor } from "unified"
@@ -26,6 +27,7 @@ import { rehypeKatexPlaceholder } from "./rehype-katex-placeholder"
 import { rehypeMermaid } from "./rehype-mermaid"
 import { rehypePlantuml } from "./rehype-plantuml"
 import { remarkDirectivesHandler } from "./remark-directives"
+import { remarkMdxToCode } from "./remark-mdx-to-code"
 import { SHIKI_THEME_LIST, SHIKI_THEMES } from "./shiki-config"
 
 export type { Heading }
@@ -87,11 +89,10 @@ const sanitizeSchema: typeof defaultSchema = {
 // biome-ignore lint/suspicious/noExplicitAny: unified's generic types are deeply nested; the processor is used only via .process(string)
 type AnyProcessor = Processor<any, any, any, any, any>
 
-/** Apply the shared remark + early rehype stages (parse → sanitize → diagrams). */
-function applySharedPlugins(processor: AnyProcessor): AnyProcessor {
+/** Apply the shared remark (post-parse) + rehype stages (→ sanitize → diagrams). */
+function applyPostParsePlugins(processor: AnyProcessor): AnyProcessor {
   return (
     processor
-      .use(remarkParse)
       .use(remarkFrontmatter)
       .use(remarkGithubYamlMetadata)
       .use(remarkGfm)
@@ -115,6 +116,18 @@ function applySharedPlugins(processor: AnyProcessor): AnyProcessor {
       .use(rehypeGraphviz)
       .use(rehypeD2)
       .use(rehypeDbml)
+  )
+}
+
+/** Markdown parse + shared pipeline. */
+function applySharedPlugins(processor: AnyProcessor): AnyProcessor {
+  return applyPostParsePlugins(processor.use(remarkParse))
+}
+
+/** MDX parse + shared pipeline. */
+function applyMdxPlugins(processor: AnyProcessor): AnyProcessor {
+  return applyPostParsePlugins(
+    processor.use(remarkParse).use(remarkMdx).use(remarkMdxToCode),
   )
 }
 
@@ -216,6 +229,78 @@ export async function renderMarkdownHighlighted(
   source: string,
 ): Promise<MarkdownResult> {
   const processor = await getShikiProcessor()
+  const result = await processor.process(normalizeDirectives(source))
+  const html = String(result)
+  return { html, headings: extractHeadings(html) }
+}
+
+// ---------------------------------------------------------------------------
+// MDX rendering — cached like the markdown path
+// ---------------------------------------------------------------------------
+
+/** Shared MDX pipeline without Shiki. */
+let cachedMdxBase: AnyProcessor | undefined
+
+function getMdxBaseProcessor(): AnyProcessor {
+  if (!cachedMdxBase) {
+    cachedMdxBase = applyFinalPlugins(applyMdxPlugins(unified()))
+  }
+  return cachedMdxBase
+}
+
+/** Full MDX pipeline with Shiki — built lazily via dynamic import. */
+let mdxShikiProcessorPromise: Promise<AnyProcessor> | undefined
+
+function getMdxShikiProcessor(): Promise<AnyProcessor> {
+  if (!mdxShikiProcessorPromise) {
+    mdxShikiProcessorPromise = (async () => {
+      const [
+        { default: rehypeShiki },
+        { getSingletonHighlighter },
+        { rehypeShikiCachedPre, rehypeShikiCachedPost },
+      ] = await Promise.all([
+        import("@shikijs/rehype"),
+        import("shiki"),
+        import("./rehype-shiki-cached"),
+      ])
+
+      void getSingletonHighlighter({
+        themes: [...SHIKI_THEME_LIST],
+        langs: [],
+      })
+
+      const processor = applyMdxPlugins(unified())
+        .use(rehypeShikiCachedPre)
+        .use(rehypeShiki, {
+          themes: { light: SHIKI_THEMES.light, dark: SHIKI_THEMES.dark },
+          defaultColor: false,
+          langs: [],
+          lazy: true,
+          fallbackLanguage: "text",
+        })
+        .use(rehypeShikiCachedPost)
+
+      return applyFinalPlugins(processor)
+    })()
+  }
+
+  return mdxShikiProcessorPromise
+}
+
+/** Render MDX without syntax highlighting. */
+export async function renderMdx(source: string): Promise<MarkdownResult> {
+  const result = await getMdxBaseProcessor().process(
+    normalizeDirectives(source),
+  )
+  const html = String(result)
+  return { html, headings: extractHeadings(html) }
+}
+
+/** Render MDX with Shiki syntax highlighting (lazy-loaded). */
+export async function renderMdxHighlighted(
+  source: string,
+): Promise<MarkdownResult> {
+  const processor = await getMdxShikiProcessor()
   const result = await processor.process(normalizeDirectives(source))
   const html = String(result)
   return { html, headings: extractHeadings(html) }

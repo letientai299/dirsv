@@ -8,7 +8,12 @@ import { injectFigureToolbars } from "../lib/figure-toolbar"
 import { renderGraphvizBlocks } from "../lib/graphviz-render"
 import { renderKatexBlocks } from "../lib/katex-render"
 import type { MarkdownResult } from "../lib/markdown"
-import { renderMarkdown, renderMarkdownHighlighted } from "../lib/markdown"
+import {
+  renderMarkdown,
+  renderMarkdownHighlighted,
+  renderMdx,
+  renderMdxHighlighted,
+} from "../lib/markdown"
 import { handleRelativeLinkClick, rewriteMediaSrc } from "../lib/markdown-urls"
 import { renderMermaidBlocks } from "../lib/mermaid-render"
 import { renderPlantumlBlocks } from "../lib/plantuml-render"
@@ -48,8 +53,14 @@ export function MarkdownView({ content, path }: Props) {
     let cancelled = false
     let highlighted = false
 
+    const isMdx = /\.mdx$/i.test(path)
+    const renderPlain = isMdx ? renderMdx : renderMarkdown
+    const renderHighlighted = isMdx
+      ? renderMdxHighlighted
+      : renderMarkdownHighlighted
+
     // First pass: render without syntax highlighting for fast initial paint.
-    renderMarkdown(content)
+    renderPlain(content)
       .then((r) => {
         if (!cancelled && !highlighted) setResult(r)
       })
@@ -59,7 +70,7 @@ export function MarkdownView({ content, path }: Props) {
 
     // Second pass: re-render with Shiki highlighting. morphdom patches only
     // the changed <pre> blocks — headings, text, diagrams stay untouched.
-    renderMarkdownHighlighted(content)
+    renderHighlighted(content)
       .then((r) => {
         if (!cancelled) {
           highlighted = true
