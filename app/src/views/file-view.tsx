@@ -447,7 +447,9 @@ export function FileView({ path }: Props) {
 
   // Re-fetch on file changes — invalidate cache so we get fresh content
   const changedLinesRef = useRef<number[] | null>(null)
+  const fsTypes = new Set(["change", "create", "delete", "rename"])
   useWS(watchPrefix(path), (ev) => {
+    if (!fsTypes.has(ev.type)) return
     changedLinesRef.current = ev.changedLines ?? null
     invalidate(path)
     load()

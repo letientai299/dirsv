@@ -15,11 +15,10 @@ interface Props {
 
 const USER_SCROLL_TIMEOUT = 2000
 
-/** Apply editor cursor/selection/scroll to .line elements via direct DOM ops. */
-function applyEditorState(
+/** Apply editor cursor/selection highlights to .line elements. */
+function applyEditorHighlights(
   container: HTMLElement,
   state: EditorState,
-  skipScroll: boolean,
 ): void {
   const lineEls = container.querySelectorAll<HTMLElement>(".line")
   if (lineEls.length === 0) return
@@ -44,13 +43,24 @@ function applyEditorState(
       lineEls[i]?.classList.add("line--selected")
     }
   }
+}
 
-  if (state.scroll && !skipScroll) {
-    lineEls[clamp(state.scroll.line)]?.scrollIntoView({
-      block: "start",
-      behavior: "smooth",
-    })
-  }
+/** Scroll a 1-indexed line number into view within the code container. */
+function scrollLineIntoView(
+  container: HTMLElement,
+  line: number,
+  programmaticFlag: { current: boolean },
+): void {
+  const lineEls = container.querySelectorAll<HTMLElement>(".line")
+  if (lineEls.length === 0) return
+  const idx = Math.max(0, Math.min(line - 1, lineEls.length - 1))
+  programmaticFlag.current = true
+  lineEls[idx]?.scrollIntoView({ block: "nearest", behavior: "instant" })
+  // Scroll events fire asynchronously (after microtasks). Use rAF to
+  // keep the flag set until after the browser dispatches the scroll event.
+  requestAnimationFrame(() => {
+    programmaticFlag.current = false
+  })
 }
 
 export function CodeView({ path, content, changedLinesRef }: Props) {
@@ -65,17 +75,39 @@ export function CodeView({ path, content, changedLinesRef }: Props) {
   // Editor sync — subscribe directly so parent doesn't re-render on every
   // editor event. State is stored in a ref; a tick counter triggers the effect.
   const editorRef = useRef<EditorState>({})
+  // Line number to scroll to on the next effect run, consumed once.
+  const scrollToLineRef = useRef<number | null>(null)
   const [editorTick, setEditorTick] = useState(0)
   useEditorSync(watchPrefix(path), (state) => {
     editorRef.current = state
+    // Determine which line to scroll to based on the triggering event.
+    switch (state.trigger) {
+      case "cursor":
+        scrollToLineRef.current = state.cursor?.line ?? null
+        break
+      case "selection":
+        if (state.selection) {
+          scrollToLineRef.current = Math.min(
+            state.selection.startLine,
+            state.selection.endLine,
+          )
+        }
+        break
+      case "scroll":
+        scrollToLineRef.current = state.scroll?.line ?? null
+        break
+    }
     setEditorTick((n) => n + 1)
   })
 
   // Scroll-fight prevention: track user scroll, suppress editor scroll for 2s.
+  // programmaticScrollRef prevents our own scrollIntoView from tripping the guard.
   const userScrollingRef = useRef(false)
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const programmaticScrollRef = useRef(false)
 
   const onUserScroll = useCallback(() => {
+    if (programmaticScrollRef.current) return
     userScrollingRef.current = true
     clearTimeout(scrollTimerRef.current)
     scrollTimerRef.current = setTimeout(() => {
@@ -119,14 +151,23 @@ export function CodeView({ path, content, changedLinesRef }: Props) {
     }
   }, [content, html])
 
-  // Apply editor state (scroll, cursor, selection) via direct DOM manipulation.
+  // Reapply editor highlights after Shiki replaces the DOM.
   // biome-ignore lint/correctness/useExhaustiveDependencies: html triggers reapply after Shiki DOM replace
   useEffect(() => {
     const el = containerRef.current
-    const state = editorRef.current
-    if (!el || !state) return
-    applyEditorState(el, state, userScrollingRef.current)
+    if (!el) return
+    applyEditorHighlights(el, editorRef.current)
   }, [editorTick, html])
+
+  // Scroll to the target line — only on real editor events, not Shiki re-renders.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: editorTick is the only meaningful trigger
+  useEffect(() => {
+    const el = containerRef.current
+    const line = scrollToLineRef.current
+    scrollToLineRef.current = null
+    if (!el || line == null || userScrollingRef.current) return
+    scrollLineIntoView(el, line, programmaticScrollRef)
+  }, [editorTick])
 
   return html ? (
     <div

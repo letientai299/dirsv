@@ -6,6 +6,8 @@ export interface EditorState {
   scroll?: { line: number; total: number }
   cursor?: { line: number }
   selection?: { startLine: number; endLine: number }
+  /** Which event type triggered this update — drives scroll-into-view. */
+  trigger?: "scroll" | "cursor" | "selection"
 }
 
 const editorTypes = new Set(["scroll", "cursor", "selection", "clear"])
@@ -38,15 +40,17 @@ export function useEditorSync(
       case "scroll":
         next = {
           ...prev,
+          trigger: "scroll",
           scroll: { line: ev.line ?? 0, total: ev.total ?? 0 },
         }
         break
       case "cursor":
-        next = { ...prev, cursor: { line: ev.line ?? 0 } }
+        next = { ...prev, trigger: "cursor", cursor: { line: ev.line ?? 0 } }
         break
       case "selection":
         next = {
           ...prev,
+          trigger: "selection",
           selection: {
             startLine: ev.startLine ?? 0,
             endLine: ev.endLine ?? 0,

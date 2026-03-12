@@ -1343,6 +1343,14 @@ html.focus-lock {
   background: var(--editor-selection-bg, rgba(100, 149, 237, 0.1));
 }
 
+/* Shiki spans have their own background that covers the line highlight —
+   make them transparent so the .line background shows through. */
+.code-view pre .line--cursor span,
+.code-view pre .line--selected span,
+.code-view pre .line.changed span {
+  background-color: transparent;
+}
+
 /* ---------- live-reload highlight ---------- */
 
 @keyframes highlight-flash {
