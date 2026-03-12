@@ -1,4 +1,4 @@
-import type { JSX } from "preact"
+import type { JSX, RefObject } from "preact"
 import { lazy, Suspense } from "preact/compat"
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import { AppFooter } from "../components/app-footer"
@@ -15,7 +15,7 @@ import { formatSize } from "../lib/format"
 import { ChevronLeft, ChevronRight, SidebarIcon } from "../lib/icons"
 import { imageRe, videoRe } from "../lib/media-types"
 import { navigate } from "../lib/navigate"
-import { parentOf } from "../lib/path"
+import { parentOf, watchPrefix } from "../lib/path"
 import {
   focusSidebarContent,
   goToParent,
@@ -117,6 +117,7 @@ function renderFileContent(
   path: string,
   result: RawResult | null,
   error: string | null,
+  changedLinesRef: RefObject<number[] | null>,
 ): JSX.Element {
   if (/\.html?$/i.test(path))
     return (
@@ -159,7 +160,11 @@ function renderFileContent(
   if (/\.mdx?$/i.test(path)) {
     return (
       <Suspense fallback={fallback}>
-        <MarkdownView path={path} content={result.content} />
+        <MarkdownView
+          path={path}
+          content={result.content}
+          changedLinesRef={changedLinesRef}
+        />
       </Suspense>
     )
   }
@@ -201,7 +206,11 @@ function renderFileContent(
   }
   return (
     <Suspense fallback={fallback}>
-      <CodeView path={path} content={result.content} />
+      <CodeView
+        path={path}
+        content={result.content}
+        changedLinesRef={changedLinesRef}
+      />
     </Suspense>
   )
 }
@@ -437,7 +446,9 @@ export function FileView({ path }: Props) {
   useAbortEffect((signal) => load(signal), [load])
 
   // Re-fetch on file changes — invalidate cache so we get fresh content
-  useWS(path.replace(/^\//, ""), () => {
+  const changedLinesRef = useRef<number[] | null>(null)
+  useWS(watchPrefix(path), (ev) => {
+    changedLinesRef.current = ev.changedLines ?? null
     invalidate(path)
     load()
   })
@@ -479,8 +490,13 @@ export function FileView({ path }: Props) {
   const content = useMemo(
     () =>
       stale
-        ? renderFileContent(loaded?.path ?? path, loaded?.result ?? null, null)
-        : renderFileContent(path, freshResult, error),
+        ? renderFileContent(
+            loaded?.path ?? path,
+            loaded?.result ?? null,
+            null,
+            changedLinesRef,
+          )
+        : renderFileContent(path, freshResult, error, changedLinesRef),
     [stale, loaded, path, freshResult, error],
   )
 

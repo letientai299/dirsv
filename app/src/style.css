@@ -13,6 +13,8 @@
   --success: #3fb950;
   --focus-ring: #4493f8;
   --focus-offset: -2px;
+  --highlight-duration: 500ms;
+  --highlight-bg: light-dark(rgba(255, 213, 79, 0.4), rgba(255, 213, 79, 0.15));
 }
 
 [data-theme="dark"] {
@@ -1328,6 +1330,52 @@ html.focus-lock {
   color: rgba(255, 255, 255, 0.8);
   min-width: 50px;
   text-align: center;
+}
+
+/* ---------- live-reload highlight ---------- */
+
+@keyframes highlight-flash {
+  from {
+    background-color: var(--highlight-bg);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+.changed,
+.entry-added {
+  animation: highlight-flash var(--highlight-duration) ease-out;
+}
+
+@keyframes entry-deleted {
+  from {
+    max-height: 3em;
+  }
+  to {
+    max-height: 0;
+    padding-block: 0;
+    overflow: hidden;
+    opacity: 0;
+  }
+}
+
+.dir-table .entry-deleted td {
+  animation: entry-deleted calc(var(--highlight-duration) / 2) ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .changed,
+  .entry-added {
+    animation: none;
+    background-color: var(--highlight-bg);
+    transition: background-color 0.01s var(--highlight-duration);
+  }
+
+  .dir-table .entry-deleted td {
+    animation: none;
+    opacity: 0;
+  }
 }
 
 /* ---------- responsive ---------- */

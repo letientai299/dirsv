@@ -28,7 +28,13 @@ fi
 description = "Install deps and build frontend"
 dir = "app"
 run = ["bun install", "bun run build"]
-sources = ["src/**/*", "index.html", "vite.config.ts", "tsconfig.json", "package.json"]
+sources = [
+  "src/**/*",
+  "index.html",
+  "vite.config.ts",
+  "tsconfig.json",
+  "package.json",
+]
 outputs = ["dist/index.html"]
 
 [tasks."build:be"]

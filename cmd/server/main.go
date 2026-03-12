@@ -42,6 +42,11 @@ func main() {
 	dev := flag.Bool("dev", false, "proxy frontend to Vite dev server")
 	noOpen := flag.Bool("no-open", false, "don't auto-open browser")
 	debug := flag.BoolP("debug", "d", false, "enable verbose watcher logs")
+	highlightMs := flag.Int(
+		"highlight-ms",
+		5000,
+		"duration (ms) of the background flash on changed elements after live reload",
+	)
 	trustedProxy := flag.Bool(
 		"trusted-proxy",
 		false,
@@ -143,7 +148,10 @@ func main() {
 	if singleFile != "" {
 		opts = append(opts, server.WithSingleFile(singleFile))
 	}
-	opts = append(opts, server.WithAllowedHosts(allowedHostsFor(*host)...))
+	opts = append(opts,
+		server.WithHighlightMs(*highlightMs),
+		server.WithAllowedHosts(allowedHostsFor(*host)...),
+	)
 
 	srv, err := server.New(root, appFS, w, opts...)
 	if err != nil {

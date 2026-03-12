@@ -55,6 +55,7 @@ const pathCacheTTL = 2 * time.Second
 type Server struct {
 	root         string
 	singleFile   string // if non-empty, restrict serving to this one file
+	highlightMs  int    // highlight duration for live-reload change flash
 	allowedHosts map[string]struct{}
 	mux          *http.ServeMux
 	pathCache    sync.Map // cleaned request path → *pathCacheEntry
@@ -68,6 +69,12 @@ type Option func(*Server)
 // (relative to root). Directory listings show only this file.
 func WithSingleFile(name string) Option {
 	return func(s *Server) { s.singleFile = name }
+}
+
+// WithHighlightMs sets the duration (in milliseconds) of the background
+// flash that highlights changed elements after a live reload.
+func WithHighlightMs(ms int) Option {
+	return func(s *Server) { s.highlightMs = ms }
 }
 
 // WithAllowedHosts sets the hosts permitted by the Host header guard.
@@ -168,8 +175,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 	resp := map[string]any{
-		"root":    filepath.Base(s.root),
-		"version": appinfo.Info(),
+		"root":        filepath.Base(s.root),
+		"version":     appinfo.Info(),
+		"highlightMs": s.highlightMs,
 	}
 	// Only expose the server PID to loopback clients. The PID is used by
 	// the frontend to display a "kill server" affordance, but on shared

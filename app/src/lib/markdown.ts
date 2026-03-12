@@ -26,6 +26,7 @@ import { rehypeGraphviz } from "./rehype-graphviz"
 import { rehypeKatexPlaceholder } from "./rehype-katex-placeholder"
 import { rehypeMermaid } from "./rehype-mermaid"
 import { rehypePlantuml } from "./rehype-plantuml"
+import { rehypeSourceLine } from "./rehype-source-line"
 import { remarkDirectivesHandler } from "./remark-directives"
 import { remarkMdxToCode } from "./remark-mdx-to-code"
 import { SHIKI_THEME_LIST, SHIKI_THEMES } from "./shiki-config"
@@ -110,6 +111,7 @@ function applyPostParsePlugins(processor: AnyProcessor): AnyProcessor {
       .use(rehypeColorChips)
       .use(rehypeVideo)
       .use(rehypeSanitize, sanitizeSchema)
+      .use(rehypeSourceLine)
       .use(rehypeKatexPlaceholder)
       .use(rehypeMermaid)
       .use(rehypePlantuml)

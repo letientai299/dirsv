@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "preact/compat"
 import { useCallback, useEffect, useRef, useState } from "preact/hooks"
 import { type BrowseResponse, browse, fetchInfo } from "./lib/api"
+import { setHighlightDuration } from "./lib/highlight-config"
 import { normalizePath, replaceLocation } from "./lib/navigate"
 import { FileView } from "./views/file-view"
 
@@ -28,7 +29,14 @@ export function App() {
 
   const [rootName, setRootName] = useState("")
   useEffect(() => {
-    void fetchInfo().then((info) => setRootName(info.root))
+    void fetchInfo().then((info) => {
+      setRootName(info.root)
+      setHighlightDuration(info.highlightMs)
+      document.documentElement.style.setProperty(
+        "--highlight-duration",
+        `${info.highlightMs}ms`,
+      )
+    })
   }, [])
 
   useEffect(() => {

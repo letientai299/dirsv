@@ -3,6 +3,7 @@ import { useEffect, useRef } from "preact/hooks"
 interface WsEvent {
   type: "change" | "create" | "delete" | "rename"
   path: string
+  changedLines?: number[]
 }
 
 type Listener = (ev: WsEvent) => void

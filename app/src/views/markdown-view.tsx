@@ -1,4 +1,5 @@
 import morphdom from "morphdom"
+import type { RefObject } from "preact"
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import { FocusOverlay } from "../components/focus-overlay"
 import { TableOfContents } from "../components/toc"
@@ -6,6 +7,7 @@ import { renderD2Blocks } from "../lib/d2-render"
 import { renderDbmlBlocks } from "../lib/dbml-render"
 import { injectFigureToolbars } from "../lib/figure-toolbar"
 import { renderGraphvizBlocks } from "../lib/graphviz-render"
+import { markChanged } from "../lib/highlight"
 import { renderKatexBlocks } from "../lib/katex-render"
 import type { MarkdownResult } from "../lib/markdown"
 import {
@@ -27,23 +29,34 @@ import "remark-github-blockquote-alert/alert.css"
 interface Props {
   path: string
   content: string
+  changedLinesRef: RefObject<number[] | null>
 }
 
-export function MarkdownView({ content, path }: Props) {
+export function MarkdownView({ content, path, changedLinesRef }: Props) {
   const [result, setResult] = useState<MarkdownResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const contentRef = useRef<HTMLElement>(null)
   const prevContentRef = useRef("")
   const prevPathRef = useRef("")
   const scrolledHashRef = useRef("")
+  // True when content changed after initial render — triggers highlight on morphdom.
+  const liveReloadRef = useRef(false)
   const focus = useFocusOverlay()
 
   useEffect(() => {
     // Skip re-render if both path and content are unchanged (WS may re-fetch same file).
     if (content === prevContentRef.current && path === prevPathRef.current)
       return
+
+    // Live reload = same path, different content, not initial render.
+    const isNewPath = path !== prevPathRef.current
+    liveReloadRef.current =
+      !isNewPath &&
+      prevContentRef.current !== "" &&
+      content !== prevContentRef.current
+
     prevContentRef.current = content
-    if (path !== prevPathRef.current) scrolledHashRef.current = ""
+    if (isNewPath) scrolledHashRef.current = ""
     prevPathRef.current = path
 
     preloadDiagramBundles(content)
@@ -96,6 +109,7 @@ export function MarkdownView({ content, path }: Props) {
   // Patch the DOM incrementally instead of replacing innerHTML wholesale.
   // morphdom diffs old ↔ new and only touches changed nodes, preserving
   // scroll position, focus, and already-rendered mermaid diagrams.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: changedLinesRef is a stable ref read imperatively
   useEffect(() => {
     const el = contentRef.current
     if (!el || !result) return
@@ -107,7 +121,40 @@ export function MarkdownView({ content, path }: Props) {
       // Wrap new HTML in a temporary container so morphdom can diff children.
       const tmp = document.createElement("article")
       tmp.innerHTML = result.html
-      morphdom(el, tmp, { childrenOnly: true })
+
+      morphdom(el, tmp, {
+        childrenOnly: true,
+        onBeforeElUpdated(fromEl, toEl) {
+          // Preserve live-reload highlight so the Shiki re-render pass
+          // doesn't strip the animation class mid-flight.
+          if (fromEl.classList.contains("changed")) {
+            toEl.classList.add("changed")
+          }
+          return !fromEl.isEqualNode(toEl)
+        },
+      })
+
+      // Highlight changed blocks using backend-computed line indices
+      // mapped to data-source-line attributes set by rehypeSourceLine.
+      // Query all annotated elements, then keep only the deepest match
+      // per changed line so e.g. a <li> highlights instead of its <ul>.
+      if (liveReloadRef.current && changedLinesRef.current) {
+        const changed = new Set(changedLinesRef.current)
+        changedLinesRef.current = null
+        const matched: HTMLElement[] = []
+        for (const node of el.querySelectorAll<HTMLElement>(
+          "[data-source-line]",
+        )) {
+          const line = Number(node.dataset["sourceLine"]) - 1
+          if (changed.has(line)) matched.push(node)
+        }
+        for (const node of matched) {
+          if (!matched.some((o) => o !== node && node.contains(o))) {
+            markChanged(node)
+          }
+        }
+      }
+      liveReloadRef.current = false
     }
 
     rewriteMediaSrc(el, path)

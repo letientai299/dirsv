@@ -37,6 +37,7 @@ export interface ServerInfo {
   pid?: number
   root: string
   version: VersionInfo
+  highlightMs: number
 }
 
 let cachedInfo: ServerInfo | null = null

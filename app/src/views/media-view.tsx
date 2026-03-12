@@ -3,7 +3,7 @@ import { FocusOverlay } from "../components/focus-overlay"
 import { ChevronLeft, ChevronRight } from "../lib/icons"
 import { imageExts, videoExts } from "../lib/media-types"
 import { navigate } from "../lib/navigate"
-import { parentOf } from "../lib/path"
+import { parentOf, watchPrefix } from "../lib/path"
 import type { FocusItem } from "../lib/use-focus-overlay"
 import { useFocusOverlay } from "../lib/use-focus-overlay"
 import { useKeys } from "../lib/use-keys"
@@ -56,7 +56,7 @@ export function MediaView({ path, kind }: Props) {
   // Bump revision on file changes so the browser re-fetches the asset.
   const [rev, setRev] = useState(0)
   useWS(
-    path.replace(/^\//, ""),
+    watchPrefix(path),
     useCallback(() => setRev((r) => r + 1), []),
   )
 

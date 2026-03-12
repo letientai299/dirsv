@@ -24,6 +24,7 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/fsnotify/fsnotify"
+	"github.com/letientai299/dirsv/internal/diff"
 )
 
 // ANSI color helpers for terminal output.
@@ -51,8 +52,9 @@ func init() {
 
 // Event represents a file system change event sent over WebSocket.
 type Event struct {
-	Type string `json:"type"`
-	Path string `json:"path"`
+	Type         string `json:"type"`
+	Path         string `json:"path"`
+	ChangedLines []int  `json:"changedLines,omitempty"`
 }
 
 // watchMsg is the JSON message clients send to update their watch set.
@@ -84,6 +86,9 @@ type Watcher struct {
 	watchMu  sync.Mutex
 	watched  map[string]struct{} // abs paths of dirs added to fsw
 	watchSem chan struct{}       // bounds concurrent ensureWatched goroutines
+
+	cacheMu sync.RWMutex
+	cache   map[string][]string // rel path → previous lines
 }
 
 // Option configures a Watcher.
@@ -134,6 +139,7 @@ func New(root string, opts ...Option) (*Watcher, error) {
 		clients:  make(map[*wsClient]struct{}),
 		watched:  make(map[string]struct{}),
 		watchSem: make(chan struct{}, 4),
+		cache:    make(map[string][]string),
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -436,32 +442,90 @@ func matchesClient(c *wsClient, evPath string) bool {
 	return false
 }
 
-// broadcast marshals each pending event once and sends the pre-marshalled
-// bytes to matching clients, avoiding redundant per-client JSON encoding.
+// maxDiffSize is the largest file (1 MB) we'll read for diffing.
+const maxDiffSize = 1 << 20
+
+// broadcast dispatches pending events. Change events are enriched with line
+// diffs in a bounded goroutine; other events are sent immediately.
 func (w *Watcher) broadcast(pending map[string]Event) {
-	w.mu.RLock()
-	defer w.mu.RUnlock()
 	for _, ev := range pending {
-		data, err := json.Marshal(ev)
-		if err != nil {
+		if ev.Type == "change" {
+			ev := ev // capture loop variable
+			go func() {
+				w.watchSem <- struct{}{}
+				defer func() { <-w.watchSem }()
+				w.processChange(ev)
+			}()
 			continue
 		}
-		var notified int
-		for c := range w.clients {
-			if matchesClient(c, ev.Path) {
-				select {
-				case c.ch <- data:
-					notified++
-				default:
-				}
+		// Non-change events: clean cache on remove/rename.
+		if ev.Type == "delete" || ev.Type == "rename" {
+			w.cacheMu.Lock()
+			delete(w.cache, ev.Path)
+			w.cacheMu.Unlock()
+		}
+		w.fanOut(ev)
+	}
+}
+
+// processChange reads the changed file, computes a line diff against the
+// cached content, updates the cache, and fans out the enriched event.
+func (w *Watcher) processChange(ev Event) {
+	w.enrichChangedLines(&ev)
+	w.fanOut(ev)
+}
+
+// enrichChangedLines attempts to read the file and compute line-level diff.
+// On any failure (stat, read, binary, too large) it returns silently —
+// the event is sent without changedLines.
+func (w *Watcher) enrichChangedLines(ev *Event) {
+	absPath := filepath.Join(w.root, filepath.FromSlash(ev.Path))
+	info, err := os.Stat(absPath)
+	if err != nil || info.IsDir() || info.Size() > maxDiffSize {
+		return
+	}
+
+	//nolint:gosec // absPath is w.root + relative event path, not user input
+	data, err := os.ReadFile(absPath)
+	if err != nil || diff.IsBinary(data) {
+		return
+	}
+
+	newLines := strings.Split(string(data), "\n")
+
+	w.cacheMu.Lock()
+	oldLines, hadCache := w.cache[ev.Path]
+	w.cache[ev.Path] = newLines
+	w.cacheMu.Unlock()
+
+	if hadCache {
+		ev.ChangedLines = diff.ChangedLines(oldLines, newLines)
+	}
+}
+
+// fanOut marshals an event and sends it to all matching clients.
+func (w *Watcher) fanOut(ev Event) {
+	data, err := json.Marshal(ev)
+	if err != nil {
+		return
+	}
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	var notified int
+	for c := range w.clients {
+		if matchesClient(c, ev.Path) {
+			select {
+			case c.ch <- data:
+				notified++
+			default:
 			}
 		}
-		clr := eventColor(ev.Type)
-		w.logf("%s%-10s%s %s %s→ %d client(s)%s",
-			clr, ev.Type, colorReset,
-			ev.Path,
-			colorDim, notified, colorReset)
 	}
+	clr := eventColor(ev.Type)
+	w.logf("%s%-10s%s %s %s→ %d client(s)%s",
+		clr, ev.Type, colorReset,
+		ev.Path,
+		colorDim, notified, colorReset)
 }
 
 var errTooManyClients = errors.New("too many clients")
@@ -541,6 +605,17 @@ func (w *Watcher) pruneWatches() {
 		w.logf("%s%-10s%s %s",
 			colorDim, "unwatch", colorReset,
 			strings.Join(dirs, ", "))
+		// Prune cached content for files under removed directories.
+		w.cacheMu.Lock()
+		for cachedPath := range w.cache {
+			for _, rel := range dirs {
+				if rel == "." || strings.HasPrefix(cachedPath, rel+"/") {
+					delete(w.cache, cachedPath)
+					break
+				}
+			}
+		}
+		w.cacheMu.Unlock()
 	}
 }
 
