@@ -503,17 +503,14 @@ func (w *Watcher) enrichChangedLines(ev *Event) {
 	}
 }
 
-// fanOut marshals an event and sends it to all matching clients.
-func (w *Watcher) fanOut(ev Event) {
-	data, err := json.Marshal(ev)
-	if err != nil {
-		return
-	}
+// sendToClients dispatches pre-marshaled JSON to all clients whose
+// prefix filter matches evPath. Returns the number of clients notified.
+func (w *Watcher) sendToClients(data []byte, evPath string) int {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 	var notified int
 	for c := range w.clients {
-		if matchesClient(c, ev.Path) {
+		if matchesClient(c, evPath) {
 			select {
 			case c.ch <- data:
 				notified++
@@ -521,6 +518,16 @@ func (w *Watcher) fanOut(ev Event) {
 			}
 		}
 	}
+	return notified
+}
+
+// fanOut marshals an event and sends it to all matching clients.
+func (w *Watcher) fanOut(ev Event) {
+	data, err := json.Marshal(ev)
+	if err != nil {
+		return
+	}
+	notified := w.sendToClients(data, ev.Path)
 	clr := eventColor(ev.Type)
 	w.logf("%s%-10s%s %s %s→ %d client(s)%s",
 		clr, ev.Type, colorReset,
@@ -528,31 +535,14 @@ func (w *Watcher) fanOut(ev Event) {
 		colorDim, notified, colorReset)
 }
 
-// BroadcastEditor forwards a pre-marshaled editor event JSON blob to
-// matching WebSocket clients. The path is extracted from the JSON to
-// apply prefix filtering.
-func (w *Watcher) BroadcastEditor(data []byte) {
-	var peek struct {
-		Type string `json:"type"`
-		Path string `json:"path"`
-	}
-	if err := json.Unmarshal(data, &peek); err != nil {
-		return
-	}
-	w.mu.RLock()
-	defer w.mu.RUnlock()
-	var notified int
-	for c := range w.clients {
-		if matchesClient(c, peek.Path) {
-			select {
-			case c.ch <- data:
-				notified++
-			default:
-			}
-		}
-	}
+// BroadcastEditor forwards a pre-marshaled editor event to matching
+// WebSocket clients. The evPath is the cleaned event path used for
+// prefix filtering — callers should pass it directly to avoid an
+// extra unmarshal.
+func (w *Watcher) BroadcastEditor(data []byte, evPath string) {
+	notified := w.sendToClients(data, evPath)
 	w.logf("%s%-10s%s %s %s→ %d client(s)%s",
-		colorCyan, "editor", colorReset, peek.Path,
+		colorCyan, "editor", colorReset, evPath,
 		colorDim, notified, colorReset)
 }
 

@@ -53,15 +53,27 @@ type pathCacheEntry struct {
 
 const pathCacheTTL = 2 * time.Second
 
+// EventType identifies the kind of editor sync event.
+type EventType string
+
+// Valid EventType values matching the JSON wire format.
+const (
+	EventScroll    EventType = "scroll"
+	EventCursor    EventType = "cursor"
+	EventSelection EventType = "selection"
+	EventClear     EventType = "clear"
+)
+
 // EditorEvent represents an editor sync event (cursor, scroll, selection, clear).
 type EditorEvent struct {
-	Type      string `json:"type"`
-	Path      string `json:"path"`
-	Line      int    `json:"line,omitempty"`
-	StartLine int    `json:"startLine,omitempty"`
-	EndLine   int    `json:"endLine,omitempty"`
-	Total     int    `json:"total,omitempty"`
-	TopLine   int    `json:"topLine,omitempty"`
+	Type       EventType `json:"type"`
+	Path       string    `json:"path"`
+	Line       int       `json:"line,omitempty"`
+	StartLine  int       `json:"startLine,omitempty"`
+	EndLine    int       `json:"endLine,omitempty"`
+	Total      int       `json:"total,omitempty"`
+	TopLine    int       `json:"topLine,omitempty"`
+	BottomLine int       `json:"bottomLine,omitempty"`
 }
 
 // Server serves directory listings, raw files, and the SPA frontend.
@@ -104,7 +116,7 @@ func WithAllowedHosts(hosts ...string) Option {
 }
 
 // WithEditorCallback sets the function called when a valid editor event
-// is received on POST /api/editor.
+// is received on POST /api/editor or GET /api/editor/ws.
 func WithEditorCallback(fn func(EditorEvent)) Option {
 	return func(s *Server) { s.editorCallback = fn }
 }
@@ -216,16 +228,16 @@ func (s *Server) handleInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 // editorEventTypes is the set of valid editor event types.
-var editorEventTypes = map[string]struct{}{
-	"scroll":    {},
-	"cursor":    {},
-	"selection": {},
-	"clear":     {},
+var editorEventTypes = map[EventType]struct{}{
+	EventScroll:    {},
+	EventCursor:    {},
+	EventSelection: {},
+	EventClear:     {},
 }
 
-// validateEditorEvent checks the event type and path, cleans the path,
+// normalizeEditorEvent validates the event type and path, cleans the path,
 // and returns false if the event should be rejected.
-func validateEditorEvent(ev *EditorEvent) bool {
+func normalizeEditorEvent(ev *EditorEvent) bool {
 	if _, ok := editorEventTypes[ev.Type]; !ok {
 		return false
 	}
@@ -247,7 +259,7 @@ func (s *Server) handleEditor(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid JSON", http.StatusBadRequest)
 		return
 	}
-	if !validateEditorEvent(&ev) {
+	if !normalizeEditorEvent(&ev) {
 		http.Error(w, "invalid event", http.StatusBadRequest)
 		return
 	}
@@ -276,7 +288,7 @@ func (s *Server) handleEditorWS(w http.ResponseWriter, r *http.Request) {
 		if err := json.Unmarshal(data, &ev); err != nil {
 			continue
 		}
-		if !validateEditorEvent(&ev) {
+		if !normalizeEditorEvent(&ev) {
 			continue
 		}
 		if s.editorCallback != nil {

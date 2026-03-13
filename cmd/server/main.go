@@ -157,7 +157,7 @@ func main() {
 			if marshalErr != nil {
 				return
 			}
-			w.BroadcastEditor(data)
+			w.BroadcastEditor(data, ev.Path)
 		}),
 	)
 
