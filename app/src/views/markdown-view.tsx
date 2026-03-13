@@ -18,11 +18,10 @@ import {
 } from "../lib/markdown"
 import { handleRelativeLinkClick, rewriteMediaSrc } from "../lib/markdown-urls"
 import { renderMermaidBlocks } from "../lib/mermaid-render"
-import { watchPrefix } from "../lib/path"
 import { renderPlantumlBlocks } from "../lib/plantuml-render"
 import { preloadDiagramBundles } from "../lib/preload-diagrams"
 import type { EditorState } from "../lib/use-editor-sync"
-import { useEditorSync } from "../lib/use-editor-sync"
+import { useEditorSyncState } from "../lib/use-editor-sync"
 import type { FocusItem } from "../lib/use-focus-overlay"
 import { useFocusOverlay } from "../lib/use-focus-overlay"
 import "github-markdown-css/github-markdown.css"
@@ -47,69 +46,32 @@ export function MarkdownView({ content, path, changedLinesRef }: Props) {
   const focus = useFocusOverlay()
 
   // --- Editor sync (cursor, selection, scroll from nvim) ---
-  const editorRef = useRef<EditorState>({})
-  const scrollToLineRef = useRef<number | null>(null)
-  const [editorTick, setEditorTick] = useState(0)
+  const overlayRef = useRef<HTMLDivElement>(null)
 
-  useEditorSync(watchPrefix(path), (state) => {
-    editorRef.current = state
-    switch (state.trigger) {
-      case "cursor":
-        scrollToLineRef.current = state.cursor?.line ?? null
-        break
-      case "selection":
-        if (state.selection) {
-          scrollToLineRef.current = Math.min(
-            state.selection.startLine,
-            state.selection.endLine,
-          )
-        }
-        break
-      case "scroll":
-        scrollToLineRef.current = state.scroll?.line ?? null
-        break
-    }
-    setEditorTick((n) => n + 1)
-  })
+  // Hook first — refs are available before the syncRef closure reads them.
+  const { editorRef, consumeScroll } = useEditorSyncState(
+    path,
+    contentRef,
+    () => syncRef.current(),
+  )
 
-  // Scroll-fight prevention: suppress editor scroll while user is scrolling.
-  const userScrollingRef = useRef(false)
-  const scrollTimerRef = useRef<ReturnType<typeof setTimeout>>()
-  const programmaticScrollRef = useRef(false)
+  // Imperative highlight + scroll — called from WS events (no re-render)
+  // and from the morphdom/Shiki effect (reapply after DOM replace).
+  // biome-ignore lint/suspicious/noEmptyBlockStatements: noop placeholder, overwritten immediately below
+  const syncRef = useRef(() => {})
+  syncRef.current = () => {
+    const article = contentRef.current
+    const overlay = overlayRef.current
+    if (!article || !overlay) return
+    positionHighlightOverlay(article, overlay, editorRef.current)
+    consumeScroll((line) => findSourceLineElement(article, line))
+  }
 
-  const onUserScroll = useCallback(() => {
-    if (programmaticScrollRef.current) return
-    userScrollingRef.current = true
-    clearTimeout(scrollTimerRef.current)
-    scrollTimerRef.current = setTimeout(() => {
-      userScrollingRef.current = false
-    }, 2000)
-  }, [])
-
+  // Reapply overlay position after morphdom/Shiki replaces the DOM.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: result triggers reapply after DOM replace
   useEffect(() => {
-    const el = contentRef.current?.closest(".file-content")
-    if (!el) return
-    el.addEventListener("scroll", onUserScroll, { passive: true })
-    return () => el.removeEventListener("scroll", onUserScroll)
-  }, [onUserScroll])
-
-  // Apply editor cursor/selection highlights using data-source-line elements.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: editorTick is the meaningful trigger
-  useEffect(() => {
-    const el = contentRef.current
-    if (!el) return
-    applyMarkdownEditorHighlights(el, editorRef.current)
-  }, [editorTick, result])
-
-  // Scroll to the target line on editor events.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: editorTick is the meaningful trigger
-  useEffect(() => {
-    const el = contentRef.current
-    const line = scrollToLineRef.current
-    scrollToLineRef.current = null
-    if (!el || line == null || userScrollingRef.current) return
-    scrollSourceLineIntoView(el, line, programmaticScrollRef)
-  }, [editorTick])
+    syncRef.current()
+  }, [result])
 
   useEffect(() => {
     // Skip re-render if both path and content are unchanged (WS may re-fetch same file).
@@ -362,13 +324,16 @@ export function MarkdownView({ content, path, changedLinesRef }: Props) {
 
   return (
     <div class="md-layout">
-      <article
-        ref={contentRef}
-        class="markdown-body"
-        onClick={onLinkClick}
-        onDblClick={onDblClick}
-        onKeyDown={onContentKeyDown}
-      />
+      <div class="md-article-wrap">
+        <div ref={overlayRef} class="md-editor-highlight" />
+        <article
+          ref={contentRef}
+          class="markdown-body"
+          onClick={onLinkClick}
+          onDblClick={onDblClick}
+          onKeyDown={onContentKeyDown}
+        />
+      </div>
       <TableOfContents headings={tocHeadings} contentRef={contentRef} />
       {focus.overlayProps && <FocusOverlay {...focus.overlayProps} />}
     </div>
@@ -403,50 +368,68 @@ function findSourceLineElement(
   return best
 }
 
-/** Apply cursor/selection highlights to data-source-line elements. */
-function applyMarkdownEditorHighlights(
-  container: HTMLElement,
+/** Collect the source-line elements that match the editor state.
+ *  Uses `trigger` to decide mode — selection events keep cursor in state.
+ *  Filters to deepest-only elements so ancestor rects don't inflate the overlay. */
+function collectHighlightTargets(
+  article: HTMLElement,
   state: EditorState,
-): void {
-  // Clear previous highlights.
-  for (const prev of container.querySelectorAll(
-    ".md-line--cursor, .md-line--selected",
-  )) {
-    prev.classList.remove("md-line--cursor", "md-line--selected")
+): { targets: HTMLElement[]; mode: "cursor" | "selected" } {
+  if (state.trigger === "selection" && state.selection) {
+    const start = Math.min(state.selection.startLine, state.selection.endLine)
+    const end = Math.max(state.selection.startLine, state.selection.endLine)
+    const all: HTMLElement[] = []
+    for (const node of article.querySelectorAll<HTMLElement>(
+      "[data-source-line]",
+    )) {
+      const sl = Number(node.dataset["sourceLine"])
+      if (sl >= start && sl <= end) all.push(node)
+    }
+    // Keep only deepest elements — drop ancestors that contain other matches.
+    const targets = all.filter(
+      (el) => !all.some((o) => o !== el && el.contains(o)),
+    )
+    return { targets, mode: "selected" }
   }
 
   if (state.cursor) {
-    findSourceLineElement(container, state.cursor.line)?.classList.add(
-      "md-line--cursor",
-    )
+    const el = findSourceLineElement(article, state.cursor.line)
+    return { targets: el ? [el] : [], mode: "cursor" }
   }
 
-  if (state.selection) {
-    const start = Math.min(state.selection.startLine, state.selection.endLine)
-    const end = Math.max(state.selection.startLine, state.selection.endLine)
-    const nodes = container.querySelectorAll<HTMLElement>("[data-source-line]")
-    for (const node of nodes) {
-      const sl = Number(node.dataset["sourceLine"])
-      if (sl >= start && sl <= end) {
-        node.classList.add("md-line--selected")
-      }
-    }
-  }
+  return { targets: [], mode: "cursor" }
 }
 
-/** Scroll the nearest data-source-line element into view. */
-function scrollSourceLineIntoView(
-  container: HTMLElement,
-  line: number,
-  programmaticFlag: { current: boolean },
+/** Position the highlight overlay to cover the bounding rect of matched
+ *  source-line elements. Zero layout shift — the overlay is absolutely
+ *  positioned and pointer-events:none. */
+function positionHighlightOverlay(
+  article: HTMLElement,
+  overlay: HTMLDivElement,
+  state: EditorState,
 ): void {
-  const target = findSourceLineElement(container, line)
-  if (!target) return
-  programmaticFlag.current = true
-  target.scrollIntoView({ block: "nearest", behavior: "instant" })
-  requestAnimationFrame(() => {
-    programmaticFlag.current = false
-  })
+  const { targets, mode } = collectHighlightTargets(article, state)
+  if (targets.length === 0) {
+    overlay.style.display = "none"
+    return
+  }
+
+  // Union bounding rect relative to the positioning parent (.md-article-wrap).
+  const wrapRect =
+    overlay.parentElement?.getBoundingClientRect() ??
+    article.getBoundingClientRect()
+  let top = Number.POSITIVE_INFINITY
+  let bottom = Number.NEGATIVE_INFINITY
+  for (const el of targets) {
+    const r = el.getBoundingClientRect()
+    if (r.top < top) top = r.top
+    if (r.bottom > bottom) bottom = r.bottom
+  }
+
+  overlay.style.display = "block"
+  overlay.style.top = `${top - wrapRect.top}px`
+  overlay.style.height = `${bottom - top}px`
+  overlay.className = `md-editor-highlight md-editor-highlight--${mode}`
 }
 
 function elementToFocusItem(el: HTMLElement): FocusItem | null {

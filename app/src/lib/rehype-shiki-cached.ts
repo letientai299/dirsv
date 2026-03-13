@@ -64,14 +64,18 @@ export function rehypeShikiCachedPre() {
 
       const clone = cloneElement(cached)
       clone.properties["dataShikiCached"] = "true"
+      // Preserve data-source-line from the original node (set by rehypeSourceLine).
+      if (node.properties["dataSourceLine"] != null) {
+        clone.properties["dataSourceLine"] = node.properties["dataSourceLine"]
+      }
       parent.children[index] = clone
     })
   }
 }
 
-/** Cache a single newly-highlighted Shiki block if it's valid and uncached. */
+/** Cache a single newly-highlighted Shiki block if it's valid and uncached.
+ *  Caller must ensure `node.tagName === "pre"`. */
 function cacheNewBlock(node: Element): void {
-  if (node.tagName !== "pre") return
   if (!getClassList(node).includes("shiki")) return
   if (node.properties["dataShikiCached"]) return
 
@@ -85,10 +89,19 @@ function cacheNewBlock(node: Element): void {
   cache.set(cacheKey(lang, source), cloneElement(node))
 }
 
-/** Post-pass: store newly highlighted blocks in cache. */
+/** Post-pass: store newly highlighted blocks and restore source lines.
+ *  Both operations only apply to <pre> nodes — the tagName check is shared. */
 export function rehypeShikiCachedPost() {
   return (tree: Root) => {
-    visit(tree, "element", cacheNewBlock)
+    visit(tree, "element", (node: Element) => {
+      if (node.tagName !== "pre") return
+      cacheNewBlock(node)
+      // Re-annotate Shiki-processed <pre> nodes that lost data-source-line.
+      if (node.properties["dataSourceLine"] == null) {
+        const line = node.position?.start?.line
+        if (line != null) node.properties["dataSourceLine"] = line
+      }
+    })
   }
 }
 

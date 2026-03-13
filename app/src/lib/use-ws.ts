@@ -17,6 +17,7 @@ export interface WsEvent {
   endLine?: number
   total?: number
   topLine?: number
+  bottomLine?: number
 }
 
 type Listener = (ev: WsEvent) => void
