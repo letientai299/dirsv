@@ -18,8 +18,11 @@ import {
 } from "../lib/markdown"
 import { handleRelativeLinkClick, rewriteMediaSrc } from "../lib/markdown-urls"
 import { renderMermaidBlocks } from "../lib/mermaid-render"
+import { watchPrefix } from "../lib/path"
 import { renderPlantumlBlocks } from "../lib/plantuml-render"
 import { preloadDiagramBundles } from "../lib/preload-diagrams"
+import type { EditorState } from "../lib/use-editor-sync"
+import { useEditorSync } from "../lib/use-editor-sync"
 import type { FocusItem } from "../lib/use-focus-overlay"
 import { useFocusOverlay } from "../lib/use-focus-overlay"
 import "github-markdown-css/github-markdown.css"
@@ -42,6 +45,71 @@ export function MarkdownView({ content, path, changedLinesRef }: Props) {
   // True when content changed after initial render — triggers highlight on morphdom.
   const liveReloadRef = useRef(false)
   const focus = useFocusOverlay()
+
+  // --- Editor sync (cursor, selection, scroll from nvim) ---
+  const editorRef = useRef<EditorState>({})
+  const scrollToLineRef = useRef<number | null>(null)
+  const [editorTick, setEditorTick] = useState(0)
+
+  useEditorSync(watchPrefix(path), (state) => {
+    editorRef.current = state
+    switch (state.trigger) {
+      case "cursor":
+        scrollToLineRef.current = state.cursor?.line ?? null
+        break
+      case "selection":
+        if (state.selection) {
+          scrollToLineRef.current = Math.min(
+            state.selection.startLine,
+            state.selection.endLine,
+          )
+        }
+        break
+      case "scroll":
+        scrollToLineRef.current = state.scroll?.line ?? null
+        break
+    }
+    setEditorTick((n) => n + 1)
+  })
+
+  // Scroll-fight prevention: suppress editor scroll while user is scrolling.
+  const userScrollingRef = useRef(false)
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout>>()
+  const programmaticScrollRef = useRef(false)
+
+  const onUserScroll = useCallback(() => {
+    if (programmaticScrollRef.current) return
+    userScrollingRef.current = true
+    clearTimeout(scrollTimerRef.current)
+    scrollTimerRef.current = setTimeout(() => {
+      userScrollingRef.current = false
+    }, 2000)
+  }, [])
+
+  useEffect(() => {
+    const el = contentRef.current?.closest(".file-content")
+    if (!el) return
+    el.addEventListener("scroll", onUserScroll, { passive: true })
+    return () => el.removeEventListener("scroll", onUserScroll)
+  }, [onUserScroll])
+
+  // Apply editor cursor/selection highlights using data-source-line elements.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: editorTick is the meaningful trigger
+  useEffect(() => {
+    const el = contentRef.current
+    if (!el) return
+    applyMarkdownEditorHighlights(el, editorRef.current)
+  }, [editorTick, result])
+
+  // Scroll to the target line on editor events.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: editorTick is the meaningful trigger
+  useEffect(() => {
+    const el = contentRef.current
+    const line = scrollToLineRef.current
+    scrollToLineRef.current = null
+    if (!el || line == null || userScrollingRef.current) return
+    scrollSourceLineIntoView(el, line, programmaticScrollRef)
+  }, [editorTick])
 
   useEffect(() => {
     // Skip re-render if both path and content are unchanged (WS may re-fetch same file).
@@ -305,6 +373,80 @@ export function MarkdownView({ content, path, changedLinesRef }: Props) {
       {focus.overlayProps && <FocusOverlay {...focus.overlayProps} />}
     </div>
   )
+}
+
+/**
+ * Find the deepest element whose data-source-line is closest to (and ≤) the
+ * target line. When multiple elements share the same source line, pick the
+ * deepest (most specific) one — e.g. a <li> over its parent <ul>.
+ */
+function findSourceLineElement(
+  container: HTMLElement,
+  line: number,
+): HTMLElement | null {
+  const nodes = container.querySelectorAll<HTMLElement>("[data-source-line]")
+  if (nodes.length === 0) return null
+
+  let best: HTMLElement | null = null
+  let bestLine = -1
+
+  for (const node of nodes) {
+    const sl = Number(node.dataset["sourceLine"])
+    if (sl <= line && sl > bestLine) {
+      bestLine = sl
+      best = node
+    } else if (sl === bestLine && best && best.contains(node)) {
+      // Same line but deeper in the DOM — prefer the more specific element.
+      best = node
+    }
+  }
+  return best
+}
+
+/** Apply cursor/selection highlights to data-source-line elements. */
+function applyMarkdownEditorHighlights(
+  container: HTMLElement,
+  state: EditorState,
+): void {
+  // Clear previous highlights.
+  for (const prev of container.querySelectorAll(
+    ".md-line--cursor, .md-line--selected",
+  )) {
+    prev.classList.remove("md-line--cursor", "md-line--selected")
+  }
+
+  if (state.cursor) {
+    findSourceLineElement(container, state.cursor.line)?.classList.add(
+      "md-line--cursor",
+    )
+  }
+
+  if (state.selection) {
+    const start = Math.min(state.selection.startLine, state.selection.endLine)
+    const end = Math.max(state.selection.startLine, state.selection.endLine)
+    const nodes = container.querySelectorAll<HTMLElement>("[data-source-line]")
+    for (const node of nodes) {
+      const sl = Number(node.dataset["sourceLine"])
+      if (sl >= start && sl <= end) {
+        node.classList.add("md-line--selected")
+      }
+    }
+  }
+}
+
+/** Scroll the nearest data-source-line element into view. */
+function scrollSourceLineIntoView(
+  container: HTMLElement,
+  line: number,
+  programmaticFlag: { current: boolean },
+): void {
+  const target = findSourceLineElement(container, line)
+  if (!target) return
+  programmaticFlag.current = true
+  target.scrollIntoView({ block: "nearest", behavior: "instant" })
+  requestAnimationFrame(() => {
+    programmaticFlag.current = false
+  })
 }
 
 function elementToFocusItem(el: HTMLElement): FocusItem | null {

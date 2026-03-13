@@ -44,9 +44,11 @@ export function useEditorSync(
           scroll: { line: ev.line ?? 0, total: ev.total ?? 0 },
         }
         break
-      case "cursor":
-        next = { ...prev, trigger: "cursor", cursor: { line: ev.line ?? 0 } }
+      case "cursor": {
+        const { selection: _, ...rest } = prev
+        next = { ...rest, trigger: "cursor", cursor: { line: ev.line ?? 0 } }
         break
+      }
       case "selection":
         next = {
           ...prev,

@@ -15,6 +15,9 @@
   --focus-offset: -2px;
   --highlight-duration: 500ms;
   --highlight-bg: light-dark(rgba(255, 213, 79, 0.4), rgba(255, 213, 79, 0.15));
+  --editor-cursor-bg: rgba(100, 149, 237, 0.15);
+  --editor-cursor-border: rgba(100, 149, 237, 0.3);
+  --editor-selection-bg: rgba(100, 149, 237, 0.1);
 }
 
 [data-theme="dark"] {
@@ -542,6 +545,8 @@ pre {
   font-size: 13px;
   line-height: 1.6;
   border-radius: 0;
+  /* Override Shiki's theme background so the code area matches the app. */
+  background-color: var(--bg);
 }
 
 .code-view pre code {
@@ -584,26 +589,25 @@ pre {
   line-height: 1.6;
 }
 
-/* -- Shiki dual theme (defaultColor: false → no inline styles, only CSS vars) -- */
-
+/* -- Shiki dual theme (defaultColor: false → no inline styles, only CSS vars) --
+   Background on spans is removed — the <pre> (via .code-view pre) provides
+   the base background using var(--bg) so it matches the app theme. */
 .shiki,
 .shiki span {
   color: var(--shiki-light);
-  background-color: var(--shiki-light-bg);
+  background-color: transparent;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .shiki,
   :root:not([data-theme="light"]) .shiki span {
     color: var(--shiki-dark);
-    background-color: var(--shiki-dark-bg);
   }
 }
 
 [data-theme="dark"] .shiki,
 [data-theme="dark"] .shiki span {
   color: var(--shiki-dark);
-  background-color: var(--shiki-dark-bg);
 }
 
 /* ---------- status ---------- */
@@ -1334,21 +1338,15 @@ html.focus-lock {
 
 /* ---------- editor sync highlight ---------- */
 
-.code-view pre .line--cursor {
-  background: var(--editor-cursor-bg, rgba(100, 149, 237, 0.15));
-  outline: 1px solid var(--editor-cursor-border, rgba(100, 149, 237, 0.3));
+.code-view pre .line--cursor,
+.markdown-body .md-line--cursor {
+  background: var(--editor-cursor-bg);
+  outline: 1px solid var(--editor-cursor-border);
 }
 
-.code-view pre .line--selected {
-  background: var(--editor-selection-bg, rgba(100, 149, 237, 0.1));
-}
-
-/* Shiki spans have their own background that covers the line highlight —
-   make them transparent so the .line background shows through. */
-.code-view pre .line--cursor span,
-.code-view pre .line--selected span,
-.code-view pre .line.changed span {
-  background-color: transparent;
+.code-view pre .line--selected,
+.markdown-body .md-line--selected {
+  background: var(--editor-selection-bg);
 }
 
 /* ---------- live-reload highlight ---------- */
