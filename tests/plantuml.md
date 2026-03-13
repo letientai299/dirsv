@@ -660,6 +660,156 @@ digit = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
 @endregex
 ```
 
+## Archimate Diagram
+
+Enterprise architecture layers with ArchiMate stereotypes and relationships.
+
+```plantuml
+@startuml
+skinparam rectangle<<behavior>> {
+  roundCorner 25
+}
+
+rectangle "Business Layer" #FFFFCC {
+  rectangle "Customer Service" as CS <<business-service>><<behavior>>
+  rectangle "Order Processing" as OP <<business-process>><<behavior>>
+  rectangle "Sales Rep" as SR <<business-actor>>
+}
+
+rectangle "Application Layer" #C2DFFF {
+  rectangle "CRM System" as CRM <<application-component>>
+  rectangle "Order API" as API <<application-service>><<behavior>>
+  rectangle "Inventory App" as INV <<application-component>>
+}
+
+rectangle "Technology Layer" #E0FFE0 {
+  rectangle "App Server" as APP <<technology-device>>
+  rectangle "PostgreSQL" as DB <<technology-device>>
+  rectangle "Message Queue" as MQ <<technology-device>>
+}
+
+SR -down-> CS : serves
+CS -down-> OP : triggers
+OP -down-> API : uses
+API -down-> CRM
+API -down-> INV
+CRM -down-> APP : deployed on
+INV -down-> APP
+APP -right-> DB : reads/writes
+APP -right-> MQ : publishes
+@enduml
+```
+
+### Archimate — Motivation and Strategy
+
+```plantuml
+@startuml
+skinparam rectangle<<behavior>> {
+  roundCorner 25
+}
+
+rectangle "Motivation" #FFF0F0 {
+  rectangle "Reduce Churn" as goal <<motivation-goal>>
+  rectangle "Improve Response Time" as req <<motivation-requirement>>
+  rectangle "Customer Satisfaction" as driver <<motivation-driver>>
+  rectangle "Competitors Offer\nBetter Support" as concern <<motivation-assessment>>
+}
+
+rectangle "Strategy" #F0F0FF {
+  rectangle "Self-Service Portal" as cap <<strategy-capability>>
+  rectangle "Hire Support Staff" as res <<strategy-resource>>
+  rectangle "Automation Initiative" as course <<strategy-course-of-action>><<behavior>>
+}
+
+driver -down-> goal : motivates
+concern -right-> driver : associated
+goal -down-> req : realizes
+req -down-> cap : realizes
+course -right-> cap : realizes
+res -up-> course : assigned to
+@enduml
+```
+
+## Chart Diagram
+
+Charts require PlantUML 1.2026.0+. The public server may not support these
+yet — they will render once the server upgrades.
+
+### Bar Chart — Quarterly Revenue
+
+```plantuml
+@startchart
+h-axis [Q1, Q2, Q3, Q4]
+v-axis "Revenue ($K)" 0 --> 100 spacing 25
+bar "Revenue" [45, 62, 58, 70] #3498db
+bar "Profit" [20, 35, 30, 42] #2ecc71
+legend right
+@endchart
+```
+
+### Stacked Bar Chart
+
+```plantuml
+@startchart
+h-axis [Q1, Q2, Q3, Q4]
+v-axis 0 --> 120
+stackMode stacked
+bar "Product A" [30, 40, 35, 50] #3498db
+bar "Product B" [20, 25, 30, 28] #2ecc71
+bar "Product C" [10, 15, 12, 18] #e74c3c
+legend right
+@endchart
+```
+
+### Line Chart — Performance Trends
+
+```plantuml
+@startchart
+h-axis [Jan, Feb, Mar, Apr, May, Jun]
+v-axis "Score" 0 --> 100 spacing 20 grid
+line "Availability" [99, 98, 99, 97, 99, 99] #3498db labels
+line "Latency (p99)" [45, 52, 48, 60, 42, 38] #e74c3c labels
+legend right
+@endchart
+```
+
+### Area Chart — Traffic Over Time
+
+```plantuml
+@startchart
+h-axis [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
+v-axis 0 --> 200 spacing 50
+area "API Requests" [80, 120, 140, 130, 150, 60, 45] #3498db
+area "Page Views" [40, 60, 70, 65, 80, 30, 20] #2ecc71
+legend right
+@endchart
+```
+
+### Scatter Chart
+
+```plantuml
+@startchart
+h-axis "Response Time (ms)" 0 --> 500 spacing 100
+v-axis "Throughput (req/s)" 0 --> 1000 spacing 200
+scatter "Service A" [(50,800), (100,750), (150,600), (200,500), (300,350)] #3498db
+scatter "Service B" [(80,600), (120,550), (180,450), (250,300), (400,200)] #e74c3c
+legend right
+@endchart
+```
+
+### Dual Axis — Revenue vs Market Share
+
+```plantuml
+@startchart
+h-axis [Q1, Q2, Q3, Q4]
+v-axis "Revenue ($K)" 0 --> 100
+v2-axis "Market Share %" 0 --> 50
+bar "Revenue" [45, 62, 58, 70] #3498db
+line "Market Share" [15, 20, 18, 25] #ff7f0e v2
+legend right
+@endchart
+```
+
 ---
 
 ## Stress Tests — Advanced Features
