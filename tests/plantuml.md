@@ -324,6 +324,208 @@ network internal {
 
 ## Wireframe (Salt)
 
+### Basic Widgets
+
+```plantuml
+@startsalt
+{
+  Just plain text
+  [This is my button]
+  ()  Unchecked radio
+  (X) Checked radio
+  []  Unchecked box
+  [X] Checked box
+  "Enter text here   "
+  ^This is a droplist^
+}
+@endsalt
+```
+
+### Grid Layouts
+
+External borders (`{+`):
+
+```plantuml
+@startsalt
+{+
+  Login    | "MyName   "
+  Password | "****     "
+  [Cancel] | [  OK   ]
+}
+@endsalt
+```
+
+All lines (`{#`):
+
+```plantuml
+@startsalt
+{#
+  .            | Column 2  | Column 3
+  Row header 1 | value 1   | value 2
+  Row header 2 | A long cell | *
+}
+@endsalt
+```
+
+### Group Box
+
+```plantuml
+@startsalt
+{^"User Settings"
+  Theme     | ^Dark^
+  Language  | ^English^
+  [X] Enable notifications
+  [] Compact mode
+  --
+  [Cancel] | [  Apply  ]
+}
+@endsalt
+```
+
+### Separators
+
+```plantuml
+@startsalt
+{
+  Text above dots
+  ..
+  "Some field      "
+  ==
+  Note on usage
+  ~~
+  Another text
+  --
+  [Ok]
+}
+@endsalt
+```
+
+### Tabs and Menu Bar
+
+```plantuml
+@startsalt
+{+
+  {* File | Edit | Source | Refactor }
+  {/ <b>General | Fullscreen | Behavior | Saving }
+  {
+    {
+      Open image in: | ^Smart Mode^
+    }
+    [X] Smooth images when zoomed
+    [] Resize after rotating
+    --
+    [Close]
+  }
+}
+@endsalt
+```
+
+### Tree Widget
+
+```plantuml
+@startsalt
+{
+  {T
+    + World
+    ++ America
+    +++ Canada
+    +++ USA
+    ++++ New York
+    ++++ California
+    ++ Europe
+    +++ France
+    +++ Germany
+    +++ Italy
+    ++ Asia
+    +++ Japan
+    +++ South Korea
+  }
+}
+@endsalt
+```
+
+### Tree Table
+
+```plantuml
+@startsalt
+{
+  {T
+    +Name              | Size     | Modified
+    + src               | --       | 2025-03-14
+    ++ components        | --       | 2025-03-14
+    +++ Button.tsx       | 2.1 KB   | 2025-03-12
+    +++ Modal.tsx        | 4.8 KB   | 2025-03-13
+    ++ lib               | --       | 2025-03-14
+    +++ utils.ts         | 1.3 KB   | 2025-03-10
+    + tests              | --       | 2025-03-11
+    ++ Button.test.tsx   | 3.2 KB   | 2025-03-11
+  }
+}
+@endsalt
+```
+
+### Scroll Bars
+
+```plantuml
+@startsalt
+{S
+  Message line 1
+  Message line 2
+  Message line 3
+  Message line 4
+  Message line 5
+  Message line 6
+  Message line 7
+  Message line 8
+}
+@endsalt
+```
+
+### OpenIconic Icons
+
+```plantuml
+@startsalt
+{+
+  <&person> Login    | "MyName   "
+  <&key> Password    | "****     "
+  [Cancel <&circle-x>] | [OK <&account-login>]
+}
+@endsalt
+```
+
+### Creole Formatting
+
+```plantuml
+@startsalt
+{
+  This is **bold**
+  This is //italics//
+  This is ""monospaced""
+  This is --stricken-out--
+  This is __underlined__
+  This is ~~wave-underlined~~
+}
+@endsalt
+```
+
+### Colors and Styling
+
+```plantuml
+@startsalt
+{
+  <color:Blue>Blue label text
+  [This is my default button]
+  [<color:green>Green button]
+  [<color:#9a9a9a>Disabled button]
+  []  <color:red>Unchecked box
+  [X] <color:green>Checked box
+  ()  <color:orange>Radio option
+}
+@endsalt
+```
+
+### Composite — Login Dialog
+
 ```plantuml
 @startsalt
 {+
@@ -334,6 +536,67 @@ network internal {
     Role     | ^Admin^
     --
     [Cancel] | [  Save  ]
+  }
+}
+@endsalt
+```
+
+### Composite — Settings Panel
+
+```plantuml
+@startsalt
+{+
+  {* Application | Window | Help }
+  {/ General | Editor | Appearance | Keybindings }
+  {#
+    Setting          | Value              | Default
+    Font family      | "JetBrains Mono  " | Consolas
+    Font size        | "14              " | 12
+    Tab size         | "2               " | 4
+    Line height      | "1.6             " | 1.5
+  }
+  {
+    [X] Word wrap
+    [X] Show line numbers
+    [] Show minimap
+    [] Bracket pair colorization
+  }
+  ==
+  {
+    . | [Restore Defaults] | [Apply] | [  OK  ]
+  }
+}
+@endsalt
+```
+
+### Composite — File Manager
+
+```plantuml
+@startsalt
+{+
+  {* File | Edit | View | Tools | Help }
+  {
+    {T
+      + <&folder> Home
+      ++ <&folder> Documents
+      +++ <&file> report.pdf
+      +++ <&file> notes.md
+      ++ <&folder> Pictures
+      +++ <&file> photo.jpg
+      ++ <&folder> Projects
+      +++ <&folder> dirsv
+      ++++ <&file> go.mod
+      ++++ <&file> main.go
+    } | {#
+      Name          | Size     | Type     | Modified
+      report.pdf    | 2.4 MB   | PDF      | 2025-03-10
+      notes.md      | 12 KB    | Markdown | 2025-03-13
+      photo.jpg     | 3.1 MB   | JPEG     | 2025-02-28
+    }
+  }
+  ==
+  {
+    Path: | "/home/user/Documents          " | [Browse]
   }
 }
 @endsalt
