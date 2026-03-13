@@ -16,8 +16,11 @@ const cache = new Map<string, Element>()
  *   .use(rehypeShikiCachedPost)   // store newly highlighted blocks
  */
 
+/** Stable content key for a code block. Strips the trailing newline that
+ *  remark-rehype appends but Shiki's `stripEndNewline` removes, so keys
+ *  match across the pre→Shiki→post pipeline. */
 function cacheKey(lang: string, source: string): string {
-  return simpleHash(`${lang}\0${source}`)
+  return simpleHash(`${lang}\0${source.replace(/\n$/, "")}`)
 }
 
 /** Deep-clone a HAST element for reuse. */
@@ -50,25 +53,49 @@ function extractCodeInfo(
   }
 }
 
-/** Pre-pass: replace code blocks with cached Shiki output where available. */
+/** Source lines queued by the pre-pass for uncached blocks. Shiki replaces
+ *  `<pre>` nodes entirely (wrapped in a Root fragment that changes parent/index)
+ *  and doesn't set `dataLanguage`, so we can't key by content or position.
+ *  Instead we rely on visit order: both passes traverse depth-first, so the
+ *  Nth uncached block in the pre-pass becomes the Nth Shiki block in the
+ *  post-pass. The queue is reset at the start of each render. */
+let pendingSourceLines: (number | null)[] = []
+
+/** Try to replace a code block with a cached Shiki clone. Returns true if
+ *  replaced, false if uncached (Shiki will process it). */
+function tryReplaceWithCached(
+  node: Element,
+  info: { lang: string; source: string },
+  index: number,
+  parent: { children: unknown[] },
+): boolean {
+  const cached = cache.get(cacheKey(info.lang, info.source))
+  if (!cached) return false
+
+  const clone = cloneElement(cached)
+  clone.properties["dataShikiCached"] = "true"
+  if (node.properties["dataSourceLine"] != null) {
+    clone.properties["dataSourceLine"] = node.properties["dataSourceLine"]
+  }
+  parent.children[index] = clone
+  return true
+}
+
+/** Pre-pass: replace code blocks with cached Shiki output where available.
+ *  For uncached blocks, queue their source line for the post-pass. */
 export function rehypeShikiCachedPre() {
   return (tree: Root) => {
+    pendingSourceLines = []
     visit(tree, "element", (node: Element, index, parent) => {
       if (!parent || index === undefined || index === null) return
       const info = extractCodeInfo(node)
       if (!info) return
 
-      const key = cacheKey(info.lang, info.source)
-      const cached = cache.get(key)
-      if (!cached) return
+      if (tryReplaceWithCached(node, info, index, parent)) return
 
-      const clone = cloneElement(cached)
-      clone.properties["dataShikiCached"] = "true"
-      // Preserve data-source-line from the original node (set by rehypeSourceLine).
-      if (node.properties["dataSourceLine"] != null) {
-        clone.properties["dataSourceLine"] = node.properties["dataSourceLine"]
-      }
-      parent.children[index] = clone
+      // Uncached: Shiki will replace this node. Queue the source line.
+      const line = node.properties["dataSourceLine"]
+      pendingSourceLines.push(line != null ? Number(line) : null)
     })
   }
 }
@@ -89,18 +116,29 @@ function cacheNewBlock(node: Element): void {
   cache.set(cacheKey(lang, source), cloneElement(node))
 }
 
+/** True when a `<pre>` was freshly processed by Shiki (not from cache). */
+function isNewShikiBlock(node: Element): boolean {
+  return (
+    node.properties["dataSourceLine"] == null &&
+    getClassList(node).includes("shiki") &&
+    !node.properties["dataShikiCached"]
+  )
+}
+
 /** Post-pass: store newly highlighted blocks and restore source lines.
  *  Both operations only apply to <pre> nodes — the tagName check is shared. */
 export function rehypeShikiCachedPost() {
   return (tree: Root) => {
+    let queueIdx = 0
     visit(tree, "element", (node: Element) => {
       if (node.tagName !== "pre") return
       cacheNewBlock(node)
-      // Re-annotate Shiki-processed <pre> nodes that lost data-source-line.
-      if (node.properties["dataSourceLine"] == null) {
-        const line = node.position?.start?.line
-        if (line != null) node.properties["dataSourceLine"] = line
-      }
+      if (!isNewShikiBlock(node)) return
+
+      const line =
+        node.position?.start?.line ?? pendingSourceLines[queueIdx] ?? null
+      if (line != null) node.properties["dataSourceLine"] = line
+      queueIdx++
     })
   }
 }

@@ -17,6 +17,9 @@ export interface EditorState {
 export interface ScrollTarget {
   line: number
   ratio: number
+  /** When true, always reposition to the exact ratio (scroll events, zz/zt/zb).
+   *  When false, only scroll if the element is outside the visible viewport. */
+  exact: boolean
 }
 
 /** Callback invoked on each editor sync event — do imperative DOM work here
@@ -49,22 +52,31 @@ function scrollTargetFromState(state: EditorState): ScrollTarget | null {
       return {
         line: state.cursor.line,
         ratio: viewportRatio(state.cursor.line, state.scroll),
+        exact: false,
       }
     case "selection": {
       if (!state.selection) return null
       const line = Math.min(state.selection.startLine, state.selection.endLine)
-      return { line, ratio: viewportRatio(line, state.scroll) }
+      return { line, ratio: viewportRatio(line, state.scroll), exact: false }
     }
     case "scroll":
-      // Pure scroll event (legacy) — scroll topLine to top.
-      return state.scroll ? { line: state.scroll.topLine, ratio: 0 } : null
+      // Pure scroll event — reposition to exact ratio.
+      return state.scroll
+        ? { line: state.scroll.topLine, ratio: 0, exact: true }
+        : null
     default:
       return null
   }
 }
 
-/** Scroll `el` to sit at `target.ratio` within the nearest `.file-content`
- *  scroll container. Sets `programmaticFlag` to suppress the scroll-fight guard. */
+/** Fraction of the scroller height used as a margin when checking visibility.
+ *  Keeps the element from sitting right at the edge before we scroll. */
+const VISIBLE_MARGIN = 0.05
+
+/** Scroll `el` so it sits at `target.ratio` within the nearest `.file-content`
+ *  scroll container. When `target.exact` is false (cursor/selection moves),
+ *  the scroll is skipped if the element is already within the visible viewport
+ *  — this avoids jarring jumps on every `j`/`k` keystroke. */
 function scrollElementToRatio(
   el: HTMLElement,
   target: ScrollTarget,
@@ -73,9 +85,26 @@ function scrollElementToRatio(
   const scroller = el.closest(".file-content")
   if (!scroller) return
 
-  const elTop = el.getBoundingClientRect().top
+  const elRect = el.getBoundingClientRect()
   const scrollerRect = scroller.getBoundingClientRect()
-  const delta = elTop - (scrollerRect.top + target.ratio * scrollerRect.height)
+
+  // For cursor/selection events, skip the scroll when the element's top edge
+  // is comfortably inside the viewport.  We only test the top — not bottom —
+  // because in markdown the matched element may sit well above the actual
+  // cursor line (sparse data-source-line annotations), and requiring the
+  // bottom to also be in view would miss offscreen content below.
+  if (!target.exact) {
+    const margin = scrollerRect.height * VISIBLE_MARGIN
+    if (
+      elRect.top >= scrollerRect.top + margin &&
+      elRect.top <= scrollerRect.bottom - margin
+    ) {
+      return
+    }
+  }
+
+  const delta =
+    elRect.top - (scrollerRect.top + target.ratio * scrollerRect.height)
   if (Math.abs(delta) < SCROLL_THRESHOLD) return
 
   programmaticFlag.current = true
