@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"log/slog"
 	"mime"
 	"net"
 	"net/http"
@@ -20,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/coder/websocket"
 	"github.com/letientai299/dirsv/internal/appinfo"
 )
 
@@ -145,6 +147,7 @@ func New(
 	s.mux.HandleFunc("GET /api/info", s.handleInfo)
 
 	s.mux.HandleFunc("POST /api/editor", s.handleEditor)
+	s.mux.HandleFunc("GET /api/editor/ws", s.handleEditorWS)
 
 	if sseHandler != nil {
 		s.mux.Handle("GET /api/events", sseHandler)
@@ -220,6 +223,23 @@ var editorEventTypes = map[string]struct{}{
 	"clear":     {},
 }
 
+// validateEditorEvent checks the event type and path, cleans the path,
+// and returns false if the event should be rejected.
+func validateEditorEvent(ev *EditorEvent) bool {
+	if _, ok := editorEventTypes[ev.Type]; !ok {
+		return false
+	}
+	if ev.Path == "" {
+		return false
+	}
+	ev.Path = path.Clean("/" + ev.Path)
+	ev.Path = strings.TrimPrefix(ev.Path, "/")
+	if ev.Path == "." {
+		ev.Path = ""
+	}
+	return true
+}
+
 func (s *Server) handleEditor(w http.ResponseWriter, r *http.Request) {
 	var ev EditorEvent
 	dec := json.NewDecoder(io.LimitReader(r.Body, 4096))
@@ -227,23 +247,42 @@ func (s *Server) handleEditor(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid JSON", http.StatusBadRequest)
 		return
 	}
-	if _, ok := editorEventTypes[ev.Type]; !ok {
-		http.Error(w, "invalid type", http.StatusBadRequest)
+	if !validateEditorEvent(&ev) {
+		http.Error(w, "invalid event", http.StatusBadRequest)
 		return
-	}
-	if ev.Path == "" {
-		http.Error(w, "missing path", http.StatusBadRequest)
-		return
-	}
-	ev.Path = path.Clean("/" + ev.Path)
-	ev.Path = strings.TrimPrefix(ev.Path, "/")
-	if ev.Path == "." {
-		ev.Path = ""
 	}
 	if s.editorCallback != nil {
 		s.editorCallback(ev)
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handleEditorWS(w http.ResponseWriter, r *http.Request) {
+	conn, err := websocket.Accept(w, r, nil)
+	if err != nil {
+		slog.Debug("ws accept", "err", err)
+		return
+	}
+	defer func() { _ = conn.CloseNow() }()
+	conn.SetReadLimit(4096)
+
+	ctx := r.Context()
+	for {
+		_, data, err := conn.Read(ctx)
+		if err != nil {
+			return
+		}
+		var ev EditorEvent
+		if err := json.Unmarshal(data, &ev); err != nil {
+			continue
+		}
+		if !validateEditorEvent(&ev) {
+			continue
+		}
+		if s.editorCallback != nil {
+			s.editorCallback(ev)
+		}
+	}
 }
 
 // asciiLower returns s with ASCII uppercase letters lowered.

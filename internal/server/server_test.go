@@ -8,7 +8,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
+	"time"
+
+	"github.com/coder/websocket"
 )
 
 func setupTestDir(t *testing.T) string {
@@ -569,6 +573,63 @@ func TestHandleEditor(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHandleEditorWS(t *testing.T) {
+	var got EditorEvent
+	var mu sync.Mutex
+	dir := setupTestDir(t)
+	srv, err := New(dir, nil, nil, WithEditorCallback(func(ev EditorEvent) {
+		mu.Lock()
+		got = ev
+		mu.Unlock()
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ts := httptest.NewServer(srv)
+	defer ts.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http") + "/api/editor/ws"
+	conn, resp, err := websocket.Dial(ctx, wsURL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = conn.CloseNow() }()
+	if resp != nil && resp.Body != nil {
+		_ = resp.Body.Close()
+	}
+
+	// Send a cursor event over WS.
+	msg := []byte(
+		`{"type":"cursor","path":"hello.txt","line":10,"topLine":1,"total":50}`,
+	)
+	if err := conn.Write(ctx, websocket.MessageText, msg); err != nil {
+		t.Fatal(err)
+	}
+
+	// Give the server a moment to process.
+	time.Sleep(50 * time.Millisecond)
+
+	mu.Lock()
+	ev := got
+	mu.Unlock()
+
+	if ev.Type != "cursor" {
+		t.Errorf("want type=cursor, got %q", ev.Type)
+	}
+	if ev.Path != "hello.txt" {
+		t.Errorf("want path=hello.txt, got %q", ev.Path)
+	}
+	if ev.Line != 10 {
+		t.Errorf("want line=10, got %d", ev.Line)
+	}
+
+	_ = conn.Close(websocket.StatusNormalClosure, "")
 }
 
 func TestHandleEditorPathCleaning(t *testing.T) {
