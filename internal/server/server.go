@@ -59,6 +59,7 @@ type EditorEvent struct {
 	StartLine int    `json:"startLine,omitempty"`
 	EndLine   int    `json:"endLine,omitempty"`
 	Total     int    `json:"total,omitempty"`
+	TopLine   int    `json:"topLine,omitempty"`
 }
 
 // Server serves directory listings, raw files, and the SPA frontend.

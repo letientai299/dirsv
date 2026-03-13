@@ -36,6 +36,12 @@ export function useEditorSync(
     const prev = stateRef.current
     let next: EditorState
 
+    // Merged events carry viewport info alongside cursor/selection.
+    const scrollFromTop =
+      ev.topLine != null
+        ? { scroll: { line: ev.topLine, total: ev.total ?? 0 } }
+        : undefined
+
     switch (ev.type) {
       case "scroll":
         next = {
@@ -46,7 +52,12 @@ export function useEditorSync(
         break
       case "cursor": {
         const { selection: _, ...rest } = prev
-        next = { ...rest, trigger: "cursor", cursor: { line: ev.line ?? 0 } }
+        next = {
+          ...rest,
+          trigger: "cursor",
+          cursor: { line: ev.line ?? 0 },
+          ...scrollFromTop,
+        }
         break
       }
       case "selection":
@@ -57,6 +68,7 @@ export function useEditorSync(
             startLine: ev.startLine ?? 0,
             endLine: ev.endLine ?? 0,
           },
+          ...scrollFromTop,
         }
         break
       case "clear":

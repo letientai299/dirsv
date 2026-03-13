@@ -515,6 +515,12 @@ func TestHandleEditor(t *testing.T) {
 			wantCB:   true,
 		},
 		{
+			name:     "cursor with topLine",
+			body:     `{"type":"cursor","path":"hello.txt","line":10,"topLine":1,"total":300}`,
+			wantCode: http.StatusNoContent,
+			wantCB:   true,
+		},
+		{
 			name:     "valid selection",
 			body:     `{"type":"selection","path":"hello.txt","startLine":10,"endLine":25}`,
 			wantCode: http.StatusNoContent,
