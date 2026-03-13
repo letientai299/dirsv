@@ -33,11 +33,12 @@ None of the existing solutions covers all my need. So, I build `dirsv` and
 
 - **Directory browsing** — table view with [Devicon][devicon] file-type icons,
   sizes, and modification dates. Keyboard navigation (`j`/`k`, Enter to open)
-- **Markdown rendering** — [GFM][gfm] via [unified/remark][remark] with
-  [Shiki][shiki] syntax highlighting, [KaTeX][katex] math, definition lists,
-  color chips, GitHub-style alerts, emoji, raw HTML blocks, video embeds, and a
-  sticky table of contents sidebar. Supports `:::` [container directives][directives]
-  as an alternative to fenced code blocks for diagrams and admonitions
+- **Markdown rendering** — [GFM][gfm] and [MDX][mdx] via [unified/remark][remark]
+  with [Shiki][shiki] syntax highlighting, [KaTeX][katex] math, definition lists,
+  color chips, GitHub-style alerts, emoji, raw HTML blocks, video embeds, anchor
+  links on headings, and a sticky table of contents sidebar. Supports `:::`
+  [container directives][directives] as an alternative to fenced code blocks for
+  diagrams and admonitions
 - **Diagrams** — fenced code blocks or `:::` directives for [Mermaid][mermaid],
   [PlantUML][plantuml], [Graphviz][graphviz], [D2][d2], and [DBML][dbml].
   Standalone `.gv`/`.dot`, `.d2`, and `.dbml` files render directly.
@@ -74,6 +75,16 @@ None of the existing solutions covers all my need. So, I build `dirsv` and
 - **Keyboard shortcuts** — `?` opens a help popover listing all bindings.
   `Ctrl+B` toggle sidebar, `Ctrl+E` focus toggle, `h`/`Backspace` parent dir
 
+### Editor integration
+
+- **Editor sync** — WebSocket endpoint for editor plugins (see
+  [dirsv.nvim][dnvim]). Syncs cursor position, text selection, and scroll
+  position from the editor to the browser in real time. Closing the buffer sends
+  a close event that dismisses the browser tab
+- **Live-reload highlights** — changed lines flash briefly after each reload.
+  Duration configurable via `--highlight-ms` (default 5000 ms). Line-level diffs
+  computed server-side with a Myers O(ND) algorithm
+
 ### Server
 
 - **Live reload** — per-path WebSocket with server-side filtering. Only watched
@@ -83,7 +94,8 @@ None of the existing solutions covers all my need. So, I build `dirsv` and
 - **Security** — DNS rebinding protection, tightened CSP for HTML previews,
   WebSocket origin checks
 - **Single binary** — frontend assets embedded via `go:embed` with
-  pre-compressed gzip, no runtime dependencies
+  pre-compressed gzip, no runtime dependencies. File-type icons and [Nerd
+  Font][nerdfont] bundled for fully offline use
 
 ## Install
 
@@ -119,13 +131,14 @@ dirsv ./docs    # serve a specific directory
 ```
 Usage: dirsv [flags] [path]
 
-  -b, --browser string   browser to open (default: system default)
-  -d, --debug            enable verbose watcher logs
-      --host string      listen address (default "localhost")
-      --no-open          don't auto-open browser
-  -p, --port int         listen port (default 8080)
-      --trusted-proxy    trust proxy headers for rate limiting
-  -v, --version          print version and exit
+  -b, --browser string    browser to open (default: system default)
+  -d, --debug             enable verbose watcher logs
+      --highlight-ms int  duration (ms) of background flash on changed elements (default 5000)
+      --host string       listen address (default "localhost")
+      --no-open           don't auto-open browser
+  -p, --port int          listen port (default 8080)
+      --trusted-proxy     trust proxy headers for rate limiting
+  -v, --version           print version and exit
 ```
 
 When `[path]` is a file, the server restricts browsing to that single file.
@@ -174,4 +187,6 @@ MIT
 [asciinema-player]: https://github.com/asciinema/asciinema-player
 [dnvim]: https://github.com/letientai299/dirsv.nvim
 [sicp-1.45]: https://github.com/letientai299/read-sicp/blob/master/ch01/1.45.md
+[mdx]: https://mdxjs.com/
+[nerdfont]: https://www.nerdfonts.com/
 [directives]: https://talk.commonmark.org/t/generic-directives-plugins-syntax/444
