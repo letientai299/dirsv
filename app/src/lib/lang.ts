@@ -212,6 +212,17 @@ const nameMap: Record<string, string> = {
   ".env": "dotenv",
   ".env.local": "dotenv",
   ".env.example": "dotenv",
+  "nginx.conf": "nginx",
+  ".tmux.conf": "shellscript",
+  "tmux.conf": "shellscript",
+}
+
+/**
+ * Alias fenced-block language names that Shiki doesn't recognise
+ * to the closest built-in grammar.  Used by `@shikijs/rehype` via `langAlias`.
+ */
+export const langAlias: Record<string, string> = {
+  tmux: "shellscript",
 }
 
 /**

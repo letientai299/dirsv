@@ -1,3 +1,4 @@
+import type { Element, Root } from "hast"
 import rehypeColorChips from "rehype-color-chips"
 import rehypeRaw from "rehype-raw"
 import rehypeSanitize, { defaultSchema } from "rehype-sanitize"
@@ -17,6 +18,8 @@ import remarkParse from "remark-parse"
 import remarkRehype from "remark-rehype"
 import type { Processor } from "unified"
 import { unified } from "unified"
+import { visit } from "unist-util-visit"
+import { langAlias } from "./lang"
 import { rehypeAutolinkHeadings } from "./rehype-autolink-headings"
 import { rehypeD2 } from "./rehype-d2"
 import { rehypeDbml } from "./rehype-dbml"
@@ -133,6 +136,29 @@ function applyMdxPlugins(processor: AnyProcessor): AnyProcessor {
   )
 }
 
+/** Rewrite aliased language classes on a single `<code>` element. */
+function rewriteLangClass(node: Element): void {
+  if (node.tagName !== "code") return
+  const classes = node.properties?.["className"]
+  if (!Array.isArray(classes)) return
+  for (let i = 0; i < classes.length; i++) {
+    const cls = classes[i] as string
+    if (!cls.startsWith("language-")) continue
+    const mapped = langAlias[cls.slice("language-".length)]
+    if (mapped) classes[i] = `language-${mapped}`
+  }
+}
+
+/**
+ * Rewrite fenced-block language classes using {@link langAlias} so Shiki
+ * can resolve them with its built-in grammars.  Runs before Shiki.
+ */
+function rehypeLangAlias() {
+  return (tree: Root) => {
+    visit(tree, "element", rewriteLangClass)
+  }
+}
+
 /** Apply the final stages after code highlighting (figure, slug, stringify). */
 function applyFinalPlugins(processor: AnyProcessor): AnyProcessor {
   return processor
@@ -175,6 +201,7 @@ function getShikiProcessor(): Promise<AnyProcessor> {
       })
 
       const processor = applySharedPlugins(unified())
+        .use(rehypeLangAlias)
         .use(rehypeShikiCachedPre)
         .use(rehypeShiki, {
           themes: { light: SHIKI_THEMES.light, dark: SHIKI_THEMES.dark },
@@ -272,6 +299,7 @@ function getMdxShikiProcessor(): Promise<AnyProcessor> {
       })
 
       const processor = applyMdxPlugins(unified())
+        .use(rehypeLangAlias)
         .use(rehypeShikiCachedPre)
         .use(rehypeShiki, {
           themes: { light: SHIKI_THEMES.light, dark: SHIKI_THEMES.dark },
