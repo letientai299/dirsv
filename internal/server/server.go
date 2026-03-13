@@ -62,9 +62,10 @@ const (
 	EventCursor    EventType = "cursor"
 	EventSelection EventType = "selection"
 	EventClear     EventType = "clear"
+	EventClose     EventType = "close"
 )
 
-// EditorEvent represents an editor sync event (cursor, scroll, selection, clear).
+// EditorEvent represents an editor sync event.
 type EditorEvent struct {
 	Type       EventType `json:"type"`
 	Path       string    `json:"path"`
@@ -233,6 +234,7 @@ var editorEventTypes = map[EventType]struct{}{
 	EventCursor:    {},
 	EventSelection: {},
 	EventClear:     {},
+	EventClose:     {},
 }
 
 // normalizeEditorEvent validates the event type and path, cleans the path,

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "preact/hooks"
+import { normalizePath } from "./navigate"
 
 export interface WsEvent {
   type:
@@ -10,6 +11,7 @@ export interface WsEvent {
     | "cursor"
     | "selection"
     | "clear"
+    | "close"
   path: string
   changedLines?: number[]
   line?: number
@@ -53,6 +55,16 @@ function sendWatchList() {
 
 function dispatch(batch: WsEvent[]) {
   for (const ev of batch) {
+    if (ev.type === "close") {
+      const current = normalizePath(
+        decodeURIComponent(location.pathname),
+        "/",
+      ).replace(/^\//, "")
+      if (current === ev.path) {
+        window.close()
+      }
+      continue
+    }
     for (const [fn, prefix] of listeners) {
       if (
         prefix === "" ||

@@ -537,6 +537,17 @@ func TestHandleEditor(t *testing.T) {
 			wantCB:   true,
 		},
 		{
+			name:     "valid close",
+			body:     `{"type":"close","path":"hello.txt"}`,
+			wantCode: http.StatusNoContent,
+			wantCB:   true,
+		},
+		{
+			name:     "close without path",
+			body:     `{"type":"close"}`,
+			wantCode: http.StatusBadRequest,
+		},
+		{
 			name:     "missing path",
 			body:     `{"type":"cursor","line":10}`,
 			wantCode: http.StatusBadRequest,
