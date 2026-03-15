@@ -35,16 +35,16 @@ None of the existing solutions covers all my need. So, I build `dirsv` and
 
 - **Directory browsing** — table view with [Devicon][devicon] file-type icons,
   sizes, and modification dates. Keyboard navigation (`j`/`k`, Enter to open)
-- **Markdown rendering** — [GFM][gfm] and [MDX][mdx] via [unified/remark][remark]
-  with [Shiki][shiki] syntax highlighting, [KaTeX][katex] math, definition lists,
-  color chips, GitHub-style alerts, emoji, raw HTML blocks, video embeds, anchor
-  links on headings, and a sticky table of contents sidebar. Supports `:::`
-  [container directives][directives] as an alternative to fenced code blocks for
-  diagrams and admonitions
+- **Markdown rendering** — [GFM][gfm] and [MDX][mdx] via
+  [unified/remark][remark] with [Shiki][shiki] syntax highlighting,
+  [KaTeX][katex] math, definition lists, color chips, GitHub-style alerts,
+  emoji, raw HTML blocks, video embeds, anchor links on headings, and a sticky
+  table of contents sidebar. Supports `:::` [container directives][directives]
+  as an alternative to fenced code blocks for diagrams and admonitions
 - **Diagrams** — fenced code blocks or `:::` directives for [Mermaid][mermaid],
   [PlantUML][plantuml], [Graphviz][graphviz], [D2][d2], and [DBML][dbml].
-  Standalone `.gv`/`.dot`, `.d2`, and `.dbml` files render directly.
-  All client-side via WASM or JS
+  Standalone `.gv`/`.dot`, `.d2`, and `.dbml` files render directly. All
+  client-side via WASM or JS
 - **Code view** — syntax highlighting for 100+ languages, line numbers, copy
   button
 - **JSON / YAML tree view** — collapsible tree with path filtering, Tree/Raw
@@ -143,9 +143,9 @@ Usage: dirsv [flags] [path]
   -v, --version           print version and exit
 ```
 
-When `[path]` is a file, the server restricts browsing to that single file.
-If the port is taken and wasn't explicitly set, the server auto-finds a free
-port in the 8080-8179 range.
+When `[path]` is a file, the server restricts browsing to that single file. If
+the port is taken and wasn't explicitly set, the server auto-finds a free port
+in the 8080-8179 range.
 
 ### Build from source
 
@@ -191,4 +191,5 @@ MIT
 [sicp-1.45]: https://github.com/letientai299/read-sicp/blob/master/ch01/1.45.md
 [mdx]: https://mdxjs.com/
 [nerdfont]: https://www.nerdfonts.com/
-[directives]: https://talk.commonmark.org/t/generic-directives-plugins-syntax/444
+[directives]:
+  https://talk.commonmark.org/t/generic-directives-plugins-syntax/444

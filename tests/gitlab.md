@@ -134,8 +134,8 @@ GitLab renders backtick-wrapped color values as inline swatches:
 | HSL         | `HSL(210, 90%, 61%)`       | `HSL(210, 90%, 61%)`       |
 | HSLA        | `HSLA(210, 90%, 61%, 0.8)` | `HSLA(210, 90%, 61%, 0.8)` |
 
-A palette: `#2E3440` `#3B4252` `#434C5E` `#4C566A` `#D8DEE9` `#E5E9F0`
-`#ECEFF4` `#8FBCBB` `#88C0D0` `#81A1C1` `#5E81AC` (Nord theme)
+A palette: `#2E3440` `#3B4252` `#434C5E` `#4C566A` `#D8DEE9` `#E5E9F0` `#ECEFF4`
+`#8FBCBB` `#88C0D0` `#81A1C1` `#5E81AC` (Nord theme)
 
 ## 5. Inline Diff
 
@@ -169,14 +169,14 @@ interface +}.
 
 Standard blockquote (per-line `>`):
 
-> This is a standard blockquote.
-> Each line requires a `>` prefix.
+> This is a standard blockquote. Each line requires a `>` prefix.
 
 GitLab multiline blockquote (no per-line prefix):
 
 > > > This entire block is a blockquote.
 
-It can contain multiple paragraphs, **bold text**, `inline code`, and even lists:
+It can contain multiple paragraphs, **bold text**, `inline code`, and even
+lists:
 
 - Item one
 - Item two
@@ -188,35 +188,26 @@ No `>` prefix needed on each line.
 
 ## 8. Definition Lists
 
-HTTP Methods
-: **GET** — retrieve a resource
-: **POST** — create a resource
-: **PUT** — replace a resource
-: **PATCH** — partially update a resource
-: **DELETE** — remove a resource
+HTTP Methods : **GET** — retrieve a resource : **POST** — create a resource :
+**PUT** — replace a resource : **PATCH** — partially update a resource :
+**DELETE** — remove a resource
 
-Latency
-: The time between a request being sent and the first byte of the response
-being received.
+Latency : The time between a request being sent and the first byte of the
+response being received.
 
-Throughput
-: The number of requests a system can handle per unit of time, typically
-measured in requests per second (RPS).
+Throughput : The number of requests a system can handle per unit of time,
+typically measured in requests per second (RPS).
 
 ## 9. Abbreviations
 
-_[GLFM]: GitLab Flavored Markdown
-_[FFT]: Fast Fourier Transform
-_[NTT]: Number Theoretic Transform
-_[DFT]: Discrete Fourier Transform
-_[WASM]: WebAssembly
-_[SSR]: Server-Side Rendering
-_[CSR]: Client-Side Rendering
-_[HMR]: Hot Module Replacement
+_[GLFM]: GitLab Flavored Markdown _[FFT]: Fast Fourier Transform _[NTT]: Number
+Theoretic Transform _[DFT]: Discrete Fourier Transform _[WASM]: WebAssembly
+_[SSR]: Server-Side Rendering _[CSR]: Client-Side Rendering _[HMR]: Hot Module
+Replacement
 
 GLFM extends standard markdown with features like math blocks and diagram
-rendering. When building a high-performance web app, choosing between SSR and CSR
-affects initial load time. Modern bundlers support HMR for rapid development
+rendering. When building a high-performance web app, choosing between SSR and
+CSR affects initial load time. Modern bundlers support HMR for rapid development
 cycles. The app uses WASM modules for FFT, NTT, and DFT computations.
 
 ## 10. Task Lists (with Inapplicable State)
@@ -236,23 +227,19 @@ The `[~]` syntax marks tasks as inapplicable — distinct from incomplete.
 
 ## 11. Alerts / Admonitions
 
-> [!NOTE]
-> GitLab added alert blockquotes in 17.10, matching GitHub's syntax.
+> [!NOTE] GitLab added alert blockquotes in 17.10, matching GitHub's syntax.
 
-> [!TIP]
-> Use ` ```math ` fenced blocks for display equations instead of `$$` when you
-> need reliable rendering across GitLab versions.
+> [!TIP] Use ` ```math ` fenced blocks for display equations instead of `$$`
+> when you need reliable rendering across GitLab versions.
 
-> [!IMPORTANT]
-> The `[[_TOC_]]` directive must be on its own line with no surrounding text.
+> [!IMPORTANT] The `[[_TOC_]]` directive must be on its own line with no
+> surrounding text.
 
-> [!WARNING]
-> PlantUML requires server-side configuration. On self-managed GitLab, an admin
-> must enable it. On GitLab.com, it works out of the box.
+> [!WARNING] PlantUML requires server-side configuration. On self-managed
+> GitLab, an admin must enable it. On GitLab.com, it works out of the box.
 
-> [!CAUTION]
-> Inline diff syntax `{+ ... +}` and `{- ... -}` does not nest. Do not place
-> markdown formatting inside the diff markers.
+> [!CAUTION] Inline diff syntax `{+ ... +}` and `{- ... -}` does not nest. Do
+> not place markdown formatting inside the diff markers.
 
 ## 12. Audio / Video Embedding
 
@@ -355,13 +342,14 @@ deploy:
 
 ### Emoji
 
-:rocket: :white_check_mark: :warning: :bulb: :construction: :fire: :lock:
-:zap: :gear: :microscope:
+:rocket: :white_check_mark: :warning: :bulb: :construction: :fire: :lock: :zap:
+:gear: :microscope:
 
 ### Keyboard Shortcuts
 
 Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> to open the command palette.
-Use <kbd>Cmd</kbd>+<kbd>K</kbd> to insert a link. Press <kbd>Esc</kbd> to cancel.
+Use <kbd>Cmd</kbd>+<kbd>K</kbd> to insert a link. Press <kbd>Esc</kbd> to
+cancel.
 
 ### Superscript and Subscript
 
@@ -374,8 +362,7 @@ equation: E = mc<sup>2</sup>. Footnote style<sup>[1]</sup>.
 
 ### Line Breaks
 
-A line ending with two spaces
-creates a hard break.
+A line ending with two spaces creates a hard break.
 
 A line ending with a backslash\
 also creates a hard break.

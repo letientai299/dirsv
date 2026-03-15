@@ -877,4 +877,5 @@ This pair of equations is the **butterfly operation**.
 - :rocket: Fast — $O(n \log n)$ vs $O(n^2)$ for naive DFT
 - :warning: Precision — floating-point errors accumulate as $O(\epsilon \log n)$
 - :bulb: Tip — use NTT when exact arithmetic is required
-- :white_check_mark: Verified — all implementations above match `numpy.fft` output
+- :white_check_mark: Verified — all implementations above match `numpy.fft`
+  output

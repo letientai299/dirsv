@@ -350,8 +350,8 @@ digraph G {
 
 ### S1. Event-Driven Architecture — Dense Graph with Ports and Styling
 
-HTML labels with ports, `concentrate`, mixed edge styles, subgraph nesting
-(3 levels), `rank=same`, weighted edges, and 30+ nodes.
+HTML labels with ports, `concentrate`, mixed edge styles, subgraph nesting (3
+levels), `rank=same`, weighted edges, and 30+ nodes.
 
 ```graphviz
 digraph event_arch {
@@ -593,8 +593,8 @@ digraph event_arch {
 
 ### S2. Compiler Pipeline — Record Nodes with Ports
 
-Complex record-shape nodes with port connections, rank constraints,
-and weighted edges for layout control.
+Complex record-shape nodes with port connections, rank constraints, and weighted
+edges for layout control.
 
 ```graphviz
 digraph compiler_ir {

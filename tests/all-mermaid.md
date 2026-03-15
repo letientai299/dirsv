@@ -1057,8 +1057,8 @@ flowchart LR
 
 ### S7. Sequence Diagram — Distributed Saga with Compensations
 
-Long multi-participant flow with `rect` highlight blocks, `loop`, `opt`,
-`par`, and compensation (rollback) paths.
+Long multi-participant flow with `rect` highlight blocks, `loop`, `opt`, `par`,
+and compensation (rollback) paths.
 
 ```mermaid
 sequenceDiagram

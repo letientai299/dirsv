@@ -1,7 +1,7 @@
 # PlantUML Diagram Gallery
 
-A comprehensive test of PlantUML diagram types. Rendered via the public
-PlantUML server.
+A comprehensive test of PlantUML diagram types. Rendered via the public PlantUML
+server.
 
 ---
 
@@ -732,8 +732,8 @@ res -up-> course : assigned to
 
 ## Chart Diagram
 
-Charts require PlantUML 1.2026.0+. The public server may not support these
-yet — they will render once the server upgrades.
+Charts require PlantUML 1.2026.0+. The public server may not support these yet —
+they will render once the server upgrades.
 
 ### Bar Chart — Quarterly Revenue
 
@@ -814,14 +814,14 @@ legend right
 
 ## Stress Tests — Advanced Features
 
-The diagrams below combine multiple PlantUML features (skinparam theming,
-notes, stereotypes, creole formatting, together grouping, colored arrows,
-conditional styling) to stress-test the renderer.
+The diagrams below combine multiple PlantUML features (skinparam theming, notes,
+stereotypes, creole formatting, together grouping, colored arrows, conditional
+styling) to stress-test the renderer.
 
 ### S1. Sequence Diagram — Distributed Auth with Theming
 
-`skinparam`, `autonumber`, `box`, `alt`/`par`/`loop`/`critical`/`group`,
-notes, colored arrows, dividers, and activation bars.
+`skinparam`, `autonumber`, `box`, `alt`/`par`/`loop`/`critical`/`group`, notes,
+colored arrows, dividers, and activation bars.
 
 ```plantuml
 @startuml
@@ -929,8 +929,8 @@ end note
 
 ### S2. Class Diagram — Domain Model with Patterns
 
-Abstract classes, interfaces, generics, enums, packages, notes,
-stereotypes, composition/aggregation, and skinparam styling.
+Abstract classes, interfaces, generics, enums, packages, notes, stereotypes,
+composition/aggregation, and skinparam styling.
 
 ```plantuml
 @startuml
@@ -1095,8 +1095,8 @@ end note
 
 ### S3. Activity Diagram — CI/CD Pipeline with Swimlanes
 
-Swimlanes (`|partition|`), fork/join, signals, notes, colors, and
-nested conditionals.
+Swimlanes (`|partition|`), fork/join, signals, notes, colors, and nested
+conditionals.
 
 ```plantuml
 @startuml
@@ -1312,8 +1312,8 @@ end note
 
 ### S5. State Diagram — Order Lifecycle with Actions
 
-Nested states, concurrent regions, entry/exit/do actions, guards,
-history states, and styled transitions.
+Nested states, concurrent regions, entry/exit/do actions, guards, history
+states, and styled transitions.
 
 ```plantuml
 @startuml

@@ -140,9 +140,8 @@ This is an important admonition — use it for critical information.
 The directive syntax above should look identical to the GitHub blockquote syntax
 below:
 
-> [!NOTE]
-> This is a note written with GitHub's `> [!NOTE]` blockquote syntax.
-> It supports **bold**, _italic_, and `code`.
+> [!NOTE] This is a note written with GitHub's `> [!NOTE]` blockquote syntax. It
+> supports **bold**, _italic_, and `code`.
 
 ## Unknown directives
 
