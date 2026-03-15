@@ -6,6 +6,8 @@ Local directory browser with live reload. Single Go binary, embedded web UI.
 Browse files with a clean table view, render markdown with syntax-highlighted
 code blocks, and see changes instantly via WebSocket.
 
+https://github.com/user-attachments/assets/e8ad4e6e-ad58-463c-bcac-cf6414539240
+
 |            Directory browsing            |                JSON tree view                 |
 | :--------------------------------------: | :-------------------------------------------: |
 | ![Directory browsing](demo/dir-view.png) |     ![JSON tree view](demo/json-dark.png)     |
