@@ -4,6 +4,18 @@ import { partitionByViewport } from "./render-priority"
 const PLANTUML_SERVER = "https://www.plantuml.com/plantuml/svg"
 
 /**
+ * Render PlantUML source to an SVG string via the public PlantUML server.
+ * Used by `DiagramView` for standalone `.puml` / `.plantuml` files.
+ */
+export async function renderPlantuml(source: string): Promise<string> {
+  const encoded = await encodePlantuml(source)
+  const url = `${PLANTUML_SERVER}/${encoded}`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`PlantUML server returned ${res.status}`)
+  return res.text()
+}
+
+/**
  * Renders all `.plantuml-placeholder` elements inside `container` by
  * encoding the source and loading an `<img>` from the public PlantUML server.
  * Falls back to a `<pre><code>` block if the image fails to load.

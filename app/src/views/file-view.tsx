@@ -29,48 +29,41 @@ import { useShortcuts } from "../lib/use-shortcuts"
 import { useSiblings } from "../lib/use-siblings"
 import { useWS } from "../lib/use-ws"
 
-const D2View = lazy(() =>
-  Promise.all([import("./diagram-view"), import("../lib/d2-render")]).then(
-    ([{ DiagramView }, { renderD2 }]) => ({
-      default: (props: { content: string }) => (
-        <DiagramView
-          content={props.content}
-          render={renderD2}
-          label="D2"
-          class="diagram-standalone"
-        />
-      ),
-    }),
-  ),
-)
-const DbmlView = lazy(() =>
-  Promise.all([import("./diagram-view"), import("../lib/dbml-render")]).then(
-    ([{ DiagramView }, { renderDbml }]) => ({
-      default: (props: { content: string }) => (
-        <DiagramView
-          content={props.content}
-          render={renderDbml}
-          label="DBML"
-          class="diagram-standalone"
-        />
-      ),
-    }),
-  ),
-)
-const GraphvizView = lazy(() =>
-  Promise.all([
-    import("./diagram-view"),
-    import("../lib/graphviz-render"),
-  ]).then(([{ DiagramView }, { renderGraphviz }]) => ({
-    default: (props: { content: string }) => (
-      <DiagramView
-        content={props.content}
-        render={renderGraphviz}
-        label="Graphviz"
-        class="diagram-standalone"
-      />
+/** Create a lazy diagram component given a render function loader. */
+function lazyDiagram(
+  label: string,
+  loader: () => Promise<(s: string) => Promise<string>>,
+) {
+  return lazy(() =>
+    Promise.all([import("./diagram-view"), loader()]).then(
+      ([{ DiagramView }, render]) => ({
+        default: (props: { content: string }) => (
+          <DiagramView
+            content={props.content}
+            render={render}
+            label={label}
+            class="diagram-standalone"
+          />
+        ),
+      }),
     ),
-  })),
+  )
+}
+
+const D2View = lazyDiagram("D2", () =>
+  import("../lib/d2-render").then((m) => m.renderD2),
+)
+const DbmlView = lazyDiagram("DBML", () =>
+  import("../lib/dbml-render").then((m) => m.renderDbml),
+)
+const GraphvizView = lazyDiagram("Graphviz", () =>
+  import("../lib/graphviz-render").then((m) => m.renderGraphviz),
+)
+const MermaidView = lazyDiagram("Mermaid", () =>
+  import("../lib/mermaid-render").then((m) => m.renderMermaid),
+)
+const PlantumlView = lazyDiagram("PlantUML", () =>
+  import("../lib/plantuml-render").then((m) => m.renderPlantuml),
 )
 const HtmlView = lazy(() =>
   import("./html-view").then((m) => ({ default: m.HtmlView })),
@@ -172,6 +165,18 @@ function renderFileContent(
     return (
       <Suspense fallback={fallback}>
         <GraphvizView content={result.content} />
+      </Suspense>
+    )
+  if (/\.(?:puml|plantuml|iuml)$/i.test(path))
+    return (
+      <Suspense fallback={fallback}>
+        <PlantumlView content={result.content} />
+      </Suspense>
+    )
+  if (/\.(?:mmd|mermaid)$/i.test(path))
+    return (
+      <Suspense fallback={fallback}>
+        <MermaidView content={result.content} />
       </Suspense>
     )
   if (/\.d2$/i.test(path))

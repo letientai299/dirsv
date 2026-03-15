@@ -339,6 +339,11 @@ const EXT_ICON: Record<string, string> = {
   cob: matCobol,
   gv: vendorGraphViz,
   dot: vendorGraphViz,
+  puml: siDbml,
+  plantuml: siDbml,
+  iuml: siDbml,
+  mmd: siDbml,
+  mermaid: siDbml,
   // Documents
   pdf: matPdf,
   doc: matWord,
