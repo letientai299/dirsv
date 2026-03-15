@@ -176,6 +176,7 @@ The recursive version directly mirrors the mathematical definition:
 ```python
 import numpy as np
 
+
 def fft_recursive(x: np.ndarray) -> np.ndarray:
     """Compute FFT using Cooley-Tukey radix-2 DIT algorithm."""
     n = len(x)
@@ -194,10 +195,12 @@ def fft_recursive(x: np.ndarray) -> np.ndarray:
     twiddle = np.exp(-2j * np.pi * k / n)
 
     # Butterfly combination
-    return np.concatenate([
-        even + twiddle * odd,
-        even - twiddle * odd,
-    ])
+    return np.concatenate(
+        [
+            even + twiddle * odd,
+            even - twiddle * odd,
+        ]
+    )
 ```
 
 ### 3.2 Iterative FFT (C++)

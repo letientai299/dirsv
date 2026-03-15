@@ -1,4 +1,4 @@
-# Relative Link Tests
+# Tests
 
 Test cases for SPA navigation and media rewriting. Every link on this page
 should work without a full page reload (check the network tab — no document
@@ -99,7 +99,7 @@ api --> User: 200 OK
 
 ## Anchor links (should scroll, not navigate)
 
-- [Back to top](#relative-link-tests)
+- [Back to top](#tests)
 - [Same-directory links section](#same-directory-links)
 
 ## Images (rewritten to /api/raw/)
