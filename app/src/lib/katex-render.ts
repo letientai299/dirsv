@@ -30,6 +30,21 @@ export async function renderKatexBlocks(container: HTMLElement): Promise<void> {
   }
 }
 
+/**
+ * KaTeX's `split` environment only allows one `&` per row, but MathJax (and
+ * standard LaTeX with amsmath) is more lenient.  `aligned` is a drop-in
+ * superset that supports multiple alignment points.
+ * https://katex.org/docs/support_table
+ */
+function normalizeTex(tex: string): string {
+  if (!tex.includes("\\begin{split}")) return tex
+  return tex
+    .split("\\begin{split}")
+    .join("\\begin{aligned}")
+    .split("\\end{split}")
+    .join("\\end{aligned}")
+}
+
 function renderOne(
   katex: { renderToString: (tex: string, opts: object) => string },
   el: HTMLElement,
@@ -41,7 +56,7 @@ function renderOne(
   const display = el.dataset["display"] === "true"
 
   try {
-    el.innerHTML = katex.renderToString(tex, {
+    el.innerHTML = katex.renderToString(normalizeTex(tex), {
       displayMode: display,
       throwOnError: false,
     })
