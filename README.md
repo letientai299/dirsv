@@ -122,13 +122,13 @@ Or download a binary directly from [Releases][releases].
 ## Quick start
 
 ```sh
-dirsv           # serve current directory on :8080, open browser
-dirsv ./docs    # serve a specific directory
+dirsv        # serve current directory on :8080, open browser
+dirsv ./docs # serve a specific directory
 ```
 
 ### CLI flags
 
-```
+```text
 Usage: dirsv [flags] [path]
 
   -b, --browser string    browser to open (default: system default)
@@ -158,7 +158,7 @@ mise build   # build frontend + Go binary
 ## Development
 
 ```sh
-mise dev   # Go server + Vite dev server in parallel (HMR)
+mise dev # Go server + Vite dev server in parallel (HMR)
 ```
 
 The Go server runs on `:8080` and proxies non-API requests to [Vite][vite] on
