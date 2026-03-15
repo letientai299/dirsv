@@ -21,3 +21,16 @@ export function isRenderedAndUnchanged(
   el.dataset[key] = hash
   return false
 }
+
+/**
+ * Strip rendered markers so the next render pass re-processes these elements.
+ * Inverse of the marking done by renderers after `isRenderedAndUnchanged`.
+ */
+export function resetRendered(container: HTMLElement, prefix: string): void {
+  for (const el of container.querySelectorAll<HTMLElement>(
+    `.${prefix}-rendered`,
+  )) {
+    el.classList.remove(`${prefix}-rendered`, "diagram-rendered")
+    delete el.dataset[`${prefix}Hash`]
+  }
+}

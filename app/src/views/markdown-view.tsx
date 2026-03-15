@@ -3,6 +3,7 @@ import type { RefObject } from "preact"
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import { FocusOverlay } from "../components/focus-overlay"
 import { TableOfContents } from "../components/toc"
+import { resetRendered, simpleHash } from "../lib/content-hash"
 import { renderD2Blocks } from "../lib/d2-render"
 import { renderDbmlBlocks } from "../lib/dbml-render"
 import { injectFigureToolbars } from "../lib/figure-toolbar"
@@ -27,6 +28,8 @@ import { useFocusOverlay } from "../lib/use-focus-overlay"
 import "github-markdown-css/github-markdown.css"
 import "katex/dist/katex.min.css"
 import "remark-github-blockquote-alert/alert.css"
+
+const SOURCE_LINE_SEL = "[data-source-line]"
 
 interface Props {
   path: string
@@ -145,46 +148,10 @@ export function MarkdownView({ content, path, changedLinesRef }: Props) {
     if (!el || !result) return
 
     if (el.innerHTML === "") {
-      // First render — just set innerHTML directly.
       el.innerHTML = result.html
     } else {
-      // Wrap new HTML in a temporary container so morphdom can diff children.
-      const tmp = document.createElement("article")
-      tmp.innerHTML = result.html
-
-      morphdom(el, tmp, {
-        childrenOnly: true,
-        onBeforeElUpdated(fromEl, toEl) {
-          // Preserve live-reload highlight so the Shiki re-render pass
-          // doesn't strip the animation class mid-flight.
-          if (fromEl.classList.contains("changed")) {
-            toEl.classList.add("changed")
-          }
-          return !fromEl.isEqualNode(toEl)
-        },
-      })
-
-      // Highlight changed blocks using backend-computed line indices
-      // mapped to data-source-line attributes set by rehypeSourceLine.
-      // Query all annotated elements, then keep only the deepest match
-      // per changed line so e.g. a <li> highlights instead of its <ul>.
-      if (liveReloadRef.current && changedLinesRef.current) {
-        const changed = new Set(changedLinesRef.current)
-        changedLinesRef.current = null
-        const matched: HTMLElement[] = []
-        for (const node of el.querySelectorAll<HTMLElement>(
-          "[data-source-line]",
-        )) {
-          const line = Number(node.dataset["sourceLine"]) - 1
-          if (changed.has(line)) matched.push(node)
-        }
-        for (const node of matched) {
-          if (!matched.some((o) => o !== node && node.contains(o))) {
-            markChanged(node)
-          }
-        }
-      }
-      liveReloadRef.current = false
+      patchDom(el, result.html)
+      highlightChangedLines(el, liveReloadRef, changedLinesRef)
     }
 
     rewriteMediaSrc(el, path)
@@ -226,18 +193,13 @@ export function MarkdownView({ content, path, changedLinesRef }: Props) {
       renderingRef.current = false
       return
     }
-    for (const rendered of el.querySelectorAll<HTMLElement>(
-      ".mermaid-rendered",
-    )) {
-      rendered.classList.remove("mermaid-rendered", "diagram-rendered")
-      delete rendered.dataset["mermaidHash"]
+    resetRendered(el, "mermaid")
+    resetRendered(el, "d2")
+    try {
+      await Promise.all([renderMermaidBlocks(el), renderD2Blocks(el)])
+    } finally {
+      renderingRef.current = false
     }
-    for (const rendered of el.querySelectorAll<HTMLElement>(".d2-rendered")) {
-      rendered.classList.remove("d2-rendered", "diagram-rendered")
-      delete rendered.dataset["d2Hash"]
-    }
-    await Promise.all([renderMermaidBlocks(el), renderD2Blocks(el)])
-    renderingRef.current = false
     // updateItems is a no-op when overlay is closed (state null → null).
     const { items } = collectFocusItems(el)
     focus.updateItems(items)
@@ -349,7 +311,7 @@ function findSourceLineElement(
   container: HTMLElement,
   line: number,
 ): HTMLElement | null {
-  const nodes = container.querySelectorAll<HTMLElement>("[data-source-line]")
+  const nodes = container.querySelectorAll<HTMLElement>(SOURCE_LINE_SEL)
   if (nodes.length === 0) return null
 
   let best: HTMLElement | null = null
@@ -379,16 +341,11 @@ function collectHighlightTargets(
     const start = Math.min(state.selection.startLine, state.selection.endLine)
     const end = Math.max(state.selection.startLine, state.selection.endLine)
     const all: HTMLElement[] = []
-    for (const node of article.querySelectorAll<HTMLElement>(
-      "[data-source-line]",
-    )) {
+    for (const node of article.querySelectorAll<HTMLElement>(SOURCE_LINE_SEL)) {
       const sl = Number(node.dataset["sourceLine"])
       if (sl >= start && sl <= end) all.push(node)
     }
-    // Keep only deepest elements — drop ancestors that contain other matches.
-    const targets = all.filter(
-      (el) => !all.some((o) => o !== el && el.contains(o)),
-    )
+    const targets = filterDeepest(all)
     return { targets, mode: "selected" }
   }
 
@@ -482,4 +439,99 @@ function findFocusTarget(el: HTMLElement | null): HTMLElement | null {
     el = el.parentElement
   }
   return null
+}
+
+/** Keep only deepest elements — drop ancestors that contain another match. */
+function filterDeepest(els: HTMLElement[]): HTMLElement[] {
+  return els.filter((el) => !els.some((o) => o !== el && el.contains(o)))
+}
+
+// --- morphdom helpers: stable keys & source preservation for diagrams/KaTeX ---
+
+// Keep in sync with dataAttr values in rehype-{mermaid,graphviz,plantuml,d2,dbml}.ts
+const DIAGRAM_ATTRS = ["mermaid", "graphviz", "plantuml", "d2", "dbml"] as const
+
+/** Read the diagram source data attribute from a figure-container's placeholder child. */
+function figureSource(fig: HTMLElement): string | undefined {
+  const child = fig.querySelector<HTMLElement>(".diagram-placeholder")
+  if (!child) return undefined
+  for (const attr of DIAGRAM_ATTRS) {
+    const v = child.dataset[attr]
+    if (v) return v
+  }
+  return undefined
+}
+
+/** Return a stable key for elements morphdom should track across DOM diffs. */
+function morphdomNodeKey(el: HTMLElement): string | undefined {
+  if (el.classList.contains("figure-container")) {
+    const src = figureSource(el)
+    if (src) return `fig-${simpleHash(src)}`
+  }
+  if (el.dataset["katex"]) {
+    return `katex-${simpleHash(el.dataset["katex"])}`
+  }
+  return undefined
+}
+
+/** Decide whether morphdom should update an element or preserve it as-is. */
+function shouldUpdateEl(fromEl: HTMLElement, toEl: HTMLElement): boolean {
+  // Preserve live-reload highlight so the Shiki re-render pass
+  // doesn't strip the animation class mid-flight.
+  if (fromEl.classList.contains("changed")) {
+    toEl.classList.add("changed")
+  }
+  // Preserve rendered figure-containers (diagrams + toolbar) when
+  // the diagram source is unchanged — avoids expensive re-renders.
+  if (
+    fromEl.classList.contains("figure-container") &&
+    fromEl.querySelector(".diagram-rendered")
+  ) {
+    const fromSrc = figureSource(fromEl)
+    if (fromSrc && fromSrc === figureSource(toEl)) return false
+  }
+  // Preserve rendered KaTeX when source is unchanged.
+  if (
+    fromEl.classList.contains("katex-rendered") &&
+    fromEl.dataset["katex"] &&
+    fromEl.dataset["katex"] === toEl.dataset["katex"]
+  ) {
+    return false
+  }
+  return !fromEl.isEqualNode(toEl)
+}
+
+/** Incrementally patch the article DOM using morphdom. */
+function patchDom(el: HTMLElement, html: string): void {
+  const tmp = document.createElement("article")
+  tmp.innerHTML = html
+  morphdom(el, tmp, {
+    childrenOnly: true,
+    getNodeKey(node) {
+      if (!(node instanceof HTMLElement)) return undefined
+      return morphdomNodeKey(node)
+    },
+    onBeforeElUpdated: shouldUpdateEl,
+  })
+}
+
+/** Highlight changed lines using backend-computed indices mapped to data-source-line. */
+function highlightChangedLines(
+  el: HTMLElement,
+  liveReloadRef: { current: boolean },
+  changedLinesRef: { current: number[] | null },
+): void {
+  if (liveReloadRef.current && changedLinesRef.current) {
+    const changed = new Set(changedLinesRef.current)
+    changedLinesRef.current = null
+    const matched: HTMLElement[] = []
+    for (const node of el.querySelectorAll<HTMLElement>(SOURCE_LINE_SEL)) {
+      const line = Number(node.dataset["sourceLine"]) - 1
+      if (changed.has(line)) matched.push(node)
+    }
+    for (const node of filterDeepest(matched)) {
+      markChanged(node)
+    }
+  }
+  liveReloadRef.current = false
 }
