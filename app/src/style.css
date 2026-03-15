@@ -1452,7 +1452,7 @@ html.focus-lock {
 
 @media (max-width: 1024px) {
   .md-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .toc {
