@@ -241,9 +241,21 @@ function extractHeadings(html: string): Heading[] {
  */
 const ADO_DIRECTIVE_RE = /^([ \t]*:{3,})\s+(\w)/gm
 
+/**
+ * Move inline text after a GitHub alert marker to the next blockquote line.
+ * remark-github-blockquote-alert drops text between `[!TYPE]` and the first
+ * inline element (e.g. backtick) when everything is on one line.
+ * `> [!WARNING] text here` → `> [!WARNING]\n> text here`
+ */
+const ALERT_INLINE_RE =
+  /^([ \t]*>[ \t]*\[!(?:NOTE|TIP|IMPORTANT|WARNING|CAUTION)\])[ \t]+(\S)/gim
+
 export function normalizeDirectives(source: string): string {
-  if (!source.includes(":::")) return source
-  return source.replace(ADO_DIRECTIVE_RE, "$1$2")
+  let s = source
+  if (s.includes(":::")) {
+    s = s.replace(ADO_DIRECTIVE_RE, "$1$2")
+  }
+  return s.replace(ALERT_INLINE_RE, "$1\n> $2")
 }
 
 /** Render markdown without syntax highlighting (fast first paint). */
