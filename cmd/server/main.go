@@ -33,7 +33,7 @@ import (
 func main() {
 	showVersion := flag.BoolP("version", "v", false, "print version and exit")
 	host := flag.String("host", "localhost", "listen address")
-	port := flag.IntP("port", "p", 8080, "listen port")
+	port := flag.IntP("port", "p", 3579, "listen port")
 	browser := flag.StringP(
 		"browser",
 		"b",
@@ -284,7 +284,7 @@ func isAPIPath(p string) bool {
 	return p == "/api" || strings.HasPrefix(p, "/api/")
 }
 
-// browserURL turns a listen address like ":8080" or "0.0.0.0:8080" into
+// browserURL turns a listen address like ":3579" or "0.0.0.0:3579" into
 // an http://localhost:port URL suitable for opening in a browser.
 func browserURL(addr string) string {
 	host, port, err := net.SplitHostPort(addr)

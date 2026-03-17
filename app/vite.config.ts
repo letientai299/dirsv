@@ -2,7 +2,7 @@
 import { defineConfig } from "vite";
 import preact from "@preact/preset-vite";
 
-const apiPort = process.env.DEV_API_PORT || "8080";
+const apiPort = process.env.DEV_API_PORT || "3579";
 
 export default defineConfig({
   clearScreen: false,

@@ -426,11 +426,11 @@ func TestHostGuard(t *testing.T) {
 		want int
 	}{
 		{"localhost", http.StatusOK},
-		{"localhost:8080", http.StatusOK},
-		{"LOCALHOST:8080", http.StatusOK}, // case-insensitive
+		{"localhost:3579", http.StatusOK},
+		{"LOCALHOST:3579", http.StatusOK}, // case-insensitive
 		{"Localhost", http.StatusOK},
 		{"evil.com", http.StatusForbidden},
-		{"evil.com:8080", http.StatusForbidden},
+		{"evil.com:3579", http.StatusForbidden},
 	}
 	for _, tt := range tests {
 		req := httptest.NewRequestWithContext(

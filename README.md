@@ -124,7 +124,7 @@ Or download a binary directly from [Releases][releases].
 ## Quick start
 
 ```sh
-dirsv        # serve current directory on :8080, open browser
+dirsv        # serve current directory on :3579, open browser
 dirsv ./docs # serve a specific directory
 ```
 
@@ -138,14 +138,14 @@ Usage: dirsv [flags] [path]
       --highlight-ms int  duration (ms) of background flash on changed elements (default 5000)
       --host string       listen address (default "localhost")
       --no-open           don't auto-open browser
-  -p, --port int          listen port (default 8080)
+  -p, --port int          listen port (default 3579)
       --trusted-proxy     trust proxy headers for rate limiting
   -v, --version           print version and exit
 ```
 
 When `[path]` is a file, the server restricts browsing to that single file. If
 the port is taken and wasn't explicitly set, the server auto-finds a free port
-in the 8080-8179 range.
+starting from 3579.
 
 ### Build from source
 
@@ -154,7 +154,7 @@ automatically).
 
 ```sh
 mise build   # build frontend + Go binary
-./bin/server # serves current directory on :8080, opens browser
+./bin/server # serves current directory on :3579, opens browser
 ```
 
 ## Development
@@ -163,7 +163,7 @@ mise build   # build frontend + Go binary
 mise dev # Go server + Vite dev server in parallel (HMR)
 ```
 
-The Go server runs on `:8080` and proxies non-API requests to [Vite][vite] on
+The Go server runs on `:3579` and proxies non-API requests to [Vite][vite] on
 `:5173`.
 
 ## License
