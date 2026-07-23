@@ -3,7 +3,20 @@ set -euo pipefail
 
 REPO="letientai299/dirsv"
 BINARY_NAME="dirsv"
-INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
+
+# Pick a default install dir. Prefer the per-user ~/.local/bin (a
+# systemd/freedesktop convention; XDG has no env var for a user bin dir) when
+# it is already on PATH, so no sudo is needed. Otherwise fall back to the
+# system-wide /usr/local/bin. An explicit INSTALL_DIR env always wins.
+default_install_dir() {
+    local user_bin="${HOME}/.local/bin"
+    case ":${PATH}:" in
+        *":${user_bin}:"*) echo "$user_bin" ;;
+        *) echo "/usr/local/bin" ;;
+    esac
+}
+
+INSTALL_DIR="${INSTALL_DIR:-$(default_install_dir)}"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -25,7 +38,8 @@ Download and install dirsv from GitHub.
 
 OPTIONS:
     -m, --from-main    Download latest build from main branch (requires gh CLI)
-    -d, --dir DIR      Installation directory (default: /usr/local/bin)
+    -d, --dir DIR      Installation directory
+                       (default: ~/.local/bin if on PATH, else /usr/local/bin)
     -h, --help         Show this help message
 
 EXAMPLES:
