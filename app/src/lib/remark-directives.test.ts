@@ -98,6 +98,25 @@ describe("remarkDirectivesHandler", () => {
     })
   })
 
+  describe("false-positive text directives", () => {
+    it("preserves timestamps in headings (:mm not eaten)", async () => {
+      const html = await process("## 12:55\n\nPersonal note.")
+      expect(html).toContain("<h2>12:55</h2>")
+      expect(html).not.toContain("directive-55")
+    })
+
+    it("preserves inline timestamps in text", async () => {
+      const html = await process("Meeting at 9:30 today.")
+      expect(html).toContain("Meeting at 9:30 today.")
+      expect(html).not.toContain("<span")
+    })
+
+    it("still treats :name[label] as a directive", async () => {
+      const html = await process("Say :abbr[HTML] now")
+      expect(html).toContain("directive directive-abbr")
+    })
+  })
+
   describe("ADO-style space after colons", () => {
     it("::: mermaid (with space) produces code block", async () => {
       const md = "::: mermaid\ngraph TD\n  A --> B\n:::"

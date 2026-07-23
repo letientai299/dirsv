@@ -74,6 +74,8 @@ export function remarkDirectivesHandler() {
       if (directive.type === "containerDirective" && ADMONITION_NAMES.has(name))
         return handleAdmonition(directive, name)
 
+      if (revertFalseTextDirective(directive, index, parent)) return SKIP
+
       handleUnknown(directive, name)
     })
   }
@@ -125,6 +127,30 @@ function handleAdmonition(directive: ContainerDirective, name: string) {
 
   directive.children = [titlePara, ...children]
   return SKIP
+}
+
+/**
+ * Revert a false-positive inline text directive back to literal text.
+ *
+ * remark-directive treats `:name` as a text directive, so a timestamp like
+ * `12:55` parses `:55` as a directive named `55`. Such accidental directives
+ * carry no label content and no attributes; without this, the `:55` text is
+ * silently dropped (rendered as an empty `<span>`). Restore the original
+ * `:name` source as plain text. Returns true when a revert happened.
+ */
+function revertFalseTextDirective(
+  directive: Directive,
+  index: number,
+  parent: Parent,
+): boolean {
+  if (directive.type !== "textDirective") return false
+  if (directive.children.length > 0) return false
+  const attrs = directive.attributes
+  if (attrs && Object.keys(attrs).length > 0) return false
+
+  const text: Text = { type: "text", value: `:${directive.name}` }
+  parent.children[index] = text
+  return true
 }
 
 /** Wrap unknown directives in a generic div/span. */
