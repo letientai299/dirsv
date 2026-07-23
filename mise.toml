@@ -97,6 +97,14 @@ CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X github.com/letientai299/dirs
 sources = ["**/*.go", "go.mod", "go.sum", "app/dist/**/*"]
 outputs = ["bin/dirsv"]
 
+[tasks.install]
+description = "Install the production binary to ~/.local/bin"
+depends = ["release"]
+run = """
+mkdir -p "$HOME/.local/bin"
+install -m 0755 bin/dirsv "$HOME/.local/bin/dirsv"
+"""
+
 # -- test --
 
 [tasks."test:be"]
