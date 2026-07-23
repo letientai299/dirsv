@@ -243,6 +243,7 @@ const EXT_ICON: Record<string, string> = {
   xml: matXml,
   md: matMarkdown,
   markdown: matMarkdown,
+  mdc: matMarkdown,
   html: diHtml5,
   css: diCss3,
   scss: diSass,

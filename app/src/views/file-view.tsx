@@ -150,7 +150,7 @@ function renderFileContent(
         <CastView content={result.content} />
       </Suspense>
     )
-  if (/\.(?:mdx?|markdown)$/i.test(path)) {
+  if (/\.(?:mdx?|markdown|mdc)$/i.test(path)) {
     return (
       <Suspense fallback={fallback}>
         <MarkdownView
