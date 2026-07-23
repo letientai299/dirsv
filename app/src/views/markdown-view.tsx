@@ -297,7 +297,7 @@ export function MarkdownView({ content, path, changedLinesRef }: Props) {
         />
       </div>
       <TableOfContents headings={tocHeadings} contentRef={contentRef} />
-      {focus.overlayProps && <FocusOverlay {...focus.overlayProps} />}
+      {focus.overlayProps ? <FocusOverlay {...focus.overlayProps} /> : null}
     </div>
   )
 }

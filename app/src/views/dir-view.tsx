@@ -1,3 +1,4 @@
+import type { JSX } from "preact"
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import { AppFooter } from "../components/app-footer"
 import { Toolbar } from "../components/toolbar"
@@ -127,6 +128,17 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
 
   const defs = useShortcuts(shortcuts)
 
+  // Stable SPA-navigation handler for anchor links: reads the target's own
+  // href attribute so it stays reference-stable across rows and renders.
+  const handleNavClick = useCallback(
+    (e: JSX.TargetedMouseEvent<HTMLAnchorElement>) => {
+      e.preventDefault()
+      const href = e.currentTarget.getAttribute("href")
+      if (href) onNavigate(href)
+    },
+    [onNavigate],
+  )
+
   return (
     <div class="dir-layout">
       <Toolbar path={path} shortcuts={[...defs, ...listNavShortcuts]} />
@@ -141,17 +153,10 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
             </tr>
           </thead>
           <tbody>
-            {parentPath && (
+            {parentPath ? (
               <tr>
                 <td>
-                  <a
-                    rel="up"
-                    href={parentPath}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      onNavigate(parentPath)
-                    }}
-                  >
+                  <a rel="up" href={parentPath} onClick={handleNavClick}>
                     <span class="entry-icon">
                       <ParentIcon />
                     </span>
@@ -161,7 +166,7 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
                 <td class="col-size" />
                 <td class="col-date" />
               </tr>
-            )}
+            ) : null}
             {entries.map((entry) => {
               const href = `${path}${entry.name}`
               const cls = entryClass(
@@ -173,13 +178,7 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
               return (
                 <tr key={entry.name} class={cls}>
                   <td>
-                    <a
-                      href={href}
-                      onClick={(e) => {
-                        e.preventDefault()
-                        onNavigate(href)
-                      }}
-                    >
+                    <a href={href} onClick={handleNavClick}>
                       <span
                         class={`entry-icon${entry.isDir ? " entry-icon--folder" : ""}`}
                       >

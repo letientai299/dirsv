@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.6/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.5/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -22,15 +22,14 @@
   },
   "linter": {
     "rules": {
-      "recommended": true,
-      "a11y": { "recommended": true },
+      "preset": "recommended",
       "complexity": {
-        "recommended": true,
+        "preset": "recommended",
         "noExcessiveCognitiveComplexity": "warn",
         "useLiteralKeys": "off"
       },
       "correctness": {
-        "recommended": true,
+        "preset": "recommended",
         "noNodejsModules": "off",
         "noUndeclaredDependencies": "off",
         "noUnusedFunctionParameters": "error",
@@ -38,10 +37,8 @@
         "noUnusedPrivateClassMembers": "error",
         "noUnusedVariables": "error"
       },
-      "performance": { "recommended": true },
-      "security": { "recommended": true },
       "style": {
-        "recommended": true,
+        "preset": "recommended",
         "noDefaultExport": "off",
         "useFilenamingConvention": "off",
         "noNonNullAssertion": "error",
@@ -52,17 +49,18 @@
         "useFragmentSyntax": "error"
       },
       "suspicious": {
-        "recommended": true,
+        "preset": "recommended",
         "noConsole": "warn",
         "noEmptyBlockStatements": "error",
-        "noExplicitAny": "error"
+        "noExplicitAny": "error",
+        "noUnknownAttribute": "off",
+        "noShadow": "error",
+        "noUnnecessaryConditions": "off"
       },
       "nursery": {
         "noFloatingPromises": "error",
         "noMisusedPromises": "error",
-        "noShadow": "error",
         "useExplicitType": "off",
-        "noUnnecessaryConditions": "warn",
         "useAwaitThenable": "error"
       }
     },

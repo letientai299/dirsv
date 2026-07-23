@@ -1,9 +1,9 @@
-import type { JSX, RefObject } from "preact"
+import type { ComponentChildren, JSX, RefObject } from "preact"
 import { lazy, Suspense } from "preact/compat"
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import { AppFooter } from "../components/app-footer"
 import { Toolbar } from "../components/toolbar"
-import type { RawResult } from "../lib/api"
+import type { DirEntry, RawResult } from "../lib/api"
 import {
   clearCache,
   getCached,
@@ -138,7 +138,12 @@ function renderFileContent(
         <p>
           Binary file ({result.contentType}, {formatSize(result.size)})
         </p>
-        <a href={`/api/raw${path}`} class="file-binary-open" target="_blank">
+        <a
+          href={`/api/raw${path}`}
+          class="file-binary-open"
+          target="_blank"
+          rel="noopener"
+        >
           Open in app
         </a>
       </div>
@@ -258,6 +263,102 @@ const fileShortcutBindings = (
     },
   },
 ]
+
+interface FileSidebarProps {
+  width: number
+  sidebarRef: RefObject<HTMLElement>
+  parentDir: string
+  siblings: DirEntry[]
+  currentName: string
+  siblingHref: (name: string) => string
+  onNavClick: (e: JSX.TargetedMouseEvent<HTMLAnchorElement>) => void
+}
+
+/** Sibling-file list shown alongside the current file. */
+function FileSidebar({
+  width,
+  sidebarRef,
+  parentDir,
+  siblings,
+  currentName,
+  siblingHref,
+  onNavClick,
+}: FileSidebarProps) {
+  return (
+    <aside
+      class="file-sidebar"
+      style={{ width: `${width}px` }}
+      ref={sidebarRef}
+      aria-label="Sibling files"
+    >
+      <a rel="up" href={parentDir} onClick={onNavClick}>
+        <span class="entry-icon">
+          <ParentIcon />
+        </span>
+        ..
+      </a>
+      {siblings.map((entry) => {
+        const href = siblingHref(entry.name)
+        const active = entry.name === currentName && !entry.isDir
+        return (
+          <a
+            key={entry.name}
+            href={href}
+            class={active ? "sidebar-active" : ""}
+            onClick={onNavClick}
+            onPointerEnter={
+              isPrefetchable(entry.name, entry.isDir)
+                ? () => prefetch(href)
+                : undefined
+            }
+          >
+            <span
+              class={`entry-icon${entry.isDir ? " entry-icon--folder" : ""}`}
+            >
+              <FileIcon
+                name={entry.name}
+                isDir={entry.isDir}
+                isExec={entry.isExec ?? false}
+              />
+            </span>
+            {entry.name}
+            {entry.isDir ? "/" : ""}
+          </a>
+        )
+      })}
+    </aside>
+  )
+}
+
+/** Prev/next footer link to an adjacent sibling. */
+function SiblingNavLink({
+  entry,
+  rel,
+  href,
+  onNavClick,
+  children,
+}: {
+  entry: DirEntry
+  rel: string
+  href: string
+  onNavClick: (e: JSX.TargetedMouseEvent<HTMLAnchorElement>) => void
+  children: ComponentChildren
+}) {
+  return (
+    <a
+      rel={rel}
+      href={href}
+      onClick={onNavClick}
+      onPointerEnter={
+        isPrefetchable(entry.name, entry.isDir)
+          ? () => prefetch(href)
+          : undefined
+      }
+    >
+      {children}
+    </a>
+  )
+}
 
 export function FileView({ path }: Props) {
   const isHtml = /\.html?$/i.test(path)
@@ -475,6 +576,17 @@ export function FileView({ path }: Props) {
     [parentDir],
   )
 
+  // Stable SPA-navigation handler for anchor links: reads the target's own
+  // href attribute so it stays reference-stable across renders and rows.
+  const onNavClick = useCallback(
+    (e: JSX.TargetedMouseEvent<HTMLAnchorElement>) => {
+      e.preventDefault()
+      const href = e.currentTarget.getAttribute("href")
+      if (href) navigate(href)
+    },
+    [],
+  )
+
   // Prefetch adjacent siblings once the current file finishes loading
   const loadedPath = loaded?.path
   useEffect(() => {
@@ -529,61 +641,18 @@ export function FileView({ path }: Props) {
       />
       <hr class="file-separator" />
       <div class="file-body">
-        {sidebarOpen && (
-          <aside
-            class="file-sidebar"
-            style={{ width: `${sidebarWidth}px` }}
-            ref={sidebarRef}
-            aria-label="Sibling files"
-          >
-            <a
-              rel="up"
-              href={parentDir}
-              onClick={(e) => {
-                e.preventDefault()
-                navigate(parentDir)
-              }}
-            >
-              <span class="entry-icon">
-                <ParentIcon />
-              </span>
-              ..
-            </a>
-            {siblings.map((entry) => {
-              const href = siblingHref(entry.name)
-              const active = entry.name === currentName && !entry.isDir
-              return (
-                <a
-                  key={entry.name}
-                  href={href}
-                  class={active ? "sidebar-active" : ""}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    navigate(href)
-                  }}
-                  onPointerEnter={
-                    isPrefetchable(entry.name, entry.isDir)
-                      ? () => prefetch(href)
-                      : undefined
-                  }
-                >
-                  <span
-                    class={`entry-icon${entry.isDir ? " entry-icon--folder" : ""}`}
-                  >
-                    <FileIcon
-                      name={entry.name}
-                      isDir={entry.isDir}
-                      isExec={entry.isExec ?? false}
-                    />
-                  </span>
-                  {entry.name}
-                  {entry.isDir ? "/" : ""}
-                </a>
-              )
-            })}
-          </aside>
-        )}
-        {sidebarOpen && (
+        {sidebarOpen ? (
+          <FileSidebar
+            width={sidebarWidth}
+            sidebarRef={sidebarRef}
+            parentDir={parentDir}
+            siblings={siblings}
+            currentName={currentName}
+            siblingHref={siblingHref}
+            onNavClick={onNavClick}
+          />
+        ) : null}
+        {sidebarOpen ? (
           <hr
             class="file-sidebar-handle"
             aria-label="Resize sidebar"
@@ -596,7 +665,7 @@ export function FileView({ path }: Props) {
             aria-valuetext={`${sidebarWidth} pixels`}
             aria-orientation="vertical"
           />
-        )}
+        ) : null}
         <div
           ref={contentRef}
           tabIndex={-1}
@@ -607,45 +676,31 @@ export function FileView({ path }: Props) {
       </div>
       <footer class="file-footer">
         <span class="file-footer-prev">
-          {prevEntry && (
-            <a
+          {prevEntry ? (
+            <SiblingNavLink
+              entry={prevEntry}
               rel="prev"
               href={siblingHref(prevEntry.name)}
-              onClick={(e) => {
-                e.preventDefault()
-                navigate(siblingHref(prevEntry.name))
-              }}
-              onPointerEnter={
-                isPrefetchable(prevEntry.name, prevEntry.isDir)
-                  ? () => prefetch(siblingHref(prevEntry.name))
-                  : undefined
-              }
+              onNavClick={onNavClick}
             >
               <ChevronLeft />
               {prevEntry.name}
-            </a>
-          )}
+            </SiblingNavLink>
+          ) : null}
         </span>
         <AppFooter />
         <span class="file-footer-next">
-          {nextEntry && (
-            <a
+          {nextEntry ? (
+            <SiblingNavLink
+              entry={nextEntry}
               rel="next"
               href={siblingHref(nextEntry.name)}
-              onClick={(e) => {
-                e.preventDefault()
-                navigate(siblingHref(nextEntry.name))
-              }}
-              onPointerEnter={
-                isPrefetchable(nextEntry.name, nextEntry.isDir)
-                  ? () => prefetch(siblingHref(nextEntry.name))
-                  : undefined
-              }
+              onNavClick={onNavClick}
             >
               {nextEntry.name}
               <ChevronRight />
-            </a>
-          )}
+            </SiblingNavLink>
+          ) : null}
         </span>
       </footer>
     </div>

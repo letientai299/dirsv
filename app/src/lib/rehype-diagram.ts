@@ -40,7 +40,7 @@ function extractSource(node: Element, languages: string[]): string | null {
   if (node.tagName !== "pre") return null
 
   const code = node.children[0]
-  if (!code || code.type !== "element" || code.tagName !== "code") return null
+  if (code?.type !== "element" || code.tagName !== "code") return null
 
   const classes = getClassList(code)
   if (!languages.some((lang) => classes.includes(`language-${lang}`)))

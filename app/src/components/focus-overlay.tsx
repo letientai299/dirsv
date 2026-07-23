@@ -161,6 +161,23 @@ export function FocusOverlay({
     }
   }, [])
 
+  const onContentClick = useCallback(
+    (e: MouseEvent) => {
+      // After a drag gesture, consume the click (zoom.onClick handles its
+      // own didDrag check, but we need it here too for the close path).
+      if (zoom.consumeDrag()) return
+      // Click on empty area around content → close overlay.
+      if (e.target === e.currentTarget) {
+        onClose()
+        return
+      }
+      // Click on diagram content → no zoom (use scroll/pinch/keyboard).
+      if (item.type === "diagram") return
+      zoom.onClick(e)
+    },
+    [zoom, onClose, item],
+  )
+
   // Preload adjacent images for smoother navigation.
   useEffect(() => {
     for (const i of [index - 1, index + 1]) {
@@ -197,19 +214,7 @@ export function FocusOverlay({
         onPointerDown={zoom.onPointerDown}
         onPointerMove={zoom.onPointerMove}
         onPointerUp={zoom.onPointerUp}
-        onClick={(e: MouseEvent) => {
-          // After a drag gesture, consume the click (zoom.onClick handles its
-          // own didDrag check, but we need it here too for the close path).
-          if (zoom.consumeDrag()) return
-          // Click on empty area around content → close overlay.
-          if (e.target === e.currentTarget) {
-            onClose()
-            return
-          }
-          // Click on diagram content → no zoom (use scroll/pinch/keyboard).
-          if (item.type === "diagram") return
-          zoom.onClick(e)
-        }}
+        onClick={onContentClick}
       >
         <div
           style={{

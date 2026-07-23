@@ -41,7 +41,7 @@ function extractCodeInfo(
 ): { lang: string; source: string } | null {
   if (node.tagName !== "pre") return null
   const code = node.children[0]
-  if (!code || code.type !== "element" || code.tagName !== "code") return null
+  if (code?.type !== "element" || code.tagName !== "code") return null
 
   const classes = getClassList(code)
   const langClass = classes.find((c) => c.startsWith("language-"))
@@ -110,7 +110,7 @@ function cacheNewBlock(node: Element): void {
   if (!lang) return
 
   const code = node.children[0]
-  if (!code || code.type !== "element" || code.tagName !== "code") return
+  if (code?.type !== "element" || code.tagName !== "code") return
 
   const source = collectTextDeep(code.children)
   cache.set(cacheKey(lang, source), cloneElement(node))

@@ -30,8 +30,7 @@ function toPlaceholder(node: Element, parent: Parent): Element | null {
   if (node.tagName === "pre") {
     const code = node.children[0]
     if (
-      !code ||
-      code.type !== "element" ||
+      code?.type !== "element" ||
       code.tagName !== "code" ||
       !isMathCode(code)
     )

@@ -146,38 +146,44 @@ export function useZoom() {
     }
   }, [])
 
-  const onPointerMove = useCallback((e: PointerEvent) => {
-    pointers.current.set(e.pointerId, e)
-
-    if (pointers.current.size === 2) {
-      // Pinch-to-zoom.
-      const [a, b] = [...pointers.current.values()]
-      if (a && b) {
-        const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY)
-        if (lastPinchDist.current > 0) {
-          const factor = dist / lastPinchDist.current
-          setState((s) => ({ ...s, scale: clampScale(s.scale * factor) }))
-        }
-        lastPinchDist.current = dist
-      }
-      return
+  // Pinch-to-zoom from the two active pointers.
+  const handlePinch = useCallback(() => {
+    const [a, b] = [...pointers.current.values()]
+    if (!a || !b) return
+    const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY)
+    if (lastPinchDist.current > 0) {
+      const factor = dist / lastPinchDist.current
+      setState((s) => ({ ...s, scale: clampScale(s.scale * factor) }))
     }
-
-    if (!dragging.current) return
-
-    const dx = e.clientX - dragStart.current.x
-    const dy = e.clientY - dragStart.current.y
-    if (!didDrag.current && Math.hypot(dx, dy) > 5) {
-      didDrag.current = true
-    }
-    // Only pan when zoomed in — at scale=1 content already fits.
-    if (stateRef.current.scale <= 1) return
-    setState((s) => ({
-      ...s,
-      x: dragStart.current.sx + dx,
-      y: dragStart.current.sy + dy,
-    }))
+    lastPinchDist.current = dist
   }, [])
+
+  const onPointerMove = useCallback(
+    (e: PointerEvent) => {
+      pointers.current.set(e.pointerId, e)
+
+      if (pointers.current.size === 2) {
+        handlePinch()
+        return
+      }
+
+      if (!dragging.current) return
+
+      const dx = e.clientX - dragStart.current.x
+      const dy = e.clientY - dragStart.current.y
+      if (!didDrag.current && Math.hypot(dx, dy) > 5) {
+        didDrag.current = true
+      }
+      // Only pan when zoomed in — at scale=1 content already fits.
+      if (stateRef.current.scale <= 1) return
+      setState((s) => ({
+        ...s,
+        x: dragStart.current.sx + dx,
+        y: dragStart.current.sy + dy,
+      }))
+    },
+    [handlePinch],
+  )
 
   const onPointerUp = useCallback((e: PointerEvent) => {
     pointers.current.delete(e.pointerId)

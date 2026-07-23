@@ -71,6 +71,15 @@ function Breadcrumbs({
   path: string
   onEditLast: () => void
 }) {
+  const onNavClick = useCallback(
+    (e: JSX.TargetedMouseEvent<HTMLAnchorElement>) => {
+      e.preventDefault()
+      const href = e.currentTarget.getAttribute("href")
+      if (href) navigate(href)
+    },
+    [],
+  )
+
   const editProps = {
     role: "button" as const,
     tabIndex: 0,
@@ -92,14 +101,7 @@ function Breadcrumbs({
 
   return (
     <>
-      <a
-        class="breadcrumb-root breadcrumb-link"
-        href="/"
-        onClick={(e) => {
-          e.preventDefault()
-          navigate("/")
-        }}
-      >
+      <a class="breadcrumb-root breadcrumb-link" href="/" onClick={onNavClick}>
         <RootSegment />
       </a>
       {segments.map((seg, i) => {
@@ -113,14 +115,7 @@ function Breadcrumbs({
                 {seg}
               </span>
             ) : (
-              <a
-                class="breadcrumb-link"
-                href={href}
-                onClick={(e) => {
-                  e.preventDefault()
-                  navigate(href)
-                }}
-              >
+              <a class="breadcrumb-link" href={href} onClick={onNavClick}>
                 {seg}
               </a>
             )}
@@ -193,13 +188,37 @@ function PathBar({
     [path, cancel],
   )
 
+  const onContainerClick = useCallback(
+    (e: JSX.TargetedMouseEvent<HTMLDivElement>) => {
+      if (e.target === e.currentTarget) activate()
+    },
+    [activate],
+  )
+
+  const onInput = useCallback((e: JSX.TargetedInputEvent<HTMLInputElement>) => {
+    setError(false)
+    setDraft((e.target as HTMLInputElement).value)
+  }, [])
+
+  const onKeyDown = useCallback(
+    (e: JSX.TargetedKeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter") void commit((e.target as HTMLInputElement).value)
+      else if (e.key === "Escape") cancel()
+      else if (focusPath.match(e)) {
+        e.preventDefault()
+        inputRef.current?.select()
+      }
+    },
+    [commit, cancel],
+  )
+
+  const onBlur = useCallback(() => cancel(), [cancel])
+
   return (
     // biome-ignore lint/a11y/useKeyWithClickEvents lint/a11y/noStaticElementInteractions: Alt+L shortcut provides keyboard activation
     <div
       class={`toolbar-path${editing ? " toolbar-path--editing" : ""}${error ? " toolbar-path--error" : ""}`}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) activate()
-      }}
+      onClick={onContainerClick}
     >
       {editing ? (
         <>
@@ -211,20 +230,9 @@ function PathBar({
             class="toolbar-path-input"
             type="text"
             value={draft}
-            onInput={(e) => {
-              setError(false)
-              setDraft((e.target as HTMLInputElement).value)
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter")
-                void commit((e.target as HTMLInputElement).value)
-              else if (e.key === "Escape") cancel()
-              else if (focusPath.match(e)) {
-                e.preventDefault()
-                inputRef.current?.select()
-              }
-            }}
-            onBlur={() => cancel()}
+            onInput={onInput}
+            onKeyDown={onKeyDown}
+            onBlur={onBlur}
           />
         </>
       ) : (
@@ -266,6 +274,8 @@ function KeybindHelp({ shortcuts }: { shortcuts: ShortcutDef[] }) {
     return () => document.removeEventListener("mousedown", onClick)
   }, [])
 
+  const toggleOpen = useCallback(() => setOpen((v) => !v), [])
+
   const all = [...shortcuts, ...globalShortcuts]
 
   return (
@@ -273,13 +283,13 @@ function KeybindHelp({ shortcuts }: { shortcuts: ShortcutDef[] }) {
       <button
         type="button"
         class="theme-toggle"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggleOpen}
         aria-label="Keyboard shortcuts"
         title="Keyboard shortcuts"
       >
         ?
       </button>
-      {open && (
+      {open ? (
         <div class="kb-popover">
           <div class="kb-title">Keyboard shortcuts</div>
           <table class="kb-table">
@@ -293,7 +303,7 @@ function KeybindHelp({ shortcuts }: { shortcuts: ShortcutDef[] }) {
             </tbody>
           </table>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

@@ -34,7 +34,7 @@ declare module "asciinema-player" {
     options?: CreateOptions,
   ): Player
 
-  export { create, type Player, type CreateOptions, type Source }
+  export { type CreateOptions, create, type Player, type Source }
 }
 
 declare module "asciinema-player/dist/bundle/asciinema-player.css"

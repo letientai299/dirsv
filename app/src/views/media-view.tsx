@@ -115,6 +115,25 @@ export function MediaView({ path, kind }: Props) {
     }
   }, [prevPath, nextPath, kind, rev])
 
+  const onContainerKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Enter") openFocus()
+    },
+    [openFocus],
+  )
+
+  const onImageLoad = useCallback(() => {
+    setLoadedUrl(rawUrl)
+  }, [rawUrl])
+
+  const goPrev = useCallback(() => {
+    if (prevPath) navigate(prevPath)
+  }, [prevPath])
+
+  const goNext = useCallback(() => {
+    if (nextPath) navigate(nextPath)
+  }, [nextPath])
+
   return (
     <div class="media-viewer">
       {/* biome-ignore lint/a11y/noStaticElementInteractions: media container acts as focus trigger */}
@@ -122,9 +141,7 @@ export function MediaView({ path, kind }: Props) {
         class="media-container"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: needs focus for Enter key to open overlay
         tabIndex={0}
-        onKeyDown={(e: KeyboardEvent) => {
-          if (e.key === "Enter") openFocus()
-        }}
+        onKeyDown={onContainerKeyDown}
       >
         {kind === "image" ? (
           <img
@@ -132,7 +149,7 @@ export function MediaView({ path, kind }: Props) {
             src={rawUrl}
             alt={fileName}
             class={`media-content media-fade ${loaded ? "media-fade--in" : ""}`}
-            onLoad={() => setLoadedUrl(rawUrl)}
+            onLoad={onImageLoad}
             onDblClick={openFocus}
           />
         ) : (
@@ -152,7 +169,7 @@ export function MediaView({ path, kind }: Props) {
             type="button"
             class="media-nav-btn"
             disabled={!prevPath}
-            onClick={() => prevPath && navigate(prevPath)}
+            onClick={goPrev}
             aria-label={`Previous ${kind}`}
           >
             <ChevronLeft />
@@ -162,20 +179,20 @@ export function MediaView({ path, kind }: Props) {
             type="button"
             class="media-nav-btn"
             disabled={!nextPath}
-            onClick={() => nextPath && navigate(nextPath)}
+            onClick={goNext}
             aria-label={`Next ${kind}`}
           >
             <ChevronRight />
           </button>
         </div>
       )}
-      {focus.overlayProps && (
+      {focus.overlayProps ? (
         <FocusOverlay
           {...focus.overlayProps}
           onClose={onOverlayClose}
           onIndexChange={onOverlayIndexChange}
         />
-      )}
+      ) : null}
     </div>
   )
 }

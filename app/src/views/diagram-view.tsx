@@ -25,6 +25,13 @@ export function DiagramView({
     focus.open([{ type: "diagram", svg }], 0)
   }, [svg, focus])
 
+  const onKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Enter") openFocus()
+    },
+    [openFocus],
+  )
+
   useEffect(() => {
     // Keep old SVG visible while the new one renders — no flash to loading spinner.
     setError(null)
@@ -64,11 +71,9 @@ export function DiagramView({
         // biome-ignore lint/a11y/noNoninteractiveTabindex: needs focus for Enter key to open overlay
         tabIndex={0}
         onDblClick={openFocus}
-        onKeyDown={(e: KeyboardEvent) => {
-          if (e.key === "Enter") openFocus()
-        }}
+        onKeyDown={onKeyDown}
       />
-      {focus.overlayProps && <FocusOverlay {...focus.overlayProps} />}
+      {focus.overlayProps ? <FocusOverlay {...focus.overlayProps} /> : null}
     </>
   )
 }

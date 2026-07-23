@@ -1,3 +1,6 @@
+import type { JSX } from "preact"
+import { useCallback } from "preact/hooks"
+
 interface Props {
   filter: string
   onFilterChange: (value: string) => void
@@ -17,6 +20,15 @@ export function JsonToolbar({
   onModeChange,
   treeDisabled,
 }: Props) {
+  const onFilterInput = useCallback(
+    (e: JSX.TargetedInputEvent<HTMLInputElement>) => {
+      onFilterChange((e.target as HTMLInputElement).value)
+    },
+    [onFilterChange],
+  )
+  const selectTree = useCallback(() => onModeChange("tree"), [onModeChange])
+  const selectRaw = useCallback(() => onModeChange("raw"), [onModeChange])
+
   return (
     <div class="jt-toolbar">
       <input
@@ -24,7 +36,7 @@ export function JsonToolbar({
         class="jt-filter"
         placeholder="Filter by key path..."
         value={filter}
-        onInput={(e) => onFilterChange((e.target as HTMLInputElement).value)}
+        onInput={onFilterInput}
       />
       {mode === "tree" && (
         <>
@@ -41,14 +53,14 @@ export function JsonToolbar({
           type="button"
           class={`jt-tab ${mode === "tree" ? "jt-tab--active" : ""}`}
           disabled={treeDisabled}
-          onClick={() => onModeChange("tree")}
+          onClick={selectTree}
         >
           Tree
         </button>
         <button
           type="button"
           class={`jt-tab ${mode === "raw" ? "jt-tab--active" : ""}`}
-          onClick={() => onModeChange("raw")}
+          onClick={selectRaw}
         >
           Raw
         </button>

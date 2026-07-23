@@ -24,7 +24,7 @@ export function AppFooter() {
         />
         dirsv
       </a>
-      {info?.version && (
+      {info?.version ? (
         <a
           href={info.version.url}
           target="_blank"
@@ -33,7 +33,7 @@ export function AppFooter() {
         >
           {info.version.label}
         </a>
-      )}
+      ) : null}
       {info?.pid != null && <span>| PID {info.pid}</span>}
     </footer>
   )
