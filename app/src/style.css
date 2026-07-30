@@ -921,6 +921,28 @@ pre {
   padding: 0 24px 48px;
 }
 
+/*
+ * Full & smart modes: widen the article column to fill the window (max-width:
+ * none) while keeping the TOC.  minmax(0, 1fr) caps the article track at the
+ * available width so wide tables scroll inside their column instead of forcing
+ * page-level horizontal scroll.
+ */
+[data-layout-mode="full"] .md-layout,
+[data-layout-mode="smart"] .md-layout {
+  max-width: none;
+  grid-template-columns: minmax(0, 1fr) 200px;
+}
+
+/*
+ * Smart mode: prose elements stay narrow (max-width: 760px, left-aligned) while
+ * tables and diagrams expand to fill the wider column.
+ */
+[data-layout-mode="smart"]
+  .markdown-body
+  > :is(h1, h2, h3, h4, h5, h6, p, ul, ol, blockquote, pre, details, dl, hr) {
+  max-width: 760px;
+}
+
 /* ---------- github-markdown-css overrides ---------- */
 
 .markdown-body {
@@ -1451,7 +1473,9 @@ html.focus-lock {
 /* ---------- responsive ---------- */
 
 @media (max-width: 1024px) {
-  .md-layout {
+  .md-layout,
+  [data-layout-mode="full"] .md-layout,
+  [data-layout-mode="smart"] .md-layout {
     grid-template-columns: minmax(0, 1fr);
   }
 

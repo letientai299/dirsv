@@ -35,6 +35,12 @@ export const toggleSidebar: ShortcutDef = {
   match: (e) => e.key === "b" && (e.ctrlKey || e.metaKey),
 }
 
+export const toggleLayoutMode: ShortcutDef = {
+  keys: "Alt+W",
+  description: "Cycle layout mode",
+  match: (e) => e.code === "KeyW" && e.altKey,
+}
+
 export const focusSidebarContent: ShortcutDef = {
   keys: "Ctrl+E",
   description: "Focus sidebar / content",

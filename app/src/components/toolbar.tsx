@@ -3,11 +3,18 @@ import { Fragment } from "preact"
 import { useCallback, useEffect, useRef, useState } from "preact/hooks"
 import { browse } from "../lib/api"
 import { FolderIcon } from "../lib/file-icon"
+import type { LayoutMode } from "../lib/layout-mode"
+import {
+  cycleLayoutMode,
+  getLayoutMode,
+  listenLayoutModeChanges,
+} from "../lib/layout-mode"
 import { navigate, normalizePath } from "../lib/navigate"
 import type { ShortcutDef } from "../lib/shortcuts"
 import {
   focusPath,
   toggleHelp,
+  toggleLayoutMode as toggleLayoutModeDef,
   toggleTheme as toggleThemeDef,
 } from "../lib/shortcuts"
 import {
@@ -239,6 +246,105 @@ function PathBar({
         <Breadcrumbs path={path} onEditLast={activate} />
       )}
     </div>
+  )
+}
+
+// Layout mode icons (16×16)
+function ConstrainedIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <rect x="3" y="3" width="10" height="2" rx="0.5" />
+      <rect x="3" y="7" width="10" height="2" rx="0.5" />
+      <rect x="3" y="11" width="7" height="2" rx="0.5" />
+    </svg>
+  )
+}
+
+function FullIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <rect x="1" y="3" width="14" height="2" rx="0.5" />
+      <rect x="1" y="7" width="14" height="2" rx="0.5" />
+      <rect x="1" y="11" width="10" height="2" rx="0.5" />
+    </svg>
+  )
+}
+
+function SmartIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <rect x="3" y="2" width="10" height="2" rx="0.5" />
+      <rect x="3" y="6" width="10" height="2" rx="0.5" />
+      <rect x="1" y="10" width="14" height="4" rx="1" />
+    </svg>
+  )
+}
+
+const LAYOUT_ICONS: Record<LayoutMode, () => JSX.Element> = {
+  constrained: ConstrainedIcon,
+  full: FullIcon,
+  smart: SmartIcon,
+}
+
+const LAYOUT_LABELS: Record<LayoutMode, string> = {
+  constrained: "Constrained width",
+  full: "Full width",
+  smart: "Smart (wide tables & diagrams)",
+}
+
+export function LayoutModeToggle() {
+  const [mode, setMode] = useState<LayoutMode>(() => getLayoutMode())
+
+  useEffect(
+    () =>
+      listenLayoutModeChanges((m) => {
+        setMode(m)
+      }),
+    [],
+  )
+
+  const cycle = useCallback(() => {
+    const next = cycleLayoutMode()
+    setMode(next)
+  }, [])
+
+  useKeys((e) => {
+    if (toggleLayoutModeDef.match(e)) {
+      e.preventDefault()
+      const next = cycleLayoutMode()
+      setMode(next)
+    }
+  })
+
+  const Icon = LAYOUT_ICONS[mode]
+  return (
+    <button
+      type="button"
+      class="theme-toggle"
+      onClick={cycle}
+      aria-label={`Layout: ${LAYOUT_LABELS[mode]}`}
+      title={`Layout: ${LAYOUT_LABELS[mode]} (Alt+W to cycle)`}
+    >
+      <Icon />
+    </button>
   )
 }
 

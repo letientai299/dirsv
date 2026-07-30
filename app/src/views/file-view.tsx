@@ -2,7 +2,7 @@ import type { ComponentChildren, JSX, RefObject } from "preact"
 import { lazy, Suspense } from "preact/compat"
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import { AppFooter } from "../components/app-footer"
-import { Toolbar } from "../components/toolbar"
+import { LayoutModeToggle, Toolbar } from "../components/toolbar"
 import type { DirEntry, RawResult } from "../lib/api"
 import {
   clearCache,
@@ -20,6 +20,7 @@ import {
   focusSidebarContent,
   goToParent,
   listNavShortcuts,
+  toggleLayoutMode,
   toggleSidebar,
 } from "../lib/shortcuts"
 import { useAbortEffect } from "../lib/use-abort-effect"
@@ -93,6 +94,9 @@ const YamlStructuredView = lazy(() =>
   ),
 )
 
+/** Extensions rendered by MarkdownView — layout modes apply only to these. */
+const markdownRe = /\.(?:mdx?|markdown|mdc)$/i
+
 function isPrefetchable(name: string, isDir: boolean): boolean {
   if (isDir) return false
   if (/\.html?$/i.test(name)) return false
@@ -155,7 +159,7 @@ function renderFileContent(
         <CastView content={result.content} />
       </Suspense>
     )
-  if (/\.(?:mdx?|markdown|mdc)$/i.test(path)) {
+  if (markdownRe.test(path)) {
     return (
       <Suspense fallback={fallback}>
         <MarkdownView
@@ -364,6 +368,7 @@ export function FileView({ path }: Props) {
   const isHtml = /\.html?$/i.test(path)
   const isImage = imageRe.test(path)
   const isVideo = videoRe.test(path)
+  const isMarkdown = markdownRe.test(path)
 
   // Sidebar visibility — persist to localStorage, fall back to viewport check
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -620,23 +625,30 @@ export function FileView({ path }: Props) {
   )
 
   const sidebarToggleBtn = (
-    <button
-      type="button"
-      class="theme-toggle"
-      onClick={handleToggleSidebar}
-      aria-label="Toggle sidebar"
-      aria-pressed={sidebarOpen}
-      title="Toggle sidebar"
-    >
-      <SidebarIcon />
-    </button>
+    <>
+      {isMarkdown ? <LayoutModeToggle /> : null}
+      <button
+        type="button"
+        class="theme-toggle"
+        onClick={handleToggleSidebar}
+        aria-label="Toggle sidebar"
+        aria-pressed={sidebarOpen}
+        title="Toggle sidebar"
+      >
+        <SidebarIcon />
+      </button>
+    </>
   )
 
   return (
     <div class="file-layout">
       <Toolbar
         path={path}
-        shortcuts={[...shortcutDefs, ...listNavShortcuts]}
+        shortcuts={[
+          ...shortcutDefs,
+          ...listNavShortcuts,
+          ...(isMarkdown ? [toggleLayoutMode] : []),
+        ]}
         actions={sidebarToggleBtn}
       />
       <hr class="file-separator" />
