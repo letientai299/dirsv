@@ -65,6 +65,7 @@ const extMap: Record<string, string> = {
   cxx: "cpp",
   cc: "cpp",
   hpp: "cpp",
+  cu: "cpp",
   cs: "csharp",
   csx: "csharp",
   m: "objective-c",
@@ -199,7 +200,7 @@ const extMap: Record<string, string> = {
 /** Well-known filenames without extensions. */
 const nameMap: Record<string, string> = {
   Makefile: "makefile",
-  CMakeLists: "cmake",
+  "CMakeLists.txt": "cmake",
   Dockerfile: "dockerfile",
   Containerfile: "dockerfile",
   Vagrantfile: "ruby",
