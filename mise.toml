@@ -10,7 +10,7 @@ watchexec = "2"
 _.path = ["bin"]
 
 [hooks.enter]
-script = '''
+run = '''
 {% if os_family() == "unix" %}
 if command -v prek >/dev/null 2>&1; then
   if [ -f "$MISE_PROJECT_ROOT/prek.toml" ] && [ -d "$MISE_PROJECT_ROOT/.git" ]; then
