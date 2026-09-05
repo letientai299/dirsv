@@ -68,6 +68,13 @@ func setupTestDir(t *testing.T) string {
 	); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(
+		filepath.Join(dir, "vec-add.cu"),
+		[]byte(`__global__ void vecAdd(float *a, float *b, float *c) {}`),
+		0o644,
+	); err != nil {
+		t.Fatal(err)
+	}
 	return dir
 }
 
@@ -189,45 +196,28 @@ func TestRawMIME(t *testing.T) {
 	}
 }
 
-func TestRawTSNotBinary(t *testing.T) {
+func TestRawCodeNotBinary(t *testing.T) {
 	srv := newTestServer(t)
-	req := httptest.NewRequestWithContext(
-		context.Background(),
-		http.MethodGet,
-		"/api/raw/vite.config.ts",
-		nil,
-	)
-	rec := httptest.NewRecorder()
-	srv.ServeHTTP(rec, req)
+	for _, name := range []string{"vite.config.ts", "query.sql", "vec-add.cu"} {
+		t.Run(name, func(t *testing.T) {
+			req := httptest.NewRequestWithContext(
+				context.Background(),
+				http.MethodGet,
+				"/api/raw/"+name,
+				nil,
+			)
+			rec := httptest.NewRecorder()
+			srv.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("want 200, got %d", rec.Code)
-	}
+			if rec.Code != http.StatusOK {
+				t.Fatalf("want 200, got %d", rec.Code)
+			}
 
-	ct := rec.Header().Get("Content-Type")
-	if ct != "text/plain; charset=utf-8" {
-		t.Errorf("want text/plain for .ts, got %q", ct)
-	}
-}
-
-func TestRawSQLNotBinary(t *testing.T) {
-	srv := newTestServer(t)
-	req := httptest.NewRequestWithContext(
-		context.Background(),
-		http.MethodGet,
-		"/api/raw/query.sql",
-		nil,
-	)
-	rec := httptest.NewRecorder()
-	srv.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("want 200, got %d", rec.Code)
-	}
-
-	ct := rec.Header().Get("Content-Type")
-	if ct != "text/plain; charset=utf-8" {
-		t.Errorf("want text/plain for .sql, got %q", ct)
+			ct := rec.Header().Get("Content-Type")
+			if ct != "text/plain; charset=utf-8" {
+				t.Errorf("want text/plain, got %q", ct)
+			}
+		})
 	}
 }
 

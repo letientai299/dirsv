@@ -326,6 +326,7 @@ var errForbidden = errors.New("forbidden")
 // textMIME overrides Go's mime.TypeByExtension for extensions that are
 // misidentified as non-text (e.g., .ts → video/mp2t).
 var textMIME = map[string]string{
+	".cu":       "text/plain; charset=utf-8",
 	".ts":       "text/plain; charset=utf-8",
 	".tsx":      "text/plain; charset=utf-8",
 	".mts":      "text/plain; charset=utf-8",
