@@ -27,6 +27,11 @@ import type { Heading } from "./rehype-extract-headings"
 import { rehypeFigure } from "./rehype-figure"
 import { rehypeGraphviz } from "./rehype-graphviz"
 import { rehypeKatexPlaceholder } from "./rehype-katex-placeholder"
+import {
+  codeMetaTransformer,
+  rehypeLineNumbers,
+  rehypeStashCodeMeta,
+} from "./rehype-line-numbers"
 import { rehypeMermaid } from "./rehype-mermaid"
 import { rehypePlantuml } from "./rehype-plantuml"
 import { rehypeSourceLine } from "./rehype-source-line"
@@ -58,7 +63,7 @@ const sanitizeSchema: typeof defaultSchema = {
     ...defaultSchema.attributes,
     // remark-math v6 uses `language-math` which the default schema already
     // allows via /^language-/. No extra allowlist needed for math classes.
-    code: [...schemaAttrs("code")],
+    code: [...schemaAttrs("code"), "dataCodeMeta"],
     // remark-github-blockquote-alert
     div: [
       ...schemaAttrs("div"),
@@ -110,10 +115,12 @@ function applyPostParsePlugins(processor: AnyProcessor): AnyProcessor {
       // rehype-raw parses them into proper elements, then rehype-sanitize strips
       // anything unsafe. This allows <kbd>, <sub>, <sup>, <details>, etc.
       .use(remarkRehype, { allowDangerousHtml: true })
+      .use(rehypeStashCodeMeta)
       .use(rehypeRaw)
       .use(rehypeColorChips)
       .use(rehypeVideo)
       .use(rehypeSanitize, sanitizeSchema)
+      .use(rehypeLineNumbers)
       .use(rehypeSourceLine)
       .use(rehypeKatexPlaceholder)
       .use(rehypeMermaid)
@@ -209,6 +216,7 @@ function getShikiProcessor(): Promise<AnyProcessor> {
           langs: [],
           lazy: true,
           fallbackLanguage: "text",
+          transformers: [codeMetaTransformer],
         })
         .use(rehypeShikiCachedPost)
 
@@ -319,6 +327,7 @@ function getMdxShikiProcessor(): Promise<AnyProcessor> {
           langs: [],
           lazy: true,
           fallbackLanguage: "text",
+          transformers: [codeMetaTransformer],
         })
         .use(rehypeShikiCachedPost)
 

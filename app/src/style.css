@@ -549,18 +549,24 @@ pre {
   background-color: var(--bg);
 }
 
-.code-view pre code {
+.code-view pre code,
+.markdown-body pre.line-numbers code {
   display: block;
   counter-reset: line;
 }
 
-.code-view pre .line {
+.code-view pre .line,
+.markdown-body pre.shiki .line {
   display: inline-block;
   width: 100%;
+}
+
+.code-view pre .line {
   padding: 0 16px 0 0;
 }
 
-.code-view pre .line::before {
+.code-view pre .line::before,
+.markdown-body pre.line-numbers .line::before {
   counter-increment: line;
   content: counter(line);
   display: inline-block;
@@ -575,9 +581,17 @@ pre {
 }
 
 /* Shiki appends an empty .line for the trailing newline — hide its line number. */
-.code-view pre .line:last-child:empty::before {
+.code-view pre .line:last-child:empty::before,
+.markdown-body pre.line-numbers .line:last-child:empty::before {
   display: none;
   counter-increment: none;
+}
+
+.markdown-body pre.shiki .line.highlighted {
+  background-color: var(--bgColor-neutral-muted);
+  box-shadow:
+    -16px 0 var(--bgColor-neutral-muted),
+    16px 0 var(--bgColor-neutral-muted);
 }
 
 .code-view-fallback {

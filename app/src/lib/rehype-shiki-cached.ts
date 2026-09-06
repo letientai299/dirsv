@@ -19,8 +19,10 @@ const cache = new Map<string, Element>()
 /** Stable content key for a code block. Strips the trailing newline that
  *  remark-rehype appends but Shiki's `stripEndNewline` removes, so keys
  *  match across the pre→Shiki→post pipeline. */
-function cacheKey(lang: string, source: string): string {
-  return simpleHash(`${lang}\0${source.replace(/\n$/, "")}`)
+function cacheKey(lang: string, source: string, lineNumbers: boolean): string {
+  return simpleHash(
+    `${lang}\0${lineNumbers ? "line-numbers" : ""}\0${source.replace(/\n$/, "")}`,
+  )
 }
 
 /** Deep-clone a HAST element for reuse. */
@@ -36,9 +38,12 @@ function cloneElement(el: Element): Element {
 }
 
 /** Extract (lang, source) from a `<pre><code class="language-X">` node. */
-function extractCodeInfo(
-  node: Element,
-): { lang: string; source: string } | null {
+function extractCodeInfo(node: Element): {
+  lang: string
+  source: string
+  lineNumbers: boolean
+  hasMeta: boolean
+} | null {
   if (node.tagName !== "pre") return null
   const code = node.children[0]
   if (code?.type !== "element" || code.tagName !== "code") return null
@@ -50,6 +55,8 @@ function extractCodeInfo(
   return {
     lang: langClass.slice("language-".length),
     source: collectText(code.children),
+    lineNumbers: hasLineNumbers(node),
+    hasMeta: typeof code.data?.meta === "string" && code.data.meta.length > 0,
   }
 }
 
@@ -61,15 +68,25 @@ function extractCodeInfo(
  *  post-pass. The queue is reset at the start of each render. */
 let pendingSourceLines: (number | null)[] = []
 
+function hasLineNumbers(node: Element): boolean {
+  return getClassList(node).includes("line-numbers")
+}
+
 /** Try to replace a code block with a cached Shiki clone. Returns true if
  *  replaced, false if uncached (Shiki will process it). */
 function tryReplaceWithCached(
   node: Element,
-  info: { lang: string; source: string },
+  info: {
+    lang: string
+    source: string
+    lineNumbers: boolean
+    hasMeta: boolean
+  },
   index: number,
   parent: { children: unknown[] },
 ): boolean {
-  const cached = cache.get(cacheKey(info.lang, info.source))
+  if (info.hasMeta) return false
+  const cached = cache.get(cacheKey(info.lang, info.source, info.lineNumbers))
   if (!cached) return false
 
   const clone = cloneElement(cached)
@@ -105,15 +122,24 @@ export function rehypeShikiCachedPre() {
 function cacheNewBlock(node: Element): void {
   if (!getClassList(node).includes("shiki")) return
   if (node.properties["dataShikiCached"]) return
+  if (hasLineNumbers(node)) return
 
   const lang = node.properties["dataLanguage"] as string | undefined
   if (!lang) return
 
   const code = node.children[0]
   if (code?.type !== "element" || code.tagName !== "code") return
+  if (
+    code.children.some(
+      (child) =>
+        child.type === "element" && getClassList(child).includes("highlighted"),
+    )
+  ) {
+    return
+  }
 
   const source = collectTextDeep(code.children)
-  cache.set(cacheKey(lang, source), cloneElement(node))
+  cache.set(cacheKey(lang, source, hasLineNumbers(node)), cloneElement(node))
 }
 
 /** True when a `<pre>` was freshly processed by Shiki (not from cache). */
