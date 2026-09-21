@@ -6,6 +6,7 @@ describe("langFromPath", () => {
     ["/src/kernel.cu", "cpp"],
     ["/src/CMakeLists.txt", "cmake"],
     ["/cmake/toolchain.cmake", "cmake"],
+    ["/docs/paper.typ", "typst"],
   ]
 
   it.each(cases)("maps %s to %s", (path, expected) => {

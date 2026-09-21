@@ -25,14 +25,20 @@ export function useShiki(content: string, lang: string): string | null {
     // tokenization is synchronous inside the resolved promise — without
     // this yield the browser can't render the fallback before the freeze.
     const timer = setTimeout(() => {
-      void import("shiki")
-        .then(({ codeToHtml }) =>
-          codeToHtml(content, {
-            lang,
-            themes: { light: "github-light", dark: "github-dark" },
-            defaultColor: false,
-          }),
-        )
+      const rendered =
+        lang === "typst"
+          ? import("./typst-shiki").then(({ highlightTypst }) =>
+              highlightTypst(content),
+            )
+          : import("shiki").then(({ codeToHtml }) =>
+              codeToHtml(content, {
+                lang,
+                themes: { light: "github-light", dark: "github-dark" },
+                defaultColor: false,
+              }),
+            )
+
+      void rendered
         .then((result) => {
           if (!cancelled) setHtml(result)
         })

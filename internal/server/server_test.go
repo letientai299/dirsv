@@ -75,6 +75,13 @@ func setupTestDir(t *testing.T) string {
 	); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(
+		filepath.Join(dir, "paper.typ"),
+		[]byte("= Hello, Typst!"),
+		0o644,
+	); err != nil {
+		t.Fatal(err)
+	}
 	return dir
 }
 
@@ -198,7 +205,12 @@ func TestRawMIME(t *testing.T) {
 
 func TestRawCodeNotBinary(t *testing.T) {
 	srv := newTestServer(t)
-	for _, name := range []string{"vite.config.ts", "query.sql", "vec-add.cu"} {
+	for _, name := range []string{
+		"vite.config.ts",
+		"query.sql",
+		"vec-add.cu",
+		"paper.typ",
+	} {
 		t.Run(name, func(t *testing.T) {
 			req := httptest.NewRequestWithContext(
 				context.Background(),

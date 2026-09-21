@@ -147,6 +147,7 @@ const extMap: Record<string, string> = {
   // Markup / docs
   tex: "latex",
   latex: "latex",
+  typ: "typst",
   rst: "rst",
 
   // DevOps / config

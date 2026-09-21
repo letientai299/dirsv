@@ -91,6 +91,7 @@ import matShader from "material-icon-theme/icons/shader.svg"
 import matStylus from "material-icon-theme/icons/stylus.svg"
 import matTable from "material-icon-theme/icons/table.svg"
 import matTwig from "material-icon-theme/icons/twig.svg"
+import matTypst from "material-icon-theme/icons/typst.svg"
 import matVerilog from "material-icon-theme/icons/verilog.svg"
 import matWord from "material-icon-theme/icons/word.svg"
 import matXml from "material-icon-theme/icons/xml.svg"
@@ -250,6 +251,7 @@ const EXT_ICON: Record<string, string> = {
   sass: diSass,
   less: diLess,
   tex: diLatex,
+  typ: matTypst,
   // Web frameworks (devicon)
   vue: diVuejs,
   svelte: diSvelte,
