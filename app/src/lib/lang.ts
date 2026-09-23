@@ -65,7 +65,12 @@ const extMap: Record<string, string> = {
   cxx: "cpp",
   cc: "cpp",
   hpp: "cpp",
+  hxx: "cpp",
+  hh: "cpp",
+  ipp: "cpp",
+  tpp: "cpp",
   cu: "cpp",
+  cuh: "cpp",
   cs: "csharp",
   csx: "csharp",
   m: "objective-c",
@@ -86,6 +91,7 @@ const extMap: Record<string, string> = {
 
   // Scripting
   py: "python",
+  pyi: "python",
   rb: "ruby",
   php: "php",
   lua: "lua",
@@ -210,6 +216,11 @@ const nameMap: Record<string, string> = {
   Justfile: "just",
   ".gitignore": "gitignore",
   ".gitattributes": "gitignore",
+  ".gitconfig": "ini",
+  ".gitmodules": "ini",
+  ".bashrc": "shellscript",
+  ".bash_profile": "shellscript",
+  ".zshrc": "shellscript",
   ".editorconfig": "ini",
   ".env": "dotenv",
   ".env.local": "dotenv",
@@ -236,6 +247,9 @@ export function langFromPath(path: string): string | undefined {
 
   // Check exact filename first (Makefile, Dockerfile, etc.)
   if (nameMap[basename]) return nameMap[basename]
+
+  if (/^(?:dockerfile|containerfile)(?:\..+)?$/i.test(basename))
+    return "dockerfile"
 
   // .env.* variants (.env.production, .env.staging, etc.)
   if (basename.startsWith(".env")) return "dotenv"

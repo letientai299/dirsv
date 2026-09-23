@@ -233,6 +233,53 @@ func TestRawCodeNotBinary(t *testing.T) {
 	}
 }
 
+func TestRawHeaderMappings(t *testing.T) {
+	dir := t.TempDir()
+	const content = "#pragma once\n// header\n"
+	names := []string{
+		"kernel.cuh",
+		"kernel.CUH",
+		"vector.hxx",
+		"vector.hh",
+		"vector.ipp",
+		"vector.tpp",
+		"types.pyi",
+	}
+	for _, name := range names {
+		if err := os.WriteFile(
+			filepath.Join(dir, name),
+			[]byte(content),
+			0o644,
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+	srv, err := New(dir, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(srv.Close)
+	for _, name := range names {
+		t.Run(name, func(t *testing.T) {
+			req := httptest.NewRequestWithContext(
+				context.Background(),
+				http.MethodGet,
+				"/api/raw/"+name,
+				nil,
+			)
+			rec := httptest.NewRecorder()
+			srv.ServeHTTP(rec, req)
+			if rec.Code != http.StatusOK || rec.Body.String() != content {
+				t.Fatalf("unexpected response: %d %q", rec.Code, rec.Body.String())
+			}
+			if ct := rec.Header().
+				Get("Content-Type"); ct != "text/plain; charset=utf-8" {
+				t.Errorf("unexpected content type: %q", ct)
+			}
+		})
+	}
+}
+
 func TestRawDir(t *testing.T) {
 	srv := newTestServer(t)
 	req := httptest.NewRequestWithContext(

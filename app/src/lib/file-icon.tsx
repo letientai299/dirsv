@@ -134,6 +134,7 @@ import svgGraphViz from "../assets/icons/GraphViz.svg?raw"
 import vendorJsonnet from "../assets/icons/jsonnet.svg"
 import svgScheme from "../assets/icons/Scheme.svg?raw"
 import vendorVyper from "../assets/icons/vyper.svg"
+import { langFromPath } from "./lang"
 import { IMAGE_EXTS, VIDEO_EXTS } from "./media-types"
 
 // ---------------------------------------------------------------------------
@@ -266,6 +267,7 @@ const EXT_ICON: Record<string, string> = {
   gitignore: diGit,
   gitattributes: diGit,
   gitmodules: diGit,
+  gitconfig: diGit,
   // Containers & infra (devicon)
   dockerfile: diDocker,
   tf: diTerraform,
@@ -447,6 +449,13 @@ function resolveExt(fileName: string): string | null {
   return fileName.includes(".") ? (fileName.split(".").pop() ?? null) : null
 }
 
+const LANGUAGE_ICON: Record<string, string> = {
+  cpp: diCplusplus,
+  python: diPython,
+  shellscript: diBash,
+  dockerfile: diDocker,
+}
+
 function resolve(fileName: string): string | null {
   const lower = fileName.toLowerCase()
 
@@ -458,9 +467,11 @@ function resolve(fileName: string): string | null {
   }
 
   const ext = resolveExt(lower)
-  if (ext) return EXT_ICON[ext] ?? null
-
-  return null
+  const language = langFromPath(fileName)
+  const languageIcon = language ? LANGUAGE_ICON[language] : undefined
+  if (languageIcon) return languageIcon
+  const extensionIcon = ext ? EXT_ICON[ext] : undefined
+  return extensionIcon ?? null
 }
 
 // ---------------------------------------------------------------------------
