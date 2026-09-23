@@ -1,3 +1,12 @@
+import { encodePath } from "./navigate"
+
+export const MAX_TEXT_BYTES = 1_000_000
+export const MAX_TEXT_LINES = 10_000
+
+export function rawUrl(path: string): string {
+  return `/api/raw${encodePath(path)}`
+}
+
 export interface DirEntry {
   name: string
   isDir: boolean
@@ -7,7 +16,7 @@ export interface DirEntry {
 }
 
 export type BrowseResponse =
-  | { type: "dir"; entries: DirEntry[] }
+  | { type: "dir"; entries: DirEntry[]; truncated?: boolean }
   | { type: "file"; path: string }
   | { type: "index"; path: string }
 
@@ -15,7 +24,7 @@ export async function browse(
   path: string,
   signal?: AbortSignal,
 ): Promise<BrowseResponse> {
-  const apiPath = `/api/browse${path === "/" ? "/" : path}`
+  const apiPath = `/api/browse${encodePath(path)}`
   const res = await fetch(apiPath, signal ? { signal } : {})
   if (!res.ok) throw new Error(`browse ${path}: ${res.status}`)
   return res.json()
@@ -23,6 +32,7 @@ export async function browse(
 
 export type RawResult =
   | { kind: "text"; content: string }
+  | { kind: "large"; url: string }
   | { kind: "binary"; url: string; contentType: string; size: number }
 
 const textTypes =
@@ -55,17 +65,45 @@ export async function fetchRaw(
   path: string,
   signal?: AbortSignal,
 ): Promise<RawResult> {
-  const apiPath = `/api/raw${path}`
+  const apiPath = rawUrl(path)
   const res = await fetch(apiPath, signal ? { signal } : {})
   if (!res.ok) throw new Error(`raw ${path}: ${res.status}`)
 
   const ct = res.headers.get("Content-Type") ?? "application/octet-stream"
   const mime = ct.split(";")[0]?.trim() ?? ct
-  if (textTypes.test(mime)) {
-    return { kind: "text", content: await res.text() }
-  }
+  if (textTypes.test(mime)) return readText(res, apiPath)
   // Binary — discard body and return metadata for download.
   res.body?.cancel()
   const size = Number(res.headers.get("Content-Length")) || 0
   return { kind: "binary", url: apiPath, contentType: mime, size }
+}
+
+async function readText(res: Response, apiPath: string): Promise<RawResult> {
+  if (Number(res.headers.get("Content-Length")) > MAX_TEXT_BYTES) {
+    await res.body?.cancel()
+    return { kind: "large", url: apiPath }
+  }
+  const reader = res.body?.getReader()
+  if (!reader) return { kind: "text", content: "" }
+  const decoder = new TextDecoder()
+  let bytes = 0
+  let lines = 1
+  let content = ""
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      bytes += value.byteLength
+      for (const byte of value) if (byte === 10) lines++
+      if (bytes > MAX_TEXT_BYTES || lines > MAX_TEXT_LINES) {
+        await reader.cancel()
+        return { kind: "large", url: apiPath }
+      }
+      content += decoder.decode(value, { stream: true })
+    }
+    content += decoder.decode()
+    return { kind: "text", content }
+  } finally {
+    reader.releaseLock()
+  }
 }

@@ -1,18 +1,25 @@
-import { useCallback, useRef, useState } from "preact/hooks"
+import { useCallback, useEffect, useRef, useState } from "preact/hooks"
 import { browse, type DirEntry } from "./api"
 import { useAbortEffect } from "./use-abort-effect"
-import { useWS } from "./use-ws"
+import { isFileEvent, useWS } from "./use-ws"
 
 /** Fetches sibling entries from `parentDir` and refreshes on WS changes. */
 export function useSiblings(parentDir: string): DirEntry[] {
   const [siblings, setSiblings] = useState<DirEntry[]>([])
   const reloadController = useRef<AbortController | null>(null)
+  const generation = useRef(0)
 
   const load = useCallback(
     (signal?: AbortSignal) => {
+      const request = ++generation.current
       browse(parentDir, signal)
         .then((data) => {
-          if (data.type === "dir") setSiblings(data.entries)
+          if (
+            request === generation.current &&
+            !signal?.aborted &&
+            data.type === "dir"
+          )
+            setSiblings(data.entries)
         })
         .catch((err: unknown) => {
           if (err instanceof Error && err.name === "AbortError") return
@@ -33,7 +40,10 @@ export function useSiblings(parentDir: string): DirEntry[] {
     [load],
   )
 
-  useWS(parentDir.replace(/^\//, "") || ".", () => {
+  useEffect(() => () => reloadController.current?.abort(), [])
+
+  useWS(parentDir, (ev) => {
+    if (!isFileEvent(ev)) return
     reloadController.current?.abort()
     const controller = new AbortController()
     reloadController.current = controller

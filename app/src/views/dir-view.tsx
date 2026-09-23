@@ -6,16 +6,18 @@ import { browse, type DirEntry } from "../lib/api"
 import { FileIcon, ParentIcon } from "../lib/file-icon"
 import { formatSize } from "../lib/format"
 import { getHighlightDuration } from "../lib/highlight-config"
+import { encodePath } from "../lib/navigate"
 import { parentOf, watchPrefix } from "../lib/path"
 import { goToParent, listNavShortcuts } from "../lib/shortcuts"
 import { useListKeys } from "../lib/use-list-keys"
 import type { BoundShortcut } from "../lib/use-shortcuts"
 import { useShortcuts } from "../lib/use-shortcuts"
-import { useWS } from "../lib/use-ws"
+import { isFileEvent, useWS } from "../lib/use-ws"
 
 interface Props {
   path: string
   entries: DirEntry[]
+  truncated: boolean
   onNavigate: (to: string) => void
 }
 
@@ -28,7 +30,13 @@ function formatDate(iso: string): string {
   return dateFmt.format(new Date(iso))
 }
 
-export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
+export function DirView({
+  path,
+  entries: initialEntries,
+  truncated: initialTruncated,
+  onNavigate,
+}: Props) {
+  const [truncated, setTruncated] = useState(initialTruncated)
   const [entries, setEntries] = useState(initialEntries)
   const [addedNames, setAddedNames] = useState<Set<string>>(new Set())
   const [changedNames, setChangedNames] = useState<Set<string>>(new Set())
@@ -38,11 +46,12 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
   // Sync local entries when the parent provides a new listing (e.g. dir→dir navigation).
   useEffect(() => {
     setEntries(initialEntries)
+    setTruncated(initialTruncated)
     prevEntriesRef.current = initialEntries
     setAddedNames(new Set())
     setChangedNames(new Set())
     setDeletedNames(new Set())
-  }, [initialEntries])
+  }, [initialEntries, initialTruncated])
 
   const scrollRef = useRef<HTMLDivElement>(null)
   useListKeys(scrollRef, "a")
@@ -54,11 +63,24 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
   }, [path])
 
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  const requestRef = useRef<AbortController | null>(null)
+  useEffect(
+    () => () => {
+      requestRef.current?.abort()
+      for (const timer of timersRef.current) clearTimeout(timer)
+    },
+    [],
+  )
 
   const refresh = useCallback(() => {
-    browse(path)
+    requestRef.current?.abort()
+    for (const timer of timersRef.current) clearTimeout(timer)
+    const controller = new AbortController()
+    requestRef.current = controller
+    browse(path, controller.signal)
       .then((res) => {
-        if (res.type !== "dir") return
+        if (controller.signal.aborted || res.type !== "dir") return
+        setTruncated(res.truncated ?? false)
         for (const t of timersRef.current) clearTimeout(t)
         timersRef.current = []
 
@@ -108,7 +130,9 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
       })
   }, [path])
 
-  useWS(watchPrefix(path), refresh)
+  useWS(watchPrefix(path), (ev) => {
+    if (isFileEvent(ev)) refresh()
+  })
 
   const parentPath = path === "/" ? null : parentOf(path)
 
@@ -134,7 +158,7 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
     (e: JSX.TargetedMouseEvent<HTMLAnchorElement>) => {
       e.preventDefault()
       const href = e.currentTarget.getAttribute("href")
-      if (href) onNavigate(href)
+      if (href) onNavigate(decodeURIComponent(href))
     },
     [onNavigate],
   )
@@ -144,6 +168,11 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
       <Toolbar path={path} shortcuts={[...defs, ...listNavShortcuts]} />
       <hr class="file-separator" />
       <div class="dir-scroll" ref={scrollRef}>
+        {truncated ? (
+          <p role="status">
+            Showing 10,000 entries. Directory listing is incomplete.
+          </p>
+        ) : null}
         <table class="dir-table">
           <thead>
             <tr>
@@ -156,7 +185,11 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
             {parentPath ? (
               <tr>
                 <td>
-                  <a rel="up" href={parentPath} onClick={handleNavClick}>
+                  <a
+                    rel="up"
+                    href={encodePath(parentPath)}
+                    onClick={handleNavClick}
+                  >
                     <span class="entry-icon">
                       <ParentIcon />
                     </span>
@@ -178,7 +211,7 @@ export function DirView({ path, entries: initialEntries, onNavigate }: Props) {
               return (
                 <tr key={entry.name} class={cls}>
                   <td>
-                    <a href={href} onClick={handleNavClick}>
+                    <a href={encodePath(href)} onClick={handleNavClick}>
                       <span
                         class={`entry-icon${entry.isDir ? " entry-icon--folder" : ""}`}
                       >

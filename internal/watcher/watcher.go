@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"io/fs"
 	"log"
 	"net"
@@ -83,9 +84,12 @@ type Watcher struct {
 	mu      sync.RWMutex
 	clients map[*wsClient]struct{}
 
-	watchMu  sync.Mutex
-	watched  map[string]struct{} // abs paths of dirs added to fsw
-	watchSem chan struct{}       // bounds concurrent ensureWatched goroutines
+	watchMu       sync.Mutex
+	watched       map[string]struct{} // abs paths of dirs added to fsw
+	watchRequests chan struct{}
+	changes       chan Event
+	workers       sync.WaitGroup
+	closeOnce     sync.Once
 
 	cacheMu sync.RWMutex
 	cache   map[string][]string // rel path → previous lines
@@ -132,28 +136,37 @@ func New(root string, opts ...Option) (*Watcher, error) {
 	}
 
 	w := &Watcher{
-		root:     abs,
-		osRoot:   osRoot,
-		fsw:      fsw,
-		done:     make(chan struct{}),
-		clients:  make(map[*wsClient]struct{}),
-		watched:  make(map[string]struct{}),
-		watchSem: make(chan struct{}, 4),
-		cache:    make(map[string][]string),
+		root:          abs,
+		osRoot:        osRoot,
+		fsw:           fsw,
+		done:          make(chan struct{}),
+		clients:       make(map[*wsClient]struct{}),
+		watched:       make(map[string]struct{}),
+		watchRequests: make(chan struct{}, 1),
+		changes:       make(chan Event, 256),
+		cache:         make(map[string][]string),
 	}
 	for _, opt := range opts {
 		opt(w)
 	}
 
-	go w.loop()
+	w.workers.Add(3)
+	go func() { defer w.workers.Done(); w.loop() }()
+	go func() { defer w.workers.Done(); w.watchLoop() }()
+	go func() { defer w.workers.Done(); w.changeLoop() }()
 	return w, nil
 }
 
 // Close stops the watcher and releases resources.
 func (w *Watcher) Close() error {
-	close(w.done)
-	_ = w.osRoot.Close()
-	return w.fsw.Close()
+	var err error
+	w.closeOnce.Do(func() {
+		close(w.done)
+		err = w.fsw.Close()
+		w.workers.Wait()
+		_ = w.osRoot.Close()
+	})
+	return err
 }
 
 // isEditorTempFile reports whether name looks like an editor backup, swap,
@@ -182,77 +195,138 @@ func isEditorTempFile(name string) bool {
 	return false
 }
 
-// ensureWatched walks relDir (relative to w.root) via w.osRoot.FS() and
-// adds all sub-directories to the fsnotify watcher, skipping subtrees
-// that are already watched. Walking through os.Root confines traversal
-// to the root fd — symlink swaps cannot escape.
-func (w *Watcher) ensureWatched(relDir string) {
-	// Snapshot already-watched dirs to skip during walk (no lock held
-	// during the potentially slow WalkDir).
-	w.watchMu.Lock()
-	snapshot := make(map[string]struct{}, len(w.watched))
-	for k := range w.watched {
-		snapshot[k] = struct{}{}
+// requestWatches coalesces subscription changes.
+func (w *Watcher) requestWatches() {
+	select {
+	case w.watchRequests <- struct{}{}:
+	default:
 	}
-	w.watchMu.Unlock()
+}
 
-	// Walk without holding the lock. Paths from fs.WalkDir on
-	// osRoot.FS() are relative to w.root (forward-slash separated).
-	var newDirs []string
-	_ = fs.WalkDir(
-		w.osRoot.FS(),
-		relDir,
-		func(p string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			select {
-			case <-w.done:
-				return fs.SkipAll
-			default:
-			}
-			if !d.IsDir() {
-				return nil
-			}
-			// Never skip the walk root itself — it may start with "."
-			// (e.g., dirsv -root .hidden).
-			abs := filepath.Join(w.root, filepath.FromSlash(p))
-			if p != relDir && shouldSkipDir(d.Name()) {
-				return fs.SkipDir
-			}
-			if _, ok := snapshot[abs]; ok {
-				return fs.SkipDir // subtree already covered
-			}
-			newDirs = append(newDirs, abs)
-			return nil
-		},
-	)
-
-	if len(newDirs) == 0 {
-		return
-	}
-
-	// Lock only for the batch add.
-	w.watchMu.Lock()
-	defer w.watchMu.Unlock()
-
-	var added []string
-	for _, abs := range newDirs {
-		if _, ok := w.watched[abs]; ok {
-			continue // added by a concurrent call
+func (w *Watcher) watchLoop() {
+	for {
+		select {
+		case <-w.done:
+			return
+		case <-w.watchRequests:
+			w.reconcileWatches()
 		}
-		if err := w.fsw.Add(abs); err != nil {
+	}
+}
+
+func (w *Watcher) reconcileWatches() {
+	w.mu.RLock()
+	prefixes := make([]string, 0)
+	for c := range w.clients {
+		c.mu.RLock()
+		prefixes = append(prefixes, c.prefixes...)
+		c.mu.RUnlock()
+	}
+	w.mu.RUnlock()
+	desired := make(map[string]struct{})
+	for _, prefix := range prefixes {
+		target := prefix
+		if target == "" {
+			target = "."
+		}
+		info, err := w.osRoot.Stat(target)
+		for errors.Is(err, fs.ErrNotExist) && target != "." {
+			target = path.Dir(target)
+			info, err = w.osRoot.Stat(target)
+		}
+		if err != nil {
 			continue
 		}
-		w.watched[abs] = struct{}{}
-		rel, _ := filepath.Rel(w.root, abs)
-		added = append(added, filepath.ToSlash(rel))
+		if !info.IsDir() {
+			target = path.Dir(target)
+		}
+		_ = fs.WalkDir(
+			w.osRoot.FS(),
+			target,
+			func(p string, d fs.DirEntry, err error) error {
+				if err != nil {
+					return fs.SkipDir
+				}
+				select {
+				case <-w.done:
+					return fs.SkipAll
+				default:
+				}
+				if len(w.watchRequests) > 0 {
+					return fs.SkipAll
+				}
+				if !d.IsDir() {
+					return nil
+				}
+				if p != target && shouldSkipDir(d.Name()) {
+					return fs.SkipDir
+				}
+				if _, exists := desired[p]; exists {
+					return fs.SkipDir
+				}
+				desired[p] = struct{}{}
+				return nil
+			},
+		)
 	}
-	if len(added) > 0 {
-		//nolint:gosec // G706: dirs derived from filepath.Abs
-		w.logf("%s%-10s%s %s",
-			colorDim, "watch", colorReset,
-			strings.Join(added, ", "))
+	// Serialize installation with subscriber updates.
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	select {
+	case <-w.done:
+		return
+	default:
+	}
+	// A pending update invalidates this snapshot.
+	if len(w.watchRequests) > 0 {
+		return
+	}
+	w.watchMu.Lock()
+	defer w.watchMu.Unlock()
+	for dir := range w.watched {
+		rel, err := filepath.Rel(w.root, dir)
+		if err != nil {
+			continue
+		}
+		if _, keep := desired[filepath.ToSlash(rel)]; keep {
+			continue
+		}
+		_ = w.fsw.Remove(dir)
+		delete(w.watched, dir)
+	}
+	for rel := range desired {
+		abs := filepath.Join(w.root, filepath.FromSlash(rel))
+		if _, exists := w.watched[abs]; exists {
+			continue
+		}
+		if err := w.fsw.Add(abs); err == nil {
+			w.watched[abs] = struct{}{}
+		}
+	}
+	w.cacheMu.Lock()
+	for name := range w.cache {
+		needed := false
+		for _, prefix := range prefixes {
+			if relatedPath(prefix, name) {
+				needed = true
+				break
+			}
+		}
+		if !needed {
+			delete(w.cache, name)
+		}
+	}
+	w.cacheMu.Unlock()
+}
+
+func (w *Watcher) changeLoop() {
+	for {
+		select {
+		case <-w.done:
+			return
+		case ev := <-w.changes:
+			w.processChange(ev)
+		}
 	}
 }
 
@@ -267,7 +341,7 @@ func (w *Watcher) removeWatched(absPath string) {
 const (
 	coalesceDuration = 100 * time.Millisecond
 	maxClients       = 128
-	maxWatchPrefixes = 50 // per client, prevents unbounded goroutine spawning
+	maxWatchPrefixes = 50
 )
 
 func (w *Watcher) loop() {
@@ -286,6 +360,10 @@ func (w *Watcher) loop() {
 				continue
 			}
 			pending[fsEvent.Path] = *fsEvent
+			if len(pending) >= 256 {
+				w.broadcast(pending)
+				clear(pending)
+			}
 			if timer == nil {
 				timer = time.NewTimer(coalesceDuration)
 				timerC = timer.C
@@ -323,22 +401,17 @@ func (w *Watcher) toEvent(ev fsnotify.Event) *Event {
 	switch {
 	case ev.Op.Has(fsnotify.Create):
 		eventType = "create"
-		if info, err := os.Stat(ev.Name); err == nil && info.IsDir() {
-			if !shouldSkipDir(info.Name()) {
-				_ = w.fsw.Add(ev.Name)
-				w.watchMu.Lock()
-				w.watched[ev.Name] = struct{}{}
-				w.watchMu.Unlock()
-			}
-		}
+		w.requestWatches()
 	case ev.Op.Has(fsnotify.Write):
 		eventType = "change"
 	case ev.Op.Has(fsnotify.Remove):
 		eventType = "delete"
 		w.removeWatched(ev.Name)
+		w.requestWatches()
 	case ev.Op.Has(fsnotify.Rename):
 		eventType = "rename"
 		w.removeWatched(ev.Name)
+		w.requestWatches()
 	default:
 		return nil
 	}
@@ -434,8 +507,7 @@ func matchesClient(c *wsClient, evPath string) bool {
 		return true // no filter — match everything
 	}
 	for _, prefix := range c.prefixes {
-		if prefix == "" || strings.HasPrefix(evPath, prefix) ||
-			strings.HasPrefix(prefix, evPath) {
+		if relatedPath(prefix, evPath) {
 			return true
 		}
 	}
@@ -445,17 +517,15 @@ func matchesClient(c *wsClient, evPath string) bool {
 // maxDiffSize is the largest file (1 MB) we'll read for diffing.
 const maxDiffSize = 1 << 20
 
-// broadcast dispatches pending events. Change events are enriched with line
-// diffs in a bounded goroutine; other events are sent immediately.
+// broadcast queues diffs without blocking filesystem events.
 func (w *Watcher) broadcast(pending map[string]Event) {
 	for _, ev := range pending {
 		if ev.Type == "change" {
-			ev := ev // capture loop variable
-			go func() {
-				w.watchSem <- struct{}{}
-				defer func() { <-w.watchSem }()
-				w.processChange(ev)
-			}()
+			select {
+			case w.changes <- ev:
+			default:
+				w.fanOut(ev)
+			}
 			continue
 		}
 		// Non-change events: clean cache on remove/rename.
@@ -479,22 +549,33 @@ func (w *Watcher) processChange(ev Event) {
 // On any failure (stat, read, binary, too large) it returns silently —
 // the event is sent without changedLines.
 func (w *Watcher) enrichChangedLines(ev *Event) {
-	absPath := filepath.Join(w.root, filepath.FromSlash(ev.Path))
-	info, err := os.Stat(absPath)
-	if err != nil || info.IsDir() || info.Size() > maxDiffSize {
+	f, err := w.osRoot.Open(filepath.FromSlash(ev.Path))
+	if err != nil {
+		return
+	}
+	defer func() { _ = f.Close() }()
+	info, err := f.Stat()
+	if err != nil || !info.Mode().IsRegular() || info.Size() > maxDiffSize {
+		return
+	}
+	data, err := io.ReadAll(io.LimitReader(f, maxDiffSize+1))
+	if err != nil || len(data) > maxDiffSize || diff.IsBinary(data) {
 		return
 	}
 
-	//nolint:gosec // absPath is w.root + relative event path, not user input
-	data, err := os.ReadFile(absPath)
-	if err != nil || diff.IsBinary(data) {
+	if strings.Count(string(data), "\n") > 10000 {
 		return
 	}
-
 	newLines := strings.Split(string(data), "\n")
 
 	w.cacheMu.Lock()
 	oldLines, hadCache := w.cache[ev.Path]
+	if !hadCache && len(w.cache) >= 16 {
+		for key := range w.cache {
+			delete(w.cache, key)
+			break
+		}
+	}
 	w.cache[ev.Path] = newLines
 	w.cacheMu.Unlock()
 
@@ -567,105 +648,14 @@ func (w *Watcher) subscribe() (*wsClient, error) {
 func (w *Watcher) unsubscribe(c *wsClient) {
 	w.mu.Lock()
 	delete(w.clients, c)
+	w.requestWatches()
 	w.mu.Unlock()
 	close(c.ch)
-
-	w.pruneWatches()
 }
 
-// pruneWatches removes fsnotify watches for directories that no remaining
-// client needs. Called after a client disconnects.
-func (w *Watcher) pruneWatches() {
-	w.mu.RLock()
-	prefixes := make([]string, 0, len(w.clients))
-	for c := range w.clients {
-		c.mu.RLock()
-		prefixes = append(prefixes, c.prefixes...)
-		c.mu.RUnlock()
-	}
-	w.mu.RUnlock()
-
-	w.watchMu.Lock()
-	defer w.watchMu.Unlock()
-
-	var dirs []string
-	for dir := range w.watched {
-		rel, err := filepath.Rel(w.root, dir)
-		if err != nil {
-			continue
-		}
-		rel = filepath.ToSlash(rel)
-		if rel == "." {
-			rel = ""
-		}
-
-		needed := false
-		for _, prefix := range prefixes {
-			if prefix == "" || rel == "" ||
-				rel == prefix ||
-				strings.HasPrefix(rel, prefix+"/") ||
-				strings.HasPrefix(prefix, rel+"/") {
-				needed = true
-				break
-			}
-		}
-		if needed {
-			continue
-		}
-		_ = w.fsw.Remove(dir)
-		delete(w.watched, dir)
-		if rel == "" {
-			rel = "."
-		}
-		dirs = append(dirs, rel)
-	}
-	if len(dirs) > 0 {
-		w.logf("%s%-10s%s %s",
-			colorDim, "unwatch", colorReset,
-			strings.Join(dirs, ", "))
-		// Prune cached content for files under removed directories.
-		w.cacheMu.Lock()
-		for cachedPath := range w.cache {
-			for _, rel := range dirs {
-				if rel == "." || strings.HasPrefix(cachedPath, rel+"/") {
-					delete(w.cache, cachedPath)
-					break
-				}
-			}
-		}
-		w.cacheMu.Unlock()
-	}
-}
-
-// watchForClient resolves prefix to an absolute path under root and
-// ensures the subtree is watched. Rejects paths that escape the root
-// (os.Root enforces containment via the directory fd).
-// If prefix points to a file, the file's parent directory is watched.
-func (w *Watcher) watchForClient(prefix string) {
-	// os.Root.Stat follows symlinks but confines resolution to the
-	// root directory — paths that escape via ../ or symlinks are rejected
-	// by the kernel, replacing the manual EvalSymlinks + prefix check.
-	target := prefix
-	if target == "" {
-		target = "."
-	}
-	info, err := w.osRoot.Stat(target)
-	if err != nil {
-		return
-	}
-	// If target is a file, watch its parent directory so fsnotify
-	// can report changes to it.
-	if !info.IsDir() {
-		target = path.Dir(target)
-	}
-	// Run asynchronously so the client's read loop isn't blocked by
-	// the WalkDir inside ensureWatched. The semaphore caps concurrent
-	// walks to prevent goroutine accumulation from rapid watch messages.
-	go func() {
-		w.watchSem <- struct{}{}
-		defer func() { <-w.watchSem }()
-		w.ensureWatched(target)
-	}()
+func relatedPath(a, b string) bool {
+	return a == "" || b == "" || a == b ||
+		strings.HasPrefix(a, b+"/") || strings.HasPrefix(b, a+"/")
 }
 
 // CleanWatchPath normalizes the watch query parameter to match the format
@@ -753,23 +743,21 @@ func (w *Watcher) readLoop(
 		for _, raw := range msg.Watch {
 			cleaned = append(cleaned, CleanWatchPath(raw))
 		}
-		// Cap prefixes per client to prevent a malicious client from
-		// spawning unbounded goroutines (each new prefix triggers a
-		// WalkDir via ensureWatched).
+		// Bound each client's watch set.
 		if len(cleaned) > maxWatchPrefixes {
 			cleaned = cleaned[:maxWatchPrefixes]
 		}
 
+		w.mu.Lock()
 		c.mu.Lock()
 		c.prefixes = cleaned
 		c.mu.Unlock()
+		w.requestWatches()
+		w.mu.Unlock()
 
 		w.logf("%s%-10s%s %s %swatching %v%s",
 			colorCyan, "watch-set", colorReset,
 			clientID, colorDim, cleaned, colorReset)
 
-		for _, prefix := range cleaned {
-			w.watchForClient(prefix)
-		}
 	}
 }

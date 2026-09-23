@@ -14,7 +14,7 @@ export function normalizePath(raw: string, base: string): string {
 }
 
 /** Percent-encode each segment of a normalized path for use in the URL bar. */
-function encodePath(normalized: string): string {
+export function encodePath(normalized: string): string {
   return normalized
     .split("/")
     .map((s) => encodeURIComponent(s))
@@ -22,11 +22,8 @@ function encodePath(normalized: string): string {
 }
 
 /** SPA navigation helper. Encodes each path segment for proper URL handling. */
-export function navigate(to: string) {
-  const hashIdx = to.indexOf("#")
-  const hash = hashIdx >= 0 ? to.slice(hashIdx) : ""
-  const path = hashIdx >= 0 ? to.slice(0, hashIdx) : to
-  const normalized = normalizePath(path, "/")
+export function navigate(to: string, hash = "") {
+  const normalized = normalizePath(to, "/")
   history.pushState(null, "", encodePath(normalized) + hash)
   window.dispatchEvent(new PopStateEvent("popstate"))
 }

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "preact/hooks"
+import { clearCache, invalidateTree } from "./content-cache"
 import { normalizePath } from "./navigate"
 
 export interface WsEvent {
@@ -12,6 +13,7 @@ export interface WsEvent {
     | "selection"
     | "clear"
     | "close"
+    | "refresh"
   path: string
   changedLines?: number[]
   line?: number
@@ -38,6 +40,22 @@ let ws: WebSocket | null = null
 const listeners = new Map<Listener, string>() // listener → watched prefix
 let teardownTimer: ReturnType<typeof setTimeout> | undefined
 let backoff = 0
+let reconnectTimer: ReturnType<typeof setTimeout> | undefined
+let connected = false
+
+export function isFileEvent(ev: WsEvent): boolean {
+  return ["change", "create", "delete", "rename", "refresh"].includes(ev.type)
+}
+
+export function matchesPath(prefix: string, path: string): boolean {
+  return (
+    prefix === "" ||
+    path === "" ||
+    prefix === path ||
+    path.startsWith(`${prefix}/`) ||
+    prefix.startsWith(`${path}/`)
+  )
+}
 
 const BACKOFF_BASE = 1000
 const BACKOFF_MAX = 30000
@@ -54,31 +72,35 @@ function sendWatchList() {
 }
 
 function dispatch(batch: WsEvent[]) {
+  const reloads = new Map<Listener, WsEvent>()
+  batch.filter(isFileEvent).forEach((ev) => {
+    invalidateTree(`/${ev.path}`)
+  })
   for (const ev of batch) {
     if (ev.type === "close") {
-      const current = normalizePath(
-        decodeURIComponent(location.pathname),
-        "/",
-      ).replace(/^\//, "")
-      if (current === ev.path) {
-        window.close()
-      }
+      closePath(ev.path)
       continue
     }
     for (const [fn, prefix] of listeners) {
-      if (
-        prefix === "" ||
-        ev.path.startsWith(prefix) ||
-        prefix.startsWith(ev.path)
-      ) {
-        fn(ev)
+      if (matchesPath(prefix, ev.path)) {
+        if (isFileEvent(ev)) reloads.set(fn, ev)
+        else fn(ev)
       }
     }
   }
+  for (const [fn, ev] of reloads) fn(ev)
+}
+
+function closePath(path: string) {
+  const current = normalizePath(
+    decodeURIComponent(location.pathname),
+    "/",
+  ).replace(/^\//, "")
+  if (current === path) window.close()
 }
 
 function connect() {
-  if (ws) return
+  if (ws || listeners.size === 0) return
 
   const socket = new WebSocket(wsUrl())
   let rafId = 0
@@ -87,6 +109,11 @@ function connect() {
   socket.onopen = () => {
     backoff = 0
     sendWatchList()
+    if (connected) {
+      clearCache()
+      dispatch([{ type: "refresh", path: "" }])
+    }
+    connected = true
   }
 
   socket.onmessage = (msg) => {
@@ -106,10 +133,12 @@ function connect() {
   }
 
   socket.onclose = () => {
+    cancelAnimationFrame(rafId)
+    if (ws !== socket) return
     ws = null
     if (listeners.size === 0) return
     backoff = Math.min(backoff === 0 ? BACKOFF_BASE : backoff * 2, BACKOFF_MAX)
-    setTimeout(connect, backoff)
+    reconnectTimer = setTimeout(connect, backoff)
   }
 
   socket.onerror = () => {
@@ -120,14 +149,15 @@ function connect() {
 }
 
 function teardownIfEmpty() {
-  if (listeners.size > 0 || !ws) return
-  ws.close()
+  if (listeners.size > 0) return
+  clearTimeout(reconnectTimer)
+  ws?.close()
   ws = null
   backoff = 0
 }
 
 function subscribe(prefix: string, fn: Listener) {
-  listeners.set(fn, prefix)
+  listeners.set(fn, normalizePath(prefix, "/").replace(/^\/|\/$/g, ""))
   connect()
   sendWatchList()
 }

@@ -1,4 +1,4 @@
-import { navigate } from "./navigate"
+import { encodePath, navigate } from "./navigate"
 
 /**
  * Resolve a relative URL path against the markdown file's parent directory.
@@ -19,7 +19,7 @@ export function resolveRelativeUrl(href: string, mdPath: string): string {
   const dir = mdPath.replace(/\/[^/]*$/, "") || ""
 
   // Combine dir + href and resolve `.` / `..` segments via URL constructor.
-  const base = `http://x${dir.endsWith("/") ? dir : `${dir}/`}`
+  const base = `http://x${encodePath(dir.endsWith("/") ? dir : `${dir}/`)}`
   const resolved = new URL(href, base)
   return resolved.pathname + resolved.hash
 }
@@ -59,5 +59,6 @@ export function handleRelativeLinkClick(e: MouseEvent, mdPath: string): void {
   if (href.startsWith("#")) return
 
   e.preventDefault()
-  navigate(resolveRelativeUrl(href, mdPath))
+  const target = new URL(resolveRelativeUrl(href, mdPath), location.origin)
+  navigate(decodeURIComponent(target.pathname), target.hash)
 }

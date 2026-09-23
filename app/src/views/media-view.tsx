@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "preact/hooks"
 import { FocusOverlay } from "../components/focus-overlay"
+import { rawUrl as fileUrl } from "../lib/api"
 import { ChevronLeft, ChevronRight } from "../lib/icons"
 import { imageExts, videoExts } from "../lib/media-types"
 import { navigate } from "../lib/navigate"
@@ -8,7 +9,7 @@ import type { FocusItem } from "../lib/use-focus-overlay"
 import { useFocusOverlay } from "../lib/use-focus-overlay"
 import { useKeys } from "../lib/use-keys"
 import { useSiblings } from "../lib/use-siblings"
-import { useWS } from "../lib/use-ws"
+import { isFileEvent, useWS } from "../lib/use-ws"
 
 interface Props {
   path: string
@@ -30,10 +31,9 @@ export function MediaView({ path, kind }: Props) {
   const allSiblings = useSiblings(parentDir)
 
   const siblings = useMemo(() => {
-    const dir = parentDir === "/" ? "" : parentDir
     return allSiblings
       .filter((e) => !e.isDir && matchesKind(e.name, kind))
-      .map((e) => `${dir}/${e.name}`)
+      .map((e) => `${parentDir}${e.name}`)
   }, [allSiblings, parentDir, kind])
 
   const currentIdx = siblings.indexOf(path)
@@ -55,12 +55,11 @@ export function MediaView({ path, kind }: Props) {
 
   // Bump revision on file changes so the browser re-fetches the asset.
   const [rev, setRev] = useState(0)
-  useWS(
-    watchPrefix(path),
-    useCallback(() => setRev((r) => r + 1), []),
-  )
+  useWS(watchPrefix(path), (ev) => {
+    if (isFileEvent(ev)) setRev((r) => r + 1)
+  })
 
-  const rawUrl = `/api/raw${path}${rev ? `?v=${rev}` : ""}`
+  const rawUrl = `${fileUrl(path)}${rev ? `?v=${rev}` : ""}`
   const fileName = path.split("/").pop() ?? path
   const position =
     currentIdx >= 0 ? `${currentIdx + 1} / ${siblings.length}` : ""
@@ -71,7 +70,7 @@ export function MediaView({ path, kind }: Props) {
     () =>
       siblings.map((p) => ({
         type: kind as "image" | "video",
-        src: `/api/raw${p}${rev ? `?v=${rev}` : ""}`,
+        src: `${fileUrl(p)}${rev ? `?v=${rev}` : ""}`,
         alt: p.split("/").pop() ?? p,
       })),
     [siblings, kind, rev],
@@ -111,7 +110,7 @@ export function MediaView({ path, kind }: Props) {
     const toPreload = [prevPath, nextPath].filter(Boolean) as string[]
     for (const p of toPreload) {
       const img = new Image()
-      img.src = `/api/raw${p}${rev ? `?v=${rev}` : ""}`
+      img.src = `${fileUrl(p)}${rev ? `?v=${rev}` : ""}`
     }
   }, [prevPath, nextPath, kind, rev])
 

@@ -17,6 +17,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -36,22 +37,13 @@ type Entry struct {
 
 // BrowseResponse is the JSON envelope for /api/browse/.
 type BrowseResponse struct {
-	Type    string    `json:"type"`
-	Entries []Entry   `json:"entries"`
-	Path    string    `json:"path,omitempty"`
-	Size    int64     `json:"size,omitempty"`
-	ModTime time.Time `json:"modTime,omitempty"`
+	Type      string    `json:"type"`
+	Entries   []Entry   `json:"entries"`
+	Path      string    `json:"path,omitempty"`
+	Size      int64     `json:"size,omitempty"`
+	ModTime   time.Time `json:"modTime,omitempty"`
+	Truncated bool      `json:"truncated,omitempty"`
 }
-
-// pathCacheEntry caches the resolved filesystem path from EvalSymlinks.
-// FileInfo is not cached — Stat is cheap and caching it causes stale
-// ModTime in ServeContent (wrong 304 responses with CDN caching).
-type pathCacheEntry struct {
-	resolved string
-	cachedAt time.Time
-}
-
-const pathCacheTTL = 2 * time.Second
 
 // EventType identifies the kind of editor sync event.
 type EventType string
@@ -85,8 +77,7 @@ type Server struct {
 	allowedHosts   map[string]struct{}
 	editorCallback func(EditorEvent)
 	mux            *http.ServeMux
-	pathCache      sync.Map // cleaned request path → *pathCacheEntry
-	done           chan struct{}
+	osRoot         *os.Root
 }
 
 // Option configures a Server.
@@ -149,11 +140,14 @@ func New(
 		return nil, errors.New("root is not a directory")
 	}
 
-	s := &Server{root: abs, mux: http.NewServeMux(), done: make(chan struct{})}
+	osRoot, err := os.OpenRoot(abs)
+	if err != nil {
+		return nil, err
+	}
+	s := &Server{root: abs, mux: http.NewServeMux(), osRoot: osRoot}
 	for _, opt := range opts {
 		opt(s)
 	}
-	go s.sweepPathCache()
 	s.mux.HandleFunc("GET /api/browse/{path...}", s.handleBrowse)
 	s.mux.HandleFunc("GET /api/raw/{path...}", s.handleRaw)
 	s.mux.HandleFunc("GET /api/htmlpreview/{path...}", s.handleHTMLPreview)
@@ -343,92 +337,33 @@ var textMIME = map[string]string{
 	".mermaid":  "text/plain; charset=utf-8",
 }
 
-// resolvePath cleans, resolves symlinks, and validates a request path
-// against the root. Returns the real filesystem path and FileInfo, or an error:
-//   - fs.ErrNotExist if the path doesn't exist
-//   - errForbidden if the path escapes the root
+// resolvePath opens within the serving root.
 func (s *Server) resolvePath(
 	reqPath string,
-) (resolved string, info os.FileInfo, err error) {
-	cleaned := filepath.FromSlash(path.Clean("/" + reqPath))
-
-	// Check cache for the resolved path (EvalSymlinks result).
-	// FileInfo is always fresh — Stat is cheap, caching it causes
-	// stale ModTime in ServeContent.
-	if v, ok := s.pathCache.Load(cleaned); ok {
-		entry, ok := v.(*pathCacheEntry)
-		if ok && time.Since(entry.cachedAt) < pathCacheTTL {
-			fi, statErr := os.Stat(entry.resolved)
-			if statErr != nil {
-				s.pathCache.Delete(cleaned)
-				return "", nil, statErr
-			}
-			return entry.resolved, fi, nil
-		}
-		s.pathCache.Delete(cleaned)
+) (*os.File, os.FileInfo, error) {
+	cleaned := strings.TrimPrefix(path.Clean("/"+reqPath), "/")
+	if cleaned == "" {
+		cleaned = "."
 	}
-
-	full := filepath.Join(s.root, cleaned)
-
-	// Resolve symlinks so the containment check uses the real target.
-	resolved, err = filepath.EvalSymlinks(full)
+	f, err := s.osRoot.Open(filepath.FromSlash(cleaned))
 	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return "", nil, fs.ErrNotExist
-		}
-		return "", nil, errForbidden
+		return nil, nil, err
 	}
-
-	// Boundary-safe containment: root itself is allowed, otherwise require
-	// the separator after root to prevent /tmp/foo matching /tmp/foobar.
-	if resolved != s.root &&
-		!strings.HasPrefix(resolved, s.root+string(filepath.Separator)) {
-		return "", nil, errForbidden
+	info, err := f.Stat()
+	if err != nil {
+		_ = f.Close()
+		return nil, nil, err
 	}
-
-	fi, statErr := os.Stat(resolved)
-	if statErr != nil {
-		return "", nil, statErr
+	if !info.IsDir() && !info.Mode().IsRegular() {
+		_ = f.Close()
+		return nil, nil, errForbidden
 	}
-
-	s.pathCache.Store(cleaned, &pathCacheEntry{
-		resolved: resolved,
-		cachedAt: time.Now(),
-	})
-
-	return resolved, fi, nil
+	return f, info, nil
 }
 
-// Close stops background goroutines. Safe to call multiple times.
+// Close releases the filesystem handle.
 func (s *Server) Close() {
-	select {
-	case <-s.done:
-	default:
-		close(s.done)
-	}
-}
-
-// sweepPathCache periodically evicts expired entries so the cache
-// doesn't grow unboundedly from crawlers hitting unique paths.
-func (s *Server) sweepPathCache() {
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-s.done:
-			return
-		case <-ticker.C:
-			now := time.Now()
-			s.pathCache.Range(func(key, value any) bool {
-				if entry, ok := value.(*pathCacheEntry); ok {
-					if now.Sub(entry.cachedAt) >= pathCacheTTL {
-						s.pathCache.Delete(key)
-					}
-				}
-				return true
-			})
-		}
-	}
+	_ = s.osRoot.Close()
 }
 
 func (s *Server) handleBrowse(w http.ResponseWriter, r *http.Request) {
@@ -437,8 +372,7 @@ func (s *Server) handleBrowse(w http.ResponseWriter, r *http.Request) {
 	// Single-file mode: only the target file and root listing are allowed.
 	if s.singleFile != "" {
 		if reqPath == "" {
-			full := filepath.Join(s.root, s.singleFile)
-			info, err := os.Stat(full)
+			info, err := s.osRoot.Stat(s.singleFile)
 			if err != nil {
 				http.Error(w, "internal error", http.StatusInternalServerError)
 				return
@@ -472,6 +406,7 @@ func (s *Server) handleBrowse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	defer func() { _ = full.Close() }()
 	if !info.IsDir() {
 		resp := BrowseResponse{
 			Type:    "file",
@@ -485,32 +420,35 @@ func (s *Server) handleBrowse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Read directory entries once — used for both the index.html check
-	// and the listing response, avoiding double stat.
-	dirEntries, err := os.ReadDir(full)
-	if err != nil {
+	// Bound allocation before sorting directory entries.
+	const maxDirEntries = 10_000
+	dirEntries, err := full.ReadDir(maxDirEntries + 1)
+	if err != nil && !errors.Is(err, io.EOF) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
-	// Cap entries to avoid unbounded memory on directories with millions
-	// of files. The limit is generous enough for any practical directory.
-	const maxDirEntries = 10_000
-	if len(dirEntries) > maxDirEntries {
+	truncated := len(dirEntries) > maxDirEntries
+	if truncated {
 		dirEntries = dirEntries[:maxDirEntries]
 	}
+	slices.SortFunc(
+		dirEntries,
+		func(a, b os.DirEntry) int { return strings.Compare(a.Name(), b.Name()) },
+	)
 
 	// Trailing-slash convention: no trailing slash + dir has index.html → index type.
 	hasTrailingSlash := strings.HasSuffix(r.URL.Path, "/")
 	if !hasTrailingSlash && reqPath != "" {
-		for _, de := range dirEntries {
-			if de.IsDir() || de.Name() != "index.html" {
-				continue
-			}
-			rel, _ := filepath.Rel(s.root, filepath.Join(full, "index.html"))
+		indexPath := path.Join(reqPath, "index.html")
+		index, indexInfo, indexErr := s.resolvePath(indexPath)
+		if indexErr == nil {
+			defer func() { _ = index.Close() }()
+		}
+		if indexErr == nil && indexInfo.Mode().IsRegular() {
 			resp := BrowseResponse{
 				Type: "index",
-				Path: filepath.ToSlash(rel),
+				Path: indexPath,
 			}
 			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("Cache-Control", "no-cache")
@@ -519,15 +457,16 @@ func (s *Server) handleBrowse(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	s.serveDirEntries(w, dirEntries)
+	s.serveDirEntries(w, dirEntries, truncated)
 }
 
 func (s *Server) serveDirEntries(
 	w http.ResponseWriter,
 	dirEntries []os.DirEntry,
+	truncated bool,
 ) {
 	entries := s.collectEntries(dirEntries)
-	resp := BrowseResponse{Type: "dir", Entries: entries}
+	resp := BrowseResponse{Type: "dir", Entries: entries, Truncated: truncated}
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-cache")
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
@@ -621,28 +560,23 @@ func (s *Server) handleRaw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	defer func() { _ = full.Close() }()
 	if info.IsDir() {
 		http.Error(w, "not a file", http.StatusBadRequest)
 		return
 	}
 
-	s.serveFile(w, r, full, info)
+	s.serveFile(w, r, full, reqPath, info)
 }
 
 // serveFile sends a single file with correct MIME type and caching headers.
 func (s *Server) serveFile(
 	w http.ResponseWriter,
 	r *http.Request,
+	f *os.File,
 	full string,
 	info os.FileInfo,
 ) {
-	f, err := os.Open(full)
-	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
-	defer func() { _ = f.Close() }()
-
 	// Force browsers to revalidate so WS-triggered re-fetches get
 	// fresh content instead of heuristic-cached stale data.
 	w.Header().Set("Cache-Control", "no-cache")
@@ -701,6 +635,11 @@ func (s *Server) handleHTMLPreview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	filePath, err = url.PathUnescape(filePath)
+	if err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
 	// Resolve the full filesystem path: root + filePath.
 	fsPath := path.Join(siteRoot, filePath)
 	full, info, resolveErr := s.resolvePath(fsPath)
@@ -713,21 +652,28 @@ func (s *Server) handleHTMLPreview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	defer func() { _ = full.Close() }()
 	// Directories auto-resolve to index.html (like a real web server).
 	if info.IsDir() {
-		indexPath := filepath.Join(full, "index.html")
-		indexInfo, statErr := os.Stat(indexPath)
+		indexPath := path.Join(fsPath, "index.html")
+		indexFile, indexInfo, statErr := s.resolvePath(indexPath)
 		if statErr != nil {
-			http.Error(w, "not found", http.StatusNotFound)
+			status := http.StatusForbidden
+			if errors.Is(statErr, fs.ErrNotExist) {
+				status = http.StatusNotFound
+			}
+			http.Error(w, http.StatusText(status), status)
 			return
 		}
-		full = indexPath
+		_ = full.Close()
+		full = indexFile
+		fsPath = indexPath
 		info = indexInfo
 	}
 
-	ext := strings.ToLower(filepath.Ext(full))
+	ext := strings.ToLower(path.Ext(fsPath))
 	if ext != ".html" && ext != ".htm" {
-		s.serveFile(w, r, full, info)
+		s.serveFile(w, r, full, fsPath, info)
 		return
 	}
 
@@ -742,9 +688,17 @@ func (s *Server) handleHTMLPreview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	content, readErr := os.ReadFile(full)
+	content, readErr := io.ReadAll(io.LimitReader(full, maxPreviewSize+1))
 	if readErr != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+	if len(content) > maxPreviewSize {
+		http.Error(
+			w,
+			"file too large for preview",
+			http.StatusRequestEntityTooLarge,
+		)
 		return
 	}
 

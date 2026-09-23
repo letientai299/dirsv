@@ -1,8 +1,8 @@
 import { lazy, Suspense } from "preact/compat"
-import { useCallback, useEffect, useRef, useState } from "preact/hooks"
+import { useEffect, useRef, useState } from "preact/hooks"
 import { type BrowseResponse, browse, fetchInfo } from "./lib/api"
 import { setHighlightDuration } from "./lib/highlight-config"
-import { normalizePath, replaceLocation } from "./lib/navigate"
+import { navigate, normalizePath, replaceLocation } from "./lib/navigate"
 import { FileView } from "./views/file-view"
 
 const DirView = lazy(() =>
@@ -85,11 +85,6 @@ export function App() {
     return () => controller.abort()
   }, [path])
 
-  const navigate = useCallback((to: string) => {
-    history.pushState(null, "", to)
-    setPath(to)
-  }, [])
-
   if (error) return <div class="error">Error: {error}</div>
   if (!data) return <div class="loading">Loading...</div>
 
@@ -99,8 +94,10 @@ export function App() {
     return (
       <Suspense fallback={fallback}>
         <DirView
+          key={path}
           path={path}
           entries={data.entries ?? []}
+          truncated={data.truncated ?? false}
           onNavigate={navigate}
         />
       </Suspense>

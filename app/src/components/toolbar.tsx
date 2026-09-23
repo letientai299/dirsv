@@ -9,7 +9,7 @@ import {
   getLayoutMode,
   listenLayoutModeChanges,
 } from "../lib/layout-mode"
-import { navigate, normalizePath } from "../lib/navigate"
+import { encodePath, navigate, normalizePath } from "../lib/navigate"
 import type { ShortcutDef } from "../lib/shortcuts"
 import {
   focusPath,
@@ -82,7 +82,7 @@ function Breadcrumbs({
     (e: JSX.TargetedMouseEvent<HTMLAnchorElement>) => {
       e.preventDefault()
       const href = e.currentTarget.getAttribute("href")
-      if (href) navigate(href)
+      if (href) navigate(decodeURIComponent(href))
     },
     [],
   )
@@ -122,7 +122,11 @@ function Breadcrumbs({
                 {seg}
               </span>
             ) : (
-              <a class="breadcrumb-link" href={href} onClick={onNavClick}>
+              <a
+                class="breadcrumb-link"
+                href={encodePath(href)}
+                onClick={onNavClick}
+              >
                 {seg}
               </a>
             )}

@@ -8,7 +8,7 @@ export function HtmlView({ path }: Props) {
   // file path, keeping <base> stable across sub-page navigations.
   const dir = path.replace(/\/[^/]+$/, "").replace(/^\//, "")
   const fileName = path.split("/").pop() ?? ""
-  const src = `/api/htmlpreview/${encodeURIComponent(dir)}/${encodeURIComponent(fileName)}`
+  const src = `/api/htmlpreview/${encodeURIComponent(dir || "/")}/${encodeURIComponent(fileName)}`
   return (
     <iframe
       src={src}

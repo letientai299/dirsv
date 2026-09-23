@@ -7,14 +7,14 @@ import type { DirEntry, RawResult } from "../lib/api"
 import {
   clearCache,
   getCached,
-  invalidate,
   prefetch,
+  warmContent,
 } from "../lib/content-cache"
 import { FileIcon, ParentIcon } from "../lib/file-icon"
 import { formatSize } from "../lib/format"
 import { ChevronLeft, ChevronRight, SidebarIcon } from "../lib/icons"
 import { imageRe, videoRe } from "../lib/media-types"
-import { navigate } from "../lib/navigate"
+import { encodePath, navigate } from "../lib/navigate"
 import { parentOf, watchPrefix } from "../lib/path"
 import {
   focusSidebarContent,
@@ -28,7 +28,7 @@ import { useListKeys } from "../lib/use-list-keys"
 import type { BoundShortcut } from "../lib/use-shortcuts"
 import { useShortcuts } from "../lib/use-shortcuts"
 import { useSiblings } from "../lib/use-siblings"
-import { useWS } from "../lib/use-ws"
+import { isFileEvent, useWS } from "../lib/use-ws"
 
 /** Create a lazy diagram component given a render function loader. */
 function lazyDiagram(
@@ -136,23 +136,7 @@ function renderFileContent(
     )
   if (error) return <div class="error">Error: {error}</div>
   if (result === null) return fallback
-  if (result.kind === "binary") {
-    return (
-      <div class="file-binary">
-        <p>
-          Binary file ({result.contentType}, {formatSize(result.size)})
-        </p>
-        <a
-          href={`/api/raw${path}`}
-          class="file-binary-open"
-          target="_blank"
-          rel="noopener"
-        >
-          Open in app
-        </a>
-      </div>
-    )
-  }
+  if (result.kind !== "text") return <FileDownload result={result} />
   if (/\.cast$/i.test(path))
     return (
       <Suspense fallback={fallback}>
@@ -229,6 +213,25 @@ function renderFileContent(
   )
 }
 
+function FileDownload({
+  result,
+}: {
+  result: Exclude<RawResult, { kind: "text" }>
+}) {
+  return (
+    <div class="file-binary">
+      <p>
+        {result.kind === "large"
+          ? "File exceeds preview limits."
+          : `Binary file (${result.contentType}, ${formatSize(result.size)})`}
+      </p>
+      <a href={result.url} download>
+        Download file
+      </a>
+    </div>
+  )
+}
+
 const SIDEBAR_WIDTH_KEY = "dirsv-sidebar-width"
 const SIDEBAR_OPEN_KEY = "dirsv-sidebar-open"
 const SIDEBAR_DEFAULT = 220
@@ -295,7 +298,7 @@ function FileSidebar({
       ref={sidebarRef}
       aria-label="Sibling files"
     >
-      <a rel="up" href={parentDir} onClick={onNavClick}>
+      <a rel="up" href={encodePath(parentDir)} onClick={onNavClick}>
         <span class="entry-icon">
           <ParentIcon />
         </span>
@@ -307,12 +310,12 @@ function FileSidebar({
         return (
           <a
             key={entry.name}
-            href={href}
+            href={encodePath(href)}
             class={active ? "sidebar-active" : ""}
             onClick={onNavClick}
             onPointerEnter={
               isPrefetchable(entry.name, entry.isDir)
-                ? () => prefetch(href)
+                ? () => warmContent(href, entry.size)
                 : undefined
             }
           >
@@ -351,11 +354,11 @@ function SiblingNavLink({
   return (
     <a
       rel={rel}
-      href={href}
+      href={encodePath(href)}
       onClick={onNavClick}
       onPointerEnter={
         isPrefetchable(entry.name, entry.isDir)
-          ? () => prefetch(href)
+          ? () => warmContent(href, entry.size)
           : undefined
       }
     >
@@ -523,8 +526,12 @@ export function FileView({ path }: Props) {
   const shortcutDefs = useShortcuts(boundShortcuts)
 
   // Fetch raw file content — delegates to prefetch() for cache/dedup/abort.
+  const loadGeneration = useRef(0)
+  const activePath = useRef(path)
+  activePath.current = path
   const load = useCallback(
     (signal?: AbortSignal) => {
+      const generation = ++loadGeneration.current
       if (isHtml || isImage || isVideo) return
       setError(null)
       const cached = getCached(path)
@@ -533,11 +540,20 @@ export function FileView({ path }: Props) {
         return
       }
       const p = prefetch(path, signal)
-      if (!p) return
       p.then((r) => {
-        if (!signal?.aborted) setLoaded({ path, result: r })
+        if (
+          !signal?.aborted &&
+          activePath.current === path &&
+          generation === loadGeneration.current
+        )
+          setLoaded({ path, result: r })
       }).catch((err: Error) => {
-        if (err.name !== "AbortError") setError(err.message)
+        if (
+          err.name !== "AbortError" &&
+          activePath.current === path &&
+          generation === loadGeneration.current
+        )
+          setError(err.message)
       })
     },
     [path, isHtml, isImage, isVideo],
@@ -558,11 +574,9 @@ export function FileView({ path }: Props) {
 
   // Re-fetch on file changes — invalidate cache so we get fresh content
   const changedLinesRef = useRef<number[] | null>(null)
-  const fsTypes = new Set(["change", "create", "delete", "rename"])
   useWS(watchPrefix(path), (ev) => {
-    if (!fsTypes.has(ev.type)) return
+    if (!isFileEvent(ev)) return
     changedLinesRef.current = ev.changedLines ?? null
-    invalidate(path)
     load()
   })
 
@@ -587,7 +601,7 @@ export function FileView({ path }: Props) {
     (e: JSX.TargetedMouseEvent<HTMLAnchorElement>) => {
       e.preventDefault()
       const href = e.currentTarget.getAttribute("href")
-      if (href) navigate(href)
+      if (href) navigate(decodeURIComponent(href))
     },
     [],
   )
@@ -599,7 +613,7 @@ export function FileView({ path }: Props) {
     const controller = new AbortController()
     for (const entry of [prevEntry, nextEntry]) {
       if (entry && isPrefetchable(entry.name, entry.isDir)) {
-        void prefetch(siblingHref(entry.name), controller.signal)
+        warmContent(siblingHref(entry.name), entry.size, controller.signal)
       }
     }
     return () => controller.abort()
@@ -692,7 +706,7 @@ export function FileView({ path }: Props) {
             <SiblingNavLink
               entry={prevEntry}
               rel="prev"
-              href={siblingHref(prevEntry.name)}
+              href={encodePath(siblingHref(prevEntry.name))}
               onNavClick={onNavClick}
             >
               <ChevronLeft />
@@ -706,7 +720,7 @@ export function FileView({ path }: Props) {
             <SiblingNavLink
               entry={nextEntry}
               rel="next"
-              href={siblingHref(nextEntry.name)}
+              href={encodePath(siblingHref(nextEntry.name))}
               onNavClick={onNavClick}
             >
               {nextEntry.name}

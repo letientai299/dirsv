@@ -159,10 +159,11 @@ func BenchmarkResolvePath(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for range b.N {
-		_, _, err := srv.resolvePath(name)
+		f, _, err := srv.resolvePath(name)
 		if err != nil {
 			b.Fatal(err)
 		}
+		_ = f.Close()
 	}
 }
 
@@ -189,10 +190,11 @@ func BenchmarkResolvePathDeep(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for range b.N {
-		_, _, err := srv.resolvePath("a/b/c/d/e/f.txt")
+		f, _, err := srv.resolvePath("a/b/c/d/e/f.txt")
 		if err != nil {
 			b.Fatal(err)
 		}
+		_ = f.Close()
 	}
 }
 

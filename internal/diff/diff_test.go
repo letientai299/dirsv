@@ -2,6 +2,7 @@ package diff
 
 import (
 	"bytes"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -113,6 +114,34 @@ func TestChangedLines(t *testing.T) {
 					tt.old, tt.new, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestDiffBudget(t *testing.T) {
+	old, next := make([]string, 2000), make([]string, 2000)
+	for i := range old {
+		old[i], next[i] = "a", "b"
+	}
+	if got := ChangedLines(old, next); got != nil {
+		t.Fatalf("budget returned %d highlights", len(got))
+	}
+	old = make([]string, 20000)
+	next = slices.Clone(old)
+	next[10000] = "changed"
+	if got := ChangedLines(old, next); !slices.Equal(got, []int{10000}) {
+		t.Fatal(got)
+	}
+}
+
+func BenchmarkRewrite(b *testing.B) {
+	old, next := make([]string, 2000), make([]string, 2000)
+	for i := range old {
+		old[i], next[i] = "a", "b"
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for b.Loop() {
+		ChangedLines(old, next)
 	}
 }
 

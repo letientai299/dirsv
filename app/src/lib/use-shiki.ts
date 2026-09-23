@@ -12,11 +12,15 @@ const HARD_LIMIT = 1_000_000
  * render a plaintext fallback first.
  */
 export function useShiki(content: string, lang: string): string | null {
-  const [html, setHtml] = useState<string | null>(null)
+  const [result, setResult] = useState<{
+    content: string
+    lang: string
+    html: string
+  } | null>(null)
 
   useEffect(() => {
     if (content.length > HARD_LIMIT) {
-      setHtml(null)
+      setResult(null)
       return
     }
 
@@ -39,8 +43,8 @@ export function useShiki(content: string, lang: string): string | null {
             )
 
       void rendered
-        .then((result) => {
-          if (!cancelled) setHtml(result)
+        .then((html) => {
+          if (!cancelled) setResult({ content, lang, html })
         })
         .catch(() => {
           // Grammar load failed — keep showing the plaintext fallback.
@@ -53,5 +57,7 @@ export function useShiki(content: string, lang: string): string | null {
     }
   }, [content, lang])
 
-  return html
+  return result?.content === content && result.lang === lang
+    ? result.html
+    : null
 }

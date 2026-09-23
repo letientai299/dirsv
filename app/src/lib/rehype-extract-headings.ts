@@ -1,5 +1,6 @@
 import type { Element, Root } from "hast"
 import { visit } from "unist-util-visit"
+import type { VFile } from "vfile"
 
 export interface Heading {
   depth: number
@@ -11,20 +12,22 @@ export interface Heading {
  * Rehype plugin that collects heading metadata from the HAST.
  * Must run after rehype-slug so `id` attributes are present.
  */
-export function rehypeExtractHeadings(headings: Heading[]) {
-  return () => (tree: Root) => {
+export function rehypeExtractHeadings() {
+  return (tree: Root, file: VFile) => {
+    const headings: Heading[] = []
     visit(tree, "element", (node: Element) => {
       const match = /^h([1-6])$/.exec(node.tagName)
       if (!match) return
 
       const depth = Number(match[1])
       const id = getProp(node, "id")
-      const text = extractText(node)
+      const text = extractText(node).trim()
 
       if (id && text) {
         headings.push({ depth, text, id })
       }
     })
+    file.data["headings"] = headings
   }
 }
 
