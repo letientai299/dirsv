@@ -1,6 +1,5 @@
 import { useCallback, useRef } from "preact/hooks"
 import {
-  computeVisiblePaths,
   getChildren,
   getType,
   type JsonValue,
@@ -13,7 +12,7 @@ interface Props {
   expanded: Set<string>
   onToggle: (path: string) => void
   filter: string
-  allPaths: Set<string>
+  visible: Set<string> | null
   focusedPath: string | null
   flatPaths: string[]
   onFocusPath: (path: string | null) => void
@@ -148,7 +147,7 @@ export function JsonTree({
   expanded,
   onToggle,
   filter,
-  allPaths,
+  visible,
   focusedPath,
   flatPaths,
   onFocusPath,
@@ -217,7 +216,6 @@ export function JsonTree({
     )
   }
 
-  const visible = computeVisiblePaths(allPaths, filter)
   const children = getChildren(value, "")
   const focusedId = focusedPath ? `jt-row-${focusedPath}` : undefined
 
@@ -240,6 +238,7 @@ export function JsonTree({
             expanded={expanded}
             onToggle={onToggle}
             filter={filter}
+            visible={visible}
             focusedPath={focusedPath}
             onFocusPath={onFocusPath}
           />

@@ -25,7 +25,6 @@ export function StructuredView({ content, parse, lang }: Props) {
   const [mode, setMode] = useState<"tree" | "raw">("tree")
   const [focusedPath, setFocusedPath] = useState<string | null>(null)
   const [largeWarned, setLargeWarned] = useState(false)
-  const rawHtml = useShiki(content, lang)
 
   useEffect(() => {
     // Reset UI state when content changes (e.g., navigating between .json files).
@@ -96,8 +95,8 @@ export function StructuredView({ content, parse, lang }: Props) {
   }, [])
 
   const handleExpandAll = useCallback(() => {
-    if (parsed !== undefined) setExpanded(collectAllPaths(parsed))
-  }, [parsed])
+    setExpanded(allPaths)
+  }, [allPaths])
 
   const handleCollapseAll = useCallback(() => {
     setExpanded(new Set())
@@ -136,22 +135,33 @@ export function StructuredView({ content, parse, lang }: Props) {
           expanded={expanded}
           onToggle={handleToggle}
           filter={filter}
-          allPaths={allPaths}
+          visible={visible}
           focusedPath={focusedPath}
           flatPaths={flatPaths}
           onFocusPath={setFocusedPath}
         />
-      ) : rawHtml ? (
-        <div
-          class="code-view"
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: Shiki output is safe (no user HTML)
-          dangerouslySetInnerHTML={{ __html: rawHtml }}
-        />
+      ) : mode === "raw" ? (
+        <RawCode content={content} lang={lang} />
       ) : (
         <pre class="code-view-fallback">
           <code>{content}</code>
         </pre>
       )}
     </div>
+  )
+}
+
+function RawCode({ content, lang }: Pick<Props, "content" | "lang">) {
+  const rawHtml = useShiki(content, lang)
+  return rawHtml ? (
+    <div
+      class="code-view"
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: Shiki output is safe (no user HTML)
+      dangerouslySetInnerHTML={{ __html: rawHtml }}
+    />
+  ) : (
+    <pre class="code-view-fallback">
+      <code>{content}</code>
+    </pre>
   )
 }

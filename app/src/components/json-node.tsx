@@ -12,6 +12,7 @@ interface Props {
   expanded: Set<string>
   onToggle: (path: string) => void
   filter: string
+  visible: Set<string> | null
   focusedPath: string | null
   onFocusPath: (path: string | null) => void
 }
@@ -92,6 +93,7 @@ export function JsonNode({
   expanded,
   onToggle,
   filter,
+  visible,
   focusedPath,
   onFocusPath,
 }: Props) {
@@ -164,18 +166,21 @@ export function JsonNode({
       {children.length > 0 && (
         // biome-ignore lint/a11y/useSemanticElements: role="group" is correct for ARIA tree pattern
         <div role="group">
-          {children.map((child) => (
-            <JsonNode
-              key={child.path}
-              info={child}
-              depth={depth + 1}
-              expanded={expanded}
-              onToggle={onToggle}
-              filter={filter}
-              focusedPath={focusedPath}
-              onFocusPath={onFocusPath}
-            />
-          ))}
+          {children
+            .filter((child) => !visible || visible.has(child.path))
+            .map((child) => (
+              <JsonNode
+                key={child.path}
+                info={child}
+                depth={depth + 1}
+                expanded={expanded}
+                onToggle={onToggle}
+                filter={filter}
+                visible={visible}
+                focusedPath={focusedPath}
+                onFocusPath={onFocusPath}
+              />
+            ))}
         </div>
       )}
       {isContainer && isOpen && !isEmpty && (

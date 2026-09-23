@@ -99,19 +99,17 @@ export function computeVisiblePaths(
 /** Collect all dot-paths in the JSON tree. */
 export function collectAllPaths(value: JsonValue, prefix = ""): Set<string> {
   const paths = new Set<string>()
-  if (value === null || typeof value !== "object") return paths
-
-  const entries = Array.isArray(value)
-    ? value.map((v, i) => [String(i), v] as const)
-    : Object.entries(value)
-
-  for (const [key, val] of entries) {
-    const path = prefix ? `${prefix}.${key}` : key
-    paths.add(path)
-    if (val !== null && typeof val === "object") {
-      for (const child of collectAllPaths(val, path)) {
-        paths.add(child)
-      }
+  const root = { value, prefix }
+  const pending = [root]
+  while (pending.length > 0) {
+    const current = pending.pop()
+    if (!current) continue
+    if (current !== root) paths.add(current.prefix)
+    if (current.value === null || typeof current.value !== "object") continue
+    const entries = Object.entries(current.value)
+    for (const [key, child] of entries.reverse()) {
+      const path = current.prefix ? `${current.prefix}.${key}` : key
+      pending.push({ value: child, prefix: path })
     }
   }
   return paths
