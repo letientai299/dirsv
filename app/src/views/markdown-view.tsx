@@ -97,7 +97,6 @@ export function MarkdownView({ content, path, changedLinesRef }: Props) {
     // Keep old result visible — no setResult(null) flash.
     setError(null)
     let cancelled = false
-    let highlighted = false
 
     const isMdx = /\.mdx$/i.test(path)
     const renderPlain = isMdx ? renderMdx : renderMarkdown
@@ -108,23 +107,19 @@ export function MarkdownView({ content, path, changedLinesRef }: Props) {
     // First pass: render without syntax highlighting for fast initial paint.
     renderPlain(content)
       .then((r) => {
-        if (!cancelled && !highlighted) setResult(r)
+        if (cancelled) return
+        setResult(r)
+        if (!r.needsHighlight) return
+        return renderHighlighted(content)
+          .then((highlighted) => {
+            if (!cancelled) setResult(highlighted)
+          })
+          .catch(() => {
+            // Keep plain output when highlighting fails.
+          })
       })
       .catch((err: Error) => {
         if (!cancelled) setError(err.message)
-      })
-
-    // Second pass: re-render with Shiki highlighting. morphdom patches only
-    // the changed <pre> blocks — headings, text, diagrams stay untouched.
-    renderHighlighted(content)
-      .then((r) => {
-        if (!cancelled) {
-          highlighted = true
-          setResult(r)
-        }
-      })
-      .catch(() => {
-        // Shiki enhancement failed — keep the plain render.
       })
 
     return () => {
@@ -147,7 +142,7 @@ export function MarkdownView({ content, path, changedLinesRef }: Props) {
     const el = contentRef.current
     if (!el || !result) return
 
-    if (el.innerHTML === "") {
+    if (!el.hasChildNodes()) {
       el.innerHTML = result.html
     } else {
       patchDom(el, result.html)

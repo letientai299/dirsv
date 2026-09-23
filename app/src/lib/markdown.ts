@@ -45,6 +45,7 @@ export type { Heading }
 export interface MarkdownResult {
   html: string
   headings: Heading[]
+  needsHighlight: boolean
 }
 
 // Extend the default sanitize schema to allow classes/attributes produced by
@@ -171,11 +172,27 @@ function rehypeLangAlias() {
 /** Apply the final stages after code highlighting (figure, slug, stringify). */
 function applyFinalPlugins(processor: AnyProcessor): AnyProcessor {
   return processor
+    .use(rehypeHighlightNeeded)
     .use(rehypeFigure)
     .use(rehypeSlug)
     .use(rehypeAutolinkHeadings)
     .use(rehypeExtractHeadings)
     .use(rehypeStringify)
+}
+
+function rehypeHighlightNeeded() {
+  return (tree: Root, file: { data: Record<string, unknown> }) => {
+    let needed = false
+    visit(tree, "element", (node, _index, parent) => {
+      if (
+        node.tagName === "code" &&
+        parent?.type === "element" &&
+        parent.tagName === "pre"
+      )
+        needed = true
+    })
+    file.data["needsHighlight"] = needed
+  }
 }
 
 type Format = "markdown" | "mdx"
@@ -278,6 +295,7 @@ async function renderWith(
   return {
     html: String(result),
     headings: (result.data["headings"] as Heading[] | undefined) ?? [],
+    needsHighlight: result.data["needsHighlight"] === true,
   }
 }
 

@@ -8,6 +8,28 @@ import {
 } from "./markdown"
 
 describe("markdown source fidelity", () => {
+  it.each([
+    ["# Heading\n\nInline `code`", false],
+    ["```mermaid\ngraph TD; A-->B\n```", false],
+    ["```js\nconst value = 1\n```", true],
+    ["    indented code", true],
+    ["<pre><code>raw code</code></pre>", true],
+  ])("detects remaining code in %s", async (source, expected) => {
+    expect((await renderMarkdown(source)).needsHighlight).toBe(expected)
+  })
+
+  it("detects MDX code and isolates concurrent metadata", async () => {
+    const results = await Promise.all([
+      renderMdx("# Prose"),
+      renderMdx("<Widget />"),
+      renderMarkdown("# Prose"),
+    ])
+    expect(results.map((result) => result.needsHighlight)).toEqual([
+      false,
+      true,
+      false,
+    ])
+  })
   it("preserves fenced and indented examples", () => {
     for (const source of [
       "```md\n::: note\n> [!WARNING] text\n```",
