@@ -3,6 +3,8 @@ import { langFromPath } from "./lang"
 
 describe("langFromPath", () => {
   const cases: [path: string, expected: string][] = [
+    ["/crates/vpdf-pdf/src/document/mod.rs", "rust"],
+    ["/src/main.RS", "rust"],
     ["/src/kernel.cu", "cpp"],
     ...[
       "cuh",

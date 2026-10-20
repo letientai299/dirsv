@@ -233,10 +233,12 @@ func TestRawCodeNotBinary(t *testing.T) {
 	}
 }
 
-func TestRawHeaderMappings(t *testing.T) {
+func TestRawSourceMappings(t *testing.T) {
 	dir := t.TempDir()
 	const content = "#pragma once\n// header\n"
 	names := []string{
+		"mod.rs",
+		"mod.RS",
 		"kernel.cuh",
 		"kernel.CUH",
 		"vector.hxx",
